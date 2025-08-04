@@ -247,7 +247,7 @@ def remove_markdown_syntax(text: str) -> str:
     text = re.sub(r'`([^`]+)`', r'\1', text)
 
     # 处理markdown标题，转换为更醒目的格式
-    text = re.sub(r'^#+\s*(.+)$', r'──────────────\n📋 \1\n──────────────', text, flags=re.MULTILINE)
+    text = re.sub(r'^#+\s*(.+)$', r'─────────────────────\n📋 \1\n─────────────────────', text, flags=re.MULTILINE)
 
     # 优化列表项的显示
     text = re.sub(r'^(\s*)(\d+)\.\s+', r'\1\2️⃣ ', text, flags=re.MULTILINE)  # 数字列表用数字emoji
@@ -259,7 +259,7 @@ def remove_markdown_syntax(text: str) -> str:
 
     # 在重要信息前后添加分隔线
     text = re.sub(r'(📊\s*\*\*[^*]+\*\*)', r'\n\1\n', text)  # 统计标题前后加换行
-    text = re.sub(r'\n>\s*更新时间：([^\n]+)', r'\n──────────────\n🕐 更新时间：\1', text)  # 更新时间用时钟图标，减少间距
+    text = re.sub(r'\n>\s*更新时间：([^\n]+)', r'\n─────────────────────\n🕐 更新时间：\1', text)  # 更新时间用时钟图标，减少间距
 
     return text.strip()
 

@@ -114,7 +114,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 ## 📝 更新日志
 
-**升级说明：** 
+>**升级说明：** 
 - **小版本更新**：直接在 GitHub 网页编辑器中，用本项目的 `main.py` 代码替换你 fork 仓库中的对应文件 
 - **大版本升级**：从 v1.x 升级到 v2.0 建议删除现有 fork 后重新 fork，这样更省力且避免配置冲突
 
@@ -124,7 +124,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - 解决版本号容易被遗漏修改的问题
 
 <details>
-<summary><strong>👉 点击查看历史更新</strong></summary>
+<summary><strong>👉 历史更新</strong></summary>
 
 
 ### 2025/07/27 - v2.0.1
@@ -246,6 +246,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    <details>
    <summary> <strong>👉 企业微信机器人</strong>（配置最简单最迅速）</summary>
+   <br>
 
    **GitHub Secret 配置：**
    - 名称：`WEWORK_WEBHOOK_URL`
@@ -264,6 +265,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    <details>
    <summary> <strong>👉 飞书机器人</strong>（消息显示最友好）</summary>
+   <br>
 
    **GitHub Secret 配置：**
    - 名称：`FEISHU_WEBHOOK_URL`
@@ -308,6 +310,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    <details>
    <summary> <strong>👉 钉钉机器人</strong></summary>
+   <br>
 
    **GitHub Secret 配置：**
    - 名称：`DINGTALK_WEBHOOK_URL`
@@ -335,6 +338,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    <details>
    <summary> <strong>👉 Telegram Bot</strong></summary>
+   <br>
 
    **GitHub Secret 配置：**
    - 名称：`TELEGRAM_BOT_TOKEN` - 你的 Telegram Bot Token
@@ -375,7 +379,8 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
         | **增量监控模式**<br/>`incremental` | 有新增才推送 | 新出现的匹配频率词新闻 | 避免重复信息干扰<br/>高频监控场景 |
    
     <details>
-    <summary><strong>👉 点击查看 frequency_words.txt 配置教程</strong></summary>
+    <summary><strong>👉 frequency_words.txt 配置教程</strong></summary>
+    <br>
 
     在 `frequency_words.txt` 文件中配置监控的关键词，支持三种语法和词组功能。
 
@@ -553,7 +558,7 @@ platforms:
 ```
 
 <details>
-<summary><strong>👉 点击查看 docker 部署</strong></summary>
+<summary><strong>👉 Docker 部署</strong></summary>
 
 ### 🐳 Docker 部署
 
@@ -614,10 +619,42 @@ platforms:
 
 |           点赞人            |  金额  |  日期  |             备注             |
 | :-------------------------: | :----: | :----: | :-----------------------: |
-|           **龙            |  10.00  | 2025.7.29 |      支持一下      |
+|           x*x            |  2  | 2025.8.03 |  trendRadar 好项目 点赞          |
+|           *远            |  1  | 2025.8.01 |            |
+|           *邪            |  5  | 2025.8.01 |            |
+|           *梦            |  0.1  | 2025.7.30 |            |
+|           **龙            |  10  | 2025.7.29 |      支持一下      |
 
 <details>
-<summary><strong>👉 点击查看使用流程图</strong></summary>
+<summary><strong>👉 自荐</strong></summary>
+<br>
+
+> 附项目相关的两篇文章，欢迎留言交流
+
+- [2个月破 1000 star，我的GitHub项目推广实战经验](https://mp.weixin.qq.com/s/jzn0vLiQFX408opcfpPPxQ)
+- [基于本项目，如何开展公众号或者新闻资讯类文章写作](https://mp.weixin.qq.com/s/8ghyfDAtQZjLrnWTQabYOQ)
+
+>**AI 开发：**
+- 如果你有小众需求，完全可以基于我的项目自行开发，零编程基础的也可以试试
+- 我所有的开源项目或多或少都使用了自己写的**AI辅助软件**来提升开发效率，这款工具已开源
+- **核心功能**：迅速筛选项目代码喂给AI，你只需要补充个人需求即可
+- **项目地址**：[https://github.com/sansan0/ai-code-context-helper](https://github.com/sansan0/ai-code-context-helper)
+
+</details>
+
+<details>
+<summary><strong>👉 "手机推送通知系列"之新项目挖坑预告</strong></summary>
+<br>
+我很豪横地拿诸位的点赞，买了一瓶 15.5 元的柠檬汁
+
+截图中只支持一个渠道，我想顺便扩展功能，比如某些项目的更新监控，大家有什么好的建议可以公众号留言，完善后开源
+
+<img src="_image/next.jpg" width="300" title="github"/>
+
+</details>
+
+<details>
+<summary><strong>👉 本项目流程图</strong></summary>
 
 ```mermaid
 flowchart TD

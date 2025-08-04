@@ -564,7 +564,7 @@ platforms:
 
 1. **克隆项目并进入目录**:
    ```bash
-   git clone https://github.com/sansan0/TrendRadar.git
+   git clone https://github.com/jayzqj/TrendRadar.git
    cd TrendRadar
    ```
 

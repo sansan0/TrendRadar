@@ -669,7 +669,18 @@ platforms:
    
    # 显示帮助信息
    docker exec -it trend-radar python manage.py help
+
+   # 启动文件服务器
+   docker exec -d trend-radar python -m http.server 8000
    ```
+
+5. **访问服务**:
+   
+   访问
+    ```
+    http://localhost:8000/index.html
+    ```
+
 </details>
 
 ## ☕ 学习交流与1元点赞

@@ -7,8 +7,15 @@ if [ ! -f "/app/config/config.yaml" ] || [ ! -f "/app/config/frequency_words.txt
     exit 1
 fi
 
+
 # 保存环境变量
 env >> /etc/environment
+
+echo "🔄 启动http服务。。。。。。"
+nohup python3 -m http.server 8000 &
+
+echo "🔄 启动http服务完成"
+
 
 case "${RUN_MODE:-cron}" in
 "once")
@@ -42,3 +49,4 @@ case "${RUN_MODE:-cron}" in
     exec "$@"
     ;;
 esac
+

@@ -2,12 +2,12 @@
 
 # 🎯TrendRadar
 
-<strong>🚀 最快一分钟部署的热点助手 —— 告别无效刷屏，只看真正关心的新闻资讯</strong>
+🚀 最快<strong>30秒</strong>部署的热点助手 —— 告别无效刷屏，只看真正关心的新闻资讯
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v2.0.3-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v2.0.4-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知支持-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
 [![Telegram通知](https://img.shields.io/badge/Telegram-通知支持-00D4AA?style=flat-square)](https://telegram.org/)
@@ -23,12 +23,9 @@
 > 本项目以轻量，易部署为目标，主要处理 issues
 >
 > 遇到问题提 issues，或【硅基茶水间】公众号留言
->
-> **Fork** 的同时，如果觉得有帮助，请顺手点个 ⭐️ **Star**，感谢支持
 
 <details>
-<summary><strong>👉 点击查看致谢名单</strong></summary>
-<br>
+<summary>👉 点击查看<strong>致谢名单 (当前 12 个)</strong></summary>
 
 ### 数据支持
 
@@ -36,12 +33,11 @@
 
 ### 推广助力
 
-> 感谢以下平台和个人的推荐，让更多用户发现这个工具
+> 感谢以下平台和个人的推荐(按时间排列)，以及各微信群，qq群等给到这个项目帮助的人
 
-- [小众软件](https://mp.weixin.qq.com/s/fvutkJ_NPUelSW9OGK39aA) - 软件推荐平台的精准用户推送
-- [阮一峰周刊](https://github.com/ruanyf/weekly) - 技术圈影响力周刊的收录推荐
-- [LinuxDo 社区](https://linux.do/) - 技术爱好者的试用与反馈
-- 各微信群、QQ群 - 用户间的分享和传播
+- [小众软件](https://mp.weixin.qq.com/s/fvutkJ_NPUelSW9OGK39aA) - 开源软件推荐平台
+- [LinuxDo 社区](https://linux.do/) - 技术爱好者的聚集地
+- [阮一峰周刊](https://github.com/ruanyf/weekly) - 技术圈有影响力的周刊
 
 ### 观众支持
 
@@ -49,6 +45,8 @@
 
 |           点赞人            |  金额  |  日期  |             备注             |
 | :-------------------------: | :----: | :----: | :-----------------------: |
+|           2*D            |  88  | 2025.8.13 下午 |           |
+|           2*D            |  1  | 2025.8.13 上午 |           |
 |           S*o            |  1  | 2025.8.05 |   支持一下        |
 |           *侠            |  10  | 2025.8.04 |           |
 |           x*x            |  2  | 2025.8.03 |  trendRadar 好项目 点赞          |
@@ -109,7 +107,11 @@
 
 GitHub 一键 Fork 即可使用，无需编程基础。
 
-> 如果要手机接收通知， 要达到 1 分钟部署完毕的效果，请选择**企业微信**
+> 30秒部署： GitHub Pages（网页浏览）
+>
+> 1分钟部署： 企业微信（手机通知）
+
+**💡 提示：** 想要**实时更新**的网页版？fork 后，进入你的仓库 Settings → Pages，启用 GitHub Pages。[效果预览](https://sansan0.github.io/TrendRadar/)。
 
 ### **减少 APP 依赖**
 
@@ -118,9 +120,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 **适合人群：** 投资者、自媒体人、企业公关、关心时事的普通用户
 
 **典型场景：** 股市投资监控、品牌舆情追踪、行业动态关注、生活资讯获取
-
-**💡 提示：** 想要**实时更新**的网页版？进入你的仓库 Settings → Pages，启用 GitHub Pages。比如我这里[TrendRadar](https://sansan0.github.io/TrendRadar/)。
-
 
 | Github Pages效果 | 飞书推送效果 |
 |:---:|:---:|
@@ -183,12 +182,19 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - **小版本更新**：直接在 GitHub 网页编辑器中，用本项目的 `main.py` 代码替换你 fork 仓库中的对应文件 
 - **大版本升级**：从 v1.x 升级到 v2.0 建议删除现有 fork 后重新 fork，这样更省力且避免配置冲突
 
-### 2025/08/06 - v2.0.3
+### 2025/08/27 - v2.0.4
 
-- 优化 github page 的网页版效果，方便移动端使用
+- 本次版本不是功能修复，而是重要提醒
+- 请务必妥善保管好 webhooks，不要公开，不要公开，不要公开
+- 如果你以 fork 的方式将本项目部署在 GitHub 上，请将 webhooks 填入 GitHub Secret，而非 config.yaml
+- 如果你已经暴露了 webhooks 或将其填入了 config.yaml，建议删除后重新生成
 
 <details>
 <summary><strong>👉 历史更新</strong></summary>
+
+### 2025/08/06 - v2.0.3
+
+- 优化 github page 的网页版效果，方便移动端使用
 
 ### 2025/07/28 - v2.0.2
 

@@ -15,7 +15,7 @@ import requests
 import yaml
 
 
-VERSION = "2.0.3"
+VERSION = "2.0.4"
 
 
 # === 配置管理 ===

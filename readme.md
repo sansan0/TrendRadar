@@ -7,7 +7,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v2.0.3-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v2.0.4-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知支持-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
 [![Telegram通知](https://img.shields.io/badge/Telegram-通知支持-00D4AA?style=flat-square)](https://telegram.org/)
@@ -23,8 +23,6 @@
 > 本项目以轻量，易部署为目标，主要处理 issues
 >
 > 遇到问题提 issues，或【硅基茶水间】公众号留言
->
-> **Fork** 的同时，如果觉得有帮助，请顺手点个 ⭐️ **Star**，感谢支持
 
 <details>
 <summary>👉 点击查看<strong>致谢名单 (当前 12 个)</strong></summary>
@@ -184,12 +182,19 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - **小版本更新**：直接在 GitHub 网页编辑器中，用本项目的 `main.py` 代码替换你 fork 仓库中的对应文件 
 - **大版本升级**：从 v1.x 升级到 v2.0 建议删除现有 fork 后重新 fork，这样更省力且避免配置冲突
 
-### 2025/08/06 - v2.0.3
+### 2025/08/27 - v2.0.4
 
-- 优化 github page 的网页版效果，方便移动端使用
+- 本次版本不是功能修复，而是重要提醒
+- 请务必妥善保管好 webhooks，不要公开，不要公开，不要公开
+- 如果你以 fork 的方式将本项目部署在 GitHub 上，请将 webhooks 填入 GitHub Secret，而非 config.yaml
+- 如果你已经暴露了 webhooks 或将其填入了 config.yaml，建议删除后重新生成
 
 <details>
 <summary><strong>👉 历史更新</strong></summary>
+
+### 2025/08/06 - v2.0.3
+
+- 优化 github page 的网页版效果，方便移动端使用
 
 ### 2025/07/28 - v2.0.2
 

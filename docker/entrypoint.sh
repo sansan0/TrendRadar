@@ -22,7 +22,7 @@ case "${RUN_MODE:-cron}" in
     echo "📅 生成的crontab内容:"
     cat /tmp/crontab
 
-    if ! /usr/local/bin/supercronic-linux-amd64 -test /tmp/crontab; then
+    if ! /usr/local/bin/supercronic -test /tmp/crontab; then
         echo "❌ crontab格式验证失败"
         exit 1
     fi
@@ -36,7 +36,7 @@ case "${RUN_MODE:-cron}" in
     echo "⏰ 启动supercronic: ${CRON_SCHEDULE:-*/30 * * * *}"
     echo "🎯 supercronic 将作为 PID 1 运行"
     
-    exec /usr/local/bin/supercronic-linux-amd64 -passthrough-logs /tmp/crontab
+    exec /usr/local/bin/supercronic -passthrough-logs /tmp/crontab
     ;;
 *)
     exec "$@"

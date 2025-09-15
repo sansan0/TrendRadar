@@ -7,7 +7,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v2.1.1-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v2.1.2-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知支持-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
 [![Telegram通知](https://img.shields.io/badge/Telegram-通知支持-00D4AA?style=flat-square)](https://telegram.org/)
@@ -25,7 +25,7 @@
 > 遇到问题提 issues，或【硅基茶水间】公众号留言
 
 <details>
-<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥15🔥</strong> 位)</summary>
+<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥16🔥</strong> 位)</summary>
 
 ### 数据支持
 
@@ -45,6 +45,7 @@
 
 |           点赞人            |  金额  |  日期  |             备注             |
 | :-------------------------: | :----: | :----: | :-----------------------: |
+|           *家            |  10  | 2025.9.10  |           |
 |           *X            |  1.11  | 2025.9.3  |           |
 |           *飙            |  20  | 2025.8.31  |  来自老童谢谢         |
 |           *下            |  1  | 2025.8.30  |           |
@@ -230,14 +231,19 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 > 
 > 下一次**新功能**，大概会是 ai 分析功能(大概(●'◡'●)
 
+### 2025/09/13 - v2.1.2
+
+- 解决钉钉的推送容量限制导致的新闻推送失败问题(采用分批推送)
+
+
+<details>
+<summary><strong>👉 历史更新</strong></summary>
+
 ### 2025/09/04 - v2.1.1
 
 - 修复docker在某些架构中无法正常运行的问题
 - 正式发布官方 Docker 镜像 wantcat/trendradar，支持多架构
 - 优化 Docker 部署流程，无需本地构建即可快速使用
-
-<details>
-<summary><strong>👉 历史更新</strong></summary>
 
 ### 2025/08/30 - v2.1.0
 
@@ -715,7 +721,7 @@ docker run -d --name trend-radar \
   -e IMMEDIATE_RUN="true" \
   wantcat/trendradar:latest
 
-# 或者配置环境变量启用推送通知
+# 或者启用手机应用推送通知
 docker run -d --name trend-radar \
   -v ./config:/app/config:ro \
   -v ./output:/app/output \
@@ -759,7 +765,7 @@ wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequenc
 1. **创建项目目录和配置**:
    ```bash
    # 创建目录结构
-   mkdir -p trendradar/{config,output}
+   mkdir -p trendradar/{config,docker}
    cd trendradar
    
    # 下载配置文件模板
@@ -770,6 +776,17 @@ wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequenc
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/.env
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/docker-compose.yml
    ```
+
+完成后的目录结构应该是：
+```
+当前目录/
+├── config/
+│   ├── config.yaml
+│   └── frequency_words.txt
+└── docker/
+    ├── .env
+    └── docker-compose.yml
+```
 
 2. **配置文件说明**:
    - `config/config.yaml` - 应用主配置（报告模式、推送设置等）

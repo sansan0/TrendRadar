@@ -3508,6 +3508,7 @@ class NewsAnalyzer:
                 CONFIG["DINGTALK_WEBHOOK_URL"],
                 CONFIG["WEWORK_WEBHOOK_URL"],
                 (CONFIG["TELEGRAM_BOT_TOKEN"] and CONFIG["TELEGRAM_CHAT_ID"]),
+                (CONFIG["EMAIL_FROM"] and CONFIG["EMAIL_PASSWORD"] and CONFIG["EMAIL_TO"]),
             ]
         )
 

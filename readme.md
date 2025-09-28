@@ -9,7 +9,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v2.3.1-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v2.3.2-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
 [![Telegram通知](https://img.shields.io/badge/Telegram-通知-00D4AA?style=flat-square)](https://telegram.org/)
@@ -23,12 +23,12 @@
 </div>
 
 
-> 本项目以轻量，易部署为目标。
+> 本项目以轻量，易部署为目标
 > 
-> 遇到问题可选择以下 2 种方式获得帮助，[点此跳转到两者的区别](#问题答疑与1元点赞)
+> 遇到问题可选以下 2 种方式求助【[两者区别](#问题答疑与1元点赞)】
 
-- **详细问题** → 选择 【[GitHub Issues](https://github.com/sansan0/TrendRadar/issues)】，准备好截图和日志等。 
-- **快速咨询** → 选择【[硅基茶水间](#问题答疑与1元点赞)】公众号文章留言或私信，尽量说清核心问题。
+- **详细问题** → 选择 【[GitHub Issues](https://github.com/sansan0/TrendRadar/issues)】，准备好截图和日志等 
+- **快速咨询** → 选择【[硅基茶水间](#问题答疑与1元点赞)】公众号文章留言或私信，尽量说清核心问题
 
 <details>
 <summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥24🔥</strong> 位)</summary>
@@ -468,6 +468,16 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 > 挖坑：下一次**新功能**，大概会是 ai 分析功能(●'◡'●)
 
+### 2025/09/26 - v2.3.2
+
+- 修正了邮件通知配置检查被遗漏的问题（[#88](https://github.com/sansan0/TrendRadar/issues/88)）
+
+**修复说明**：
+- 解决了即使正确配置邮件通知，系统仍提示"未配置任何webhook"的问题
+
+<details>
+<summary><strong>👉 历史更新</strong></summary>
+
 ### 2025/09/22 - v2.3.1
 
 - **新增邮件推送功能**，支持将热点新闻报告发送到邮箱
@@ -483,9 +493,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 **更新提示**：
 - 此次更新的内容比较多，如果想升级，建议采用【大版本升级】
-
-<details>
-<summary><strong>👉 历史更新</strong></summary>
 
 ### 2025/09/17 - v2.2.0
 

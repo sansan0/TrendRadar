@@ -20,7 +20,7 @@ import requests
 import yaml
 
 
-VERSION = "2.3.0"
+VERSION = "2.3.2"
 
 
 # === SMTP邮件配置 ===
@@ -142,7 +142,7 @@ def load_config():
         "PLATFORMS": config_data["platforms"],
     }
 
-    # Webhook配置（环境变量优先）
+    # 通知渠道配置（环境变量优先）
     notification = config_data.get("notification", {})
     webhooks = notification.get("webhooks", {})
 
@@ -180,30 +180,30 @@ def load_config():
     ).strip() or webhooks.get("email_smtp_port", "")
 
     # 输出配置来源信息
-    webhook_sources = []
+    notification_sources = []
     if config["FEISHU_WEBHOOK_URL"]:
         source = "环境变量" if os.environ.get("FEISHU_WEBHOOK_URL") else "配置文件"
-        webhook_sources.append(f"飞书({source})")
+        notification_sources.append(f"飞书({source})")
     if config["DINGTALK_WEBHOOK_URL"]:
         source = "环境变量" if os.environ.get("DINGTALK_WEBHOOK_URL") else "配置文件"
-        webhook_sources.append(f"钉钉({source})")
+        notification_sources.append(f"钉钉({source})")
     if config["WEWORK_WEBHOOK_URL"]:
         source = "环境变量" if os.environ.get("WEWORK_WEBHOOK_URL") else "配置文件"
-        webhook_sources.append(f"企业微信({source})")
+        notification_sources.append(f"企业微信({source})")
     if config["TELEGRAM_BOT_TOKEN"] and config["TELEGRAM_CHAT_ID"]:
         token_source = (
             "环境变量" if os.environ.get("TELEGRAM_BOT_TOKEN") else "配置文件"
         )
         chat_source = "环境变量" if os.environ.get("TELEGRAM_CHAT_ID") else "配置文件"
-        webhook_sources.append(f"Telegram({token_source}/{chat_source})")
+        notification_sources.append(f"Telegram({token_source}/{chat_source})")
     if config["EMAIL_FROM"] and config["EMAIL_PASSWORD"] and config["EMAIL_TO"]:
         from_source = "环境变量" if os.environ.get("EMAIL_FROM") else "配置文件"
-        webhook_sources.append(f"邮件({from_source})")
+        notification_sources.append(f"邮件({from_source})")
         
-    if webhook_sources:
-        print(f"Webhook 配置来源: {', '.join(webhook_sources)}")
+    if notification_sources:
+        print(f"通知渠道配置来源: {', '.join(notification_sources)}")
     else:
-        print("未配置任何 Webhook")
+        print("未配置任何通知渠道")
 
     return config
 
@@ -2910,7 +2910,7 @@ def split_content_into_batches(
     return batches
 
 
-def send_to_webhooks(
+def send_to_notifications(
     stats: List[Dict],
     failed_ids: Optional[List] = None,
     report_type: str = "当日汇总",
@@ -2921,7 +2921,7 @@ def send_to_webhooks(
     mode: str = "daily",
     html_file_path: Optional[str] = None,
 ) -> Dict[str, bool]:
-    """发送数据到多个webhook平台"""
+    """发送数据到多个通知平台"""
     results = {}
 
     if CONFIG["SILENT_PUSH"]["ENABLED"]:
@@ -2999,7 +2999,7 @@ def send_to_webhooks(
         )
 
     if not results:
-        print("未配置任何webhook URL，跳过通知发送")
+        print("未配置任何通知渠道，跳过通知发送")
 
     # 如果成功发送了任何通知，且启用了每天只推一次，则记录推送
     if CONFIG["SILENT_PUSH"]["ENABLED"] and CONFIG["SILENT_PUSH"]["ONCE_PER_DAY"] and any(results.values()):
@@ -3500,14 +3500,15 @@ class NewsAnalyzer:
         """获取当前模式的策略配置"""
         return self.MODE_STRATEGIES.get(self.report_mode, self.MODE_STRATEGIES["daily"])
 
-    def _has_webhook_configured(self) -> bool:
-        """检查是否配置了webhook"""
+    def _has_notification_configured(self) -> bool:
+        """检查是否配置了任何通知渠道"""
         return any(
             [
                 CONFIG["FEISHU_WEBHOOK_URL"],
                 CONFIG["DINGTALK_WEBHOOK_URL"],
                 CONFIG["WEWORK_WEBHOOK_URL"],
                 (CONFIG["TELEGRAM_BOT_TOKEN"] and CONFIG["TELEGRAM_CHAT_ID"]),
+                (CONFIG["EMAIL_FROM"] and CONFIG["EMAIL_PASSWORD"] and CONFIG["EMAIL_TO"]),
             ]
         )
 
@@ -3635,14 +3636,14 @@ class NewsAnalyzer:
         html_file_path: Optional[str] = None,
     ) -> bool:
         """统一的通知发送逻辑，包含所有判断条件"""
-        has_webhook = self._has_webhook_configured()
+        has_notification = self._has_notification_configured()
 
         if (
             CONFIG["ENABLE_NOTIFICATION"]
-            and has_webhook
+            and has_notification
             and self._has_valid_content(stats, new_titles)
         ):
-            send_to_webhooks(
+            send_to_notifications(
                 stats,
                 failed_ids or [],
                 report_type,
@@ -3654,13 +3655,13 @@ class NewsAnalyzer:
                 html_file_path=html_file_path, 
             )
             return True
-        elif CONFIG["ENABLE_NOTIFICATION"] and not has_webhook:
-            print("⚠️ 警告：通知功能已启用但未配置webhook URL，将跳过通知发送")
+        elif CONFIG["ENABLE_NOTIFICATION"] and not has_notification:
+            print("⚠️ 警告：通知功能已启用但未配置任何通知渠道，将跳过通知发送")
         elif not CONFIG["ENABLE_NOTIFICATION"]:
             print(f"跳过{report_type}通知：通知功能已禁用")
         elif (
             CONFIG["ENABLE_NOTIFICATION"]
-            and has_webhook
+            and has_notification
             and not self._has_valid_content(stats, new_titles)
         ):
             mode_strategy = self._get_mode_strategy()
@@ -3756,13 +3757,13 @@ class NewsAnalyzer:
             print("爬虫功能已禁用（ENABLE_CRAWLER=False），程序退出")
             return
 
-        has_webhook = self._has_webhook_configured()
+        has_notification = self._has_notification_configured()
         if not CONFIG["ENABLE_NOTIFICATION"]:
             print("通知功能已禁用（ENABLE_NOTIFICATION=False），将只进行数据抓取")
-        elif not has_webhook:
-            print("未配置任何webhook URL，将只进行数据抓取，不发送通知")
+        elif not has_notification:
+            print("未配置任何通知渠道，将只进行数据抓取，不发送通知")
         else:
-            print("通知功能已启用，将发送webhook通知")
+            print("通知功能已启用，将发送通知")
 
         mode_strategy = self._get_mode_strategy()
         print(f"报告模式: {self.report_mode}")

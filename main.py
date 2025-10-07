@@ -20,68 +20,36 @@ import requests
 import yaml
 
 
-VERSION = "2.3.2"
+VERSION = "2.4.0"
 
 
 # === SMTP邮件配置 ===
 SMTP_CONFIGS = {
     # Gmail
-    'gmail.com': {
-        'server': 'smtp.gmail.com',
-        'port': 587,
-        'encryption': 'TLS'
-    },
-    
+    "gmail.com": {"server": "smtp.gmail.com", "port": 587, "encryption": "TLS"},
     # QQ邮箱
-    'qq.com': {
-        'server': 'smtp.qq.com', 
-        'port': 587,
-        'encryption': 'TLS'
-    },
-    
+    "qq.com": {"server": "smtp.qq.com", "port": 587, "encryption": "TLS"},
     # Outlook
-    'outlook.com': {
-        'server': 'smtp-mail.outlook.com',
-        'port': 587,
-        'encryption': 'TLS'
+    "outlook.com": {
+        "server": "smtp-mail.outlook.com",
+        "port": 587,
+        "encryption": "TLS",
     },
-    'hotmail.com': {
-        'server': 'smtp-mail.outlook.com',
-        'port': 587,
-        'encryption': 'TLS'
+    "hotmail.com": {
+        "server": "smtp-mail.outlook.com",
+        "port": 587,
+        "encryption": "TLS",
     },
-    'live.com': {
-        'server': 'smtp-mail.outlook.com',
-        'port': 587,
-        'encryption': 'TLS'
-    },
-    
+    "live.com": {"server": "smtp-mail.outlook.com", "port": 587, "encryption": "TLS"},
     # 网易邮箱
-    '163.com': {
-        'server': 'smtp.163.com',
-        'port': 587,
-        'encryption': 'TLS'
-    },
-    '126.com': {
-        'server': 'smtp.126.com',
-        'port': 587,
-        'encryption': 'TLS'
-    },
-    
+    "163.com": {"server": "smtp.163.com", "port": 587, "encryption": "TLS"},
+    "126.com": {"server": "smtp.126.com", "port": 587, "encryption": "TLS"},
     # 新浪邮箱
-    'sina.com': {
-        'server': 'smtp.sina.com',
-        'port': 587,
-        'encryption': 'TLS'
-    },
-    
+    "sina.com": {"server": "smtp.sina.com", "port": 587, "encryption": "TLS"},
     # 搜狐邮箱
-    'sohu.com': {
-        'server': 'smtp.sohu.com',
-        'port': 587,
-        'encryption': 'TLS'
-    }
+    "sohu.com": {"server": "smtp.sohu.com", "port": 587, "encryption": "TLS"},
 }
+
 
 # === 配置管理 ===
 def load_config():
@@ -108,7 +76,9 @@ def load_config():
         "ENABLE_CRAWLER": config_data["crawler"]["enable_crawler"],
         "ENABLE_NOTIFICATION": config_data["notification"]["enable_notification"],
         "MESSAGE_BATCH_SIZE": config_data["notification"]["message_batch_size"],
-        "DINGTALK_BATCH_SIZE": config_data["notification"].get("dingtalk_batch_size", 20000),
+        "DINGTALK_BATCH_SIZE": config_data["notification"].get(
+            "dingtalk_batch_size", 20000
+        ),
         "BATCH_SEND_INTERVAL": config_data["notification"]["batch_send_interval"],
         "FEISHU_MESSAGE_SEPARATOR": config_data["notification"][
             "feishu_message_separator"
@@ -161,23 +131,34 @@ def load_config():
     config["TELEGRAM_CHAT_ID"] = os.environ.get(
         "TELEGRAM_CHAT_ID", ""
     ).strip() or webhooks.get("telegram_chat_id", "")
-    
+
     # 邮件配置
-    config["EMAIL_FROM"] = os.environ.get(
-        "EMAIL_FROM", ""
-    ).strip() or webhooks.get("email_from", "")
+    config["EMAIL_FROM"] = os.environ.get("EMAIL_FROM", "").strip() or webhooks.get(
+        "email_from", ""
+    )
     config["EMAIL_PASSWORD"] = os.environ.get(
         "EMAIL_PASSWORD", ""
     ).strip() or webhooks.get("email_password", "")
-    config["EMAIL_TO"] = os.environ.get(
-        "EMAIL_TO", ""
-    ).strip() or webhooks.get("email_to", "")
+    config["EMAIL_TO"] = os.environ.get("EMAIL_TO", "").strip() or webhooks.get(
+        "email_to", ""
+    )
     config["EMAIL_SMTP_SERVER"] = os.environ.get(
         "EMAIL_SMTP_SERVER", ""
     ).strip() or webhooks.get("email_smtp_server", "")
     config["EMAIL_SMTP_PORT"] = os.environ.get(
         "EMAIL_SMTP_PORT", ""
     ).strip() or webhooks.get("email_smtp_port", "")
+
+    # ntfy配置
+    config["NTFY_SERVER_URL"] = os.environ.get(
+        "NTFY_SERVER_URL", "https://ntfy.sh"
+    ).strip() or webhooks.get("ntfy_server_url", "https://ntfy.sh")
+    config["NTFY_TOPIC"] = os.environ.get("NTFY_TOPIC", "").strip() or webhooks.get(
+        "ntfy_topic", ""
+    )
+    config["NTFY_TOKEN"] = os.environ.get("NTFY_TOKEN", "").strip() or webhooks.get(
+        "ntfy_token", ""
+    )
 
     # 输出配置来源信息
     notification_sources = []
@@ -199,7 +180,11 @@ def load_config():
     if config["EMAIL_FROM"] and config["EMAIL_PASSWORD"] and config["EMAIL_TO"]:
         from_source = "环境变量" if os.environ.get("EMAIL_FROM") else "配置文件"
         notification_sources.append(f"邮件({from_source})")
-        
+
+    if config["NTFY_SERVER_URL"] and config["NTFY_TOPIC"]:
+        server_source = "环境变量" if os.environ.get("NTFY_SERVER_URL") else "配置文件"
+        notification_sources.append(f"ntfy({server_source})")
+
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
     else:
@@ -1506,6 +1491,28 @@ def format_title_for_platform(
 
         return result
 
+    elif platform == "ntfy":
+        if link_url:
+            formatted_title = f"[{cleaned_title}]({link_url})"
+        else:
+            formatted_title = cleaned_title
+
+        title_prefix = "🆕 " if title_data.get("is_new") else ""
+
+        if show_source:
+            result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
+        else:
+            result = f"{title_prefix}{formatted_title}"
+
+        if rank_display:
+            result += f" {rank_display}"
+        if title_data["time_display"]:
+            result += f" `- {title_data['time_display']}`"
+        if title_data["count"] > 1:
+            result += f" `({title_data['count']}次)`"
+
+        return result
+
     elif platform == "html":
         rank_display = format_rank_display(
             title_data["ranks"], title_data["rank_threshold"], "html"
@@ -2245,7 +2252,7 @@ def render_html_content(
                     <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="footer-link">
                         GitHub 开源项目
                     </a>"""
-                    
+
     if update_info:
         html += f"""
                     <br>
@@ -2534,9 +2541,11 @@ def split_content_into_batches(
     if max_bytes is None:
         if format_type == "dingtalk":
             max_bytes = CONFIG.get("DINGTALK_BATCH_SIZE", 20000)
+        elif format_type == "ntfy":
+            max_bytes = 3800
         else:
             max_bytes = CONFIG.get("MESSAGE_BATCH_SIZE", 4000)
-    
+
     batches = []
 
     total_titles = sum(
@@ -2549,6 +2558,8 @@ def split_content_into_batches(
         base_header = f"**总新闻数：** {total_titles}\n\n\n\n"
     elif format_type == "telegram":
         base_header = f"总新闻数： {total_titles}\n\n"
+    elif format_type == "ntfy":
+        base_header = f"**总新闻数：** {total_titles}\n\n"
     elif format_type == "dingtalk":
         base_header = f"**总新闻数：** {total_titles}\n\n"
         base_header += f"**时间：** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
@@ -2564,6 +2575,10 @@ def split_content_into_batches(
         base_footer = f"\n\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
         if update_info:
             base_footer += f"\nTrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}"
+    elif format_type == "ntfy":
+        base_footer = f"\n\n> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
+        if update_info:
+            base_footer += f"\n> TrendRadar 发现新版本 **{update_info['remote_version']}**，当前 **{update_info['current_version']}**"
     elif format_type == "dingtalk":
         base_footer = f"\n\n> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
         if update_info:
@@ -2575,6 +2590,8 @@ def split_content_into_batches(
             stats_header = f"📊 **热点词汇统计**\n\n"
         elif format_type == "telegram":
             stats_header = f"📊 热点词汇统计\n\n"
+        elif format_type == "ntfy":
+            stats_header = f"📊 **热点词汇统计**\n\n"
         elif format_type == "dingtalk":
             stats_header = f"📊 **热点词汇统计**\n\n"
 
@@ -2641,6 +2658,17 @@ def split_content_into_batches(
                     word_header = f"📈 {sequence_display} {word} : {count} 条\n\n"
                 else:
                     word_header = f"📌 {sequence_display} {word} : {count} 条\n\n"
+            elif format_type == "ntfy":
+                if count >= 10:
+                    word_header = (
+                        f"🔥 {sequence_display} **{word}** : **{count}** 条\n\n"
+                    )
+                elif count >= 5:
+                    word_header = (
+                        f"📈 {sequence_display} **{word}** : **{count}** 条\n\n"
+                    )
+                else:
+                    word_header = f"📌 {sequence_display} **{word}** : {count} 条\n\n"
             elif format_type == "dingtalk":
                 if count >= 10:
                     word_header = (
@@ -2664,6 +2692,10 @@ def split_content_into_batches(
                 elif format_type == "telegram":
                     formatted_title = format_title_for_platform(
                         "telegram", first_title_data, show_source=True
+                    )
+                elif format_type == "ntfy":
+                    formatted_title = format_title_for_platform(
+                        "ntfy", first_title_data, show_source=True
                     )
                 elif format_type == "dingtalk":
                     formatted_title = format_title_for_platform(
@@ -2706,6 +2738,10 @@ def split_content_into_batches(
                     formatted_title = format_title_for_platform(
                         "telegram", title_data, show_source=True
                     )
+                elif format_type == "ntfy":
+                    formatted_title = format_title_for_platform(
+                        "ntfy", title_data, show_source=True
+                    )
                 elif format_type == "dingtalk":
                     formatted_title = format_title_for_platform(
                         "dingtalk", title_data, show_source=True
@@ -2737,6 +2773,8 @@ def split_content_into_batches(
                     separator = f"\n\n\n\n"
                 elif format_type == "telegram":
                     separator = f"\n\n"
+                elif format_type == "ntfy":
+                    separator = f"\n\n"
                 elif format_type == "dingtalk":
                     separator = f"\n---\n\n"
 
@@ -2756,6 +2794,8 @@ def split_content_into_batches(
             new_header = (
                 f"\n\n🆕 本次新增热点新闻 (共 {report_data['total_new_count']} 条)\n\n"
             )
+        elif format_type == "ntfy":
+            new_header = f"\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
         elif format_type == "dingtalk":
             new_header = f"\n---\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
 
@@ -2779,6 +2819,8 @@ def split_content_into_batches(
                 source_header = f"**{source_data['source_name']}** ({len(source_data['titles'])} 条):\n\n"
             elif format_type == "telegram":
                 source_header = f"{source_data['source_name']} ({len(source_data['titles'])} 条):\n\n"
+            elif format_type == "ntfy":
+                source_header = f"**{source_data['source_name']}** ({len(source_data['titles'])} 条):\n\n"
             elif format_type == "dingtalk":
                 source_header = f"**{source_data['source_name']}** ({len(source_data['titles'])} 条):\n\n"
 
@@ -2868,6 +2910,8 @@ def split_content_into_batches(
             failed_header = f"\n\n\n\n⚠️ **数据获取失败的平台：**\n\n"
         elif format_type == "telegram":
             failed_header = f"\n\n⚠️ 数据获取失败的平台：\n\n"
+        elif format_type == "ntfy":
+            failed_header = f"\n\n⚠️ **数据获取失败的平台：**\n\n"
         elif format_type == "dingtalk":
             failed_header = f"\n---\n\n⚠️ **数据获取失败的平台：**\n\n"
 
@@ -2889,7 +2933,7 @@ def split_content_into_batches(
                 failed_line = f"  • **{id_value}**\n"
             else:
                 failed_line = f"  • {id_value}\n"
-            
+
             test_content = current_batch + failed_line
             if (
                 len(test_content.encode("utf-8")) + len(base_footer.encode("utf-8"))
@@ -2928,19 +2972,21 @@ def send_to_notifications(
         push_manager = PushRecordManager()
         time_range_start = CONFIG["SILENT_PUSH"]["TIME_RANGE"]["START"]
         time_range_end = CONFIG["SILENT_PUSH"]["TIME_RANGE"]["END"]
-        
+
         if not push_manager.is_in_time_range(time_range_start, time_range_end):
             now = get_beijing_time()
-            print(f"静默模式：当前时间 {now.strftime('%H:%M')} 不在推送时间范围 {time_range_start}-{time_range_end} 内，跳过推送")
+            print(
+                f"静默模式：当前时间 {now.strftime('%H:%M')} 不在推送时间范围 {time_range_start}-{time_range_end} 内，跳过推送"
+            )
             return results
-        
+
         if CONFIG["SILENT_PUSH"]["ONCE_PER_DAY"]:
             if push_manager.has_pushed_today():
                 print(f"静默模式：今天已推送过，跳过本次推送")
                 return results
             else:
                 print(f"静默模式：今天首次推送")
-    
+
     report_data = prepare_report_data(stats, failed_ids, new_titles, id_to_name, mode)
 
     feishu_url = CONFIG["FEISHU_WEBHOOK_URL"]
@@ -2953,6 +2999,9 @@ def send_to_notifications(
     email_to = CONFIG["EMAIL_TO"]
     email_smtp_server = CONFIG.get("EMAIL_SMTP_SERVER", "")
     email_smtp_port = CONFIG.get("EMAIL_SMTP_PORT", "")
+    ntfy_server_url = CONFIG["NTFY_SERVER_URL"]
+    ntfy_topic = CONFIG["NTFY_TOPIC"]
+    ntfy_token = CONFIG.get("NTFY_TOKEN", "")
 
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
@@ -2986,6 +3035,19 @@ def send_to_notifications(
             mode,
         )
 
+    # 发送到 ntfy
+    if ntfy_server_url and ntfy_topic:
+        results["ntfy"] = send_to_ntfy(
+            ntfy_server_url,
+            ntfy_topic,
+            ntfy_token,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+        )
+
     # 发送邮件
     if email_from and email_password and email_to:
         results["email"] = send_to_email(
@@ -3002,10 +3064,14 @@ def send_to_notifications(
         print("未配置任何通知渠道，跳过通知发送")
 
     # 如果成功发送了任何通知，且启用了每天只推一次，则记录推送
-    if CONFIG["SILENT_PUSH"]["ENABLED"] and CONFIG["SILENT_PUSH"]["ONCE_PER_DAY"] and any(results.values()):
+    if (
+        CONFIG["SILENT_PUSH"]["ENABLED"]
+        and CONFIG["SILENT_PUSH"]["ONCE_PER_DAY"]
+        and any(results.values())
+    ):
         push_manager = PushRecordManager()
         push_manager.record_push(report_type)
-        
+
     return results
 
 
@@ -3071,11 +3137,11 @@ def send_to_dingtalk(
 
     # 获取分批内容，使用钉钉专用的批次大小
     batches = split_content_into_batches(
-        report_data, 
-        "dingtalk", 
-        update_info, 
+        report_data,
+        "dingtalk",
+        update_info,
         max_bytes=CONFIG.get("DINGTALK_BATCH_SIZE", 20000),
-        mode=mode
+        mode=mode,
     )
 
     print(f"钉钉消息分为 {len(batches)} 批次发送 [{report_type}]")
@@ -3093,8 +3159,7 @@ def send_to_dingtalk(
             # 将批次标识插入到适当位置（在标题之后）
             if "📊 **热点词汇统计**" in batch_content:
                 batch_content = batch_content.replace(
-                    "📊 **热点词汇统计**\n\n",
-                    f"📊 **热点词汇统计** {batch_header}\n\n"
+                    "📊 **热点词汇统计**\n\n", f"📊 **热点词汇统计** {batch_header}\n\n"
                 )
             else:
                 # 如果没有统计标题，直接在开头添加
@@ -3270,6 +3335,7 @@ def send_to_telegram(
     print(f"Telegram所有 {len(batches)} 批次发送完成 [{report_type}]")
     return True
 
+
 def send_to_email(
     from_email: str,
     password: str,
@@ -3284,13 +3350,13 @@ def send_to_email(
         if not html_file_path or not Path(html_file_path).exists():
             print(f"错误：HTML文件不存在或未提供: {html_file_path}")
             return False
-            
+
         print(f"使用HTML文件: {html_file_path}")
         with open(html_file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
-        
-        domain = from_email.split('@')[-1].lower()
-        
+
+        domain = from_email.split("@")[-1].lower()
+
         if custom_smtp_server and custom_smtp_port:
             # 使用自定义 SMTP 配置
             smtp_server = custom_smtp_server
@@ -3299,38 +3365,38 @@ def send_to_email(
         elif domain in SMTP_CONFIGS:
             # 使用预设配置
             config = SMTP_CONFIGS[domain]
-            smtp_server = config['server']
-            smtp_port = config['port']
-            use_tls = config['encryption'] == 'TLS'
+            smtp_server = config["server"]
+            smtp_port = config["port"]
+            use_tls = config["encryption"] == "TLS"
         else:
             print(f"未识别的邮箱服务商: {domain}，使用通用 SMTP 配置")
             smtp_server = f"smtp.{domain}"
             smtp_port = 587
             use_tls = True
-        
-        msg = MIMEMultipart('alternative')
-        
+
+        msg = MIMEMultipart("alternative")
+
         # 严格按照 RFC 标准设置 From header
         sender_name = "TrendRadar"
-        msg['From'] = formataddr((sender_name, from_email))
-        
+        msg["From"] = formataddr((sender_name, from_email))
+
         # 设置收件人
-        recipients = [addr.strip() for addr in to_email.split(',')]
+        recipients = [addr.strip() for addr in to_email.split(",")]
         if len(recipients) == 1:
-            msg['To'] = recipients[0]
+            msg["To"] = recipients[0]
         else:
-            msg['To'] = ', '.join(recipients)
-        
+            msg["To"] = ", ".join(recipients)
+
         # 设置邮件主题
         now = get_beijing_time()
         subject = f"TrendRadar 热点分析报告 - {report_type} - {now.strftime('%m月%d日 %H:%M')}"
-        msg['Subject'] = Header(subject, 'utf-8')
-        
+        msg["Subject"] = Header(subject, "utf-8")
+
         # 设置其他标准 header
-        msg['MIME-Version'] = '1.0'
-        msg['Date'] = formatdate(localtime=True)
-        msg['Message-ID'] = make_msgid()
-        
+        msg["MIME-Version"] = "1.0"
+        msg["Date"] = formatdate(localtime=True)
+        msg["Message-ID"] = make_msgid()
+
         # 添加纯文本部分（作为备选）
         text_content = f"""
 TrendRadar 热点分析报告
@@ -3340,16 +3406,16 @@ TrendRadar 热点分析报告
 
 请使用支持HTML的邮件客户端查看完整报告内容。
         """
-        text_part = MIMEText(text_content, 'plain', 'utf-8')
+        text_part = MIMEText(text_content, "plain", "utf-8")
         msg.attach(text_part)
-        
-        html_part = MIMEText(html_content, 'html', 'utf-8')
+
+        html_part = MIMEText(html_content, "html", "utf-8")
         msg.attach(html_part)
-        
+
         print(f"正在发送邮件到 {to_email}...")
         print(f"SMTP 服务器: {smtp_server}:{smtp_port}")
         print(f"发件人: {from_email}")
-        
+
         try:
             if use_tls:
                 # TLS 模式
@@ -3363,21 +3429,21 @@ TrendRadar 热点分析报告
                 server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
                 server.set_debuglevel(0)
                 server.ehlo()
-            
+
             # 登录
             server.login(from_email, password)
-            
+
             # 发送邮件
             server.send_message(msg)
             server.quit()
-            
+
             print(f"邮件发送成功 [{report_type}] -> {to_email}")
             return True
-            
+
         except smtplib.SMTPServerDisconnected:
             print(f"邮件发送失败：服务器意外断开连接，请检查网络或稍后重试")
             return False
-            
+
     except smtplib.SMTPAuthenticationError as e:
         print(f"邮件发送失败：认证错误，请检查邮箱和密码/授权码")
         print(f"详细错误: {str(e)}")
@@ -3398,7 +3464,139 @@ TrendRadar 热点分析报告
     except Exception as e:
         print(f"邮件发送失败 [{report_type}]：{e}")
         import traceback
+
         traceback.print_exc()
+        return False
+
+
+def send_to_ntfy(
+    server_url: str,
+    topic: str,
+    token: Optional[str],
+    report_data: Dict,
+    report_type: str,
+    update_info: Optional[Dict] = None,
+    proxy_url: Optional[str] = None,
+    mode: str = "daily",
+) -> bool:
+    """发送到ntfy（支持分批发送，严格遵守4KB限制）"""
+    headers = {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Markdown": "yes",
+        "Title": f"TrendRadar 热点分析报告 - {report_type}",
+        "Priority": "default",
+        "Tags": "newspaper,📰",
+    }
+
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    
+    # 构建完整URL，确保格式正确
+    base_url = server_url.rstrip("/")
+    if not base_url.startswith(("http://", "https://")):
+        base_url = f"https://{base_url}"
+    url = f"{base_url}/{topic}"
+
+    proxies = None
+    if proxy_url:
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 获取分批内容，使用ntfy专用的4KB限制
+    batches = split_content_into_batches(
+        report_data, "ntfy", update_info, max_bytes=3800, mode=mode
+    )
+
+    print(f"ntfy消息分为 {len(batches)} 批次发送 [{report_type}]")
+
+    # 逐批发送
+    success_count = 0
+    for i, batch_content in enumerate(batches, 1):
+        batch_size = len(batch_content.encode("utf-8"))
+        print(
+            f"发送ntfy第 {i}/{len(batches)} 批次，大小：{batch_size} 字节 [{report_type}]"
+        )
+
+        # 检查消息大小，确保不超过4KB
+        if batch_size > 4096:
+            print(f"警告：ntfy第 {i} 批次消息过大（{batch_size} 字节），可能被拒绝")
+
+        # 添加批次标识
+        current_headers = headers.copy()
+        if len(batches) > 1:
+            batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
+            batch_content = batch_header + batch_content
+            current_headers["Title"] = (
+                f"TrendRadar 热点分析报告 - {report_type} ({i}/{len(batches)})"
+            )
+
+        try:
+            response = requests.post(
+                url,
+                headers=current_headers,
+                data=batch_content.encode("utf-8"),
+                proxies=proxies,
+                timeout=30,
+            )
+
+            if response.status_code == 200:
+                print(f"ntfy第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
+                success_count += 1
+                if i < len(batches):
+                    # 公共服务器建议 2-3 秒，自托管可以更短
+                    interval = 2 if "ntfy.sh" in server_url else 1
+                    time.sleep(interval)
+            elif response.status_code == 429:
+                print(
+                    f"ntfy第 {i}/{len(batches)} 批次速率限制 [{report_type}]，等待后重试"
+                )
+                time.sleep(10)  # 等待10秒后重试
+                # 重试一次
+                retry_response = requests.post(
+                    url,
+                    headers=current_headers,
+                    data=batch_content.encode("utf-8"),
+                    proxies=proxies,
+                    timeout=30,
+                )
+                if retry_response.status_code == 200:
+                    print(f"ntfy第 {i}/{len(batches)} 批次重试成功 [{report_type}]")
+                    success_count += 1
+                else:
+                    print(
+                        f"ntfy第 {i}/{len(batches)} 批次重试失败，状态码：{retry_response.status_code}"
+                    )
+            elif response.status_code == 413:
+                print(
+                    f"ntfy第 {i}/{len(batches)} 批次消息过大被拒绝 [{report_type}]，消息大小：{batch_size} 字节"
+                )
+            else:
+                print(
+                    f"ntfy第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
+                )
+                try:
+                    error_detail = response.text[:200]  # 只显示前200字符的错误信息
+                    print(f"错误详情：{error_detail}")
+                except:
+                    pass
+
+        except requests.exceptions.ConnectTimeout:
+            print(f"ntfy第 {i}/{len(batches)} 批次连接超时 [{report_type}]")
+        except requests.exceptions.ReadTimeout:
+            print(f"ntfy第 {i}/{len(batches)} 批次读取超时 [{report_type}]")
+        except requests.exceptions.ConnectionError as e:
+            print(f"ntfy第 {i}/{len(batches)} 批次连接错误 [{report_type}]：{e}")
+        except Exception as e:
+            print(f"ntfy第 {i}/{len(batches)} 批次发送异常 [{report_type}]：{e}")
+
+    # 判断整体发送是否成功
+    if success_count == len(batches):
+        print(f"ntfy所有 {len(batches)} 批次发送完成 [{report_type}]")
+        return True
+    elif success_count > 0:
+        print(f"ntfy部分发送成功：{success_count}/{len(batches)} 批次 [{report_type}]")
+        return True  # 部分成功也视为成功
+    else:
+        print(f"ntfy发送完全失败 [{report_type}]")
         return False
 
 
@@ -3508,7 +3706,12 @@ class NewsAnalyzer:
                 CONFIG["DINGTALK_WEBHOOK_URL"],
                 CONFIG["WEWORK_WEBHOOK_URL"],
                 (CONFIG["TELEGRAM_BOT_TOKEN"] and CONFIG["TELEGRAM_CHAT_ID"]),
-                (CONFIG["EMAIL_FROM"] and CONFIG["EMAIL_PASSWORD"] and CONFIG["EMAIL_TO"]),
+                (
+                    CONFIG["EMAIL_FROM"]
+                    and CONFIG["EMAIL_PASSWORD"]
+                    and CONFIG["EMAIL_TO"]
+                ),
+                (CONFIG["NTFY_SERVER_URL"] and CONFIG["NTFY_TOPIC"]),
             ]
         )
 
@@ -3652,7 +3855,7 @@ class NewsAnalyzer:
                 self.update_info,
                 self.proxy_url,
                 mode=mode,
-                html_file_path=html_file_path, 
+                html_file_path=html_file_path,
             )
             return True
         elif CONFIG["ENABLE_NOTIFICATION"] and not has_notification:
@@ -3705,7 +3908,7 @@ class NewsAnalyzer:
         )
 
         print(f"{summary_type}报告已生成: {html_file}")
-        
+
         # 发送通知
         self._send_notification_if_needed(
             stats,
@@ -3714,7 +3917,7 @@ class NewsAnalyzer:
             failed_ids=[],
             new_titles=new_titles,
             id_to_name=id_to_name,
-            html_file_path=html_file, 
+            html_file_path=html_file,
         )
 
         return html_file

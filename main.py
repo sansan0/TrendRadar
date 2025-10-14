@@ -20,7 +20,7 @@ import requests
 import yaml
 
 
-VERSION = "2.4.0"
+VERSION = "2.4.3"
 
 
 # === SMTP邮件配置 ===
@@ -83,25 +83,25 @@ def load_config():
         "FEISHU_MESSAGE_SEPARATOR": config_data["notification"][
             "feishu_message_separator"
         ],
-        "SILENT_PUSH": {
+        "PUSH_WINDOW": {
             "ENABLED": config_data["notification"]
-            .get("silent_push", {})
+            .get("push_window", {})
             .get("enabled", False),
             "TIME_RANGE": {
                 "START": config_data["notification"]
-                .get("silent_push", {})
+                .get("push_window", {})
                 .get("time_range", {})
                 .get("start", "08:00"),
                 "END": config_data["notification"]
-                .get("silent_push", {})
+                .get("push_window", {})
                 .get("time_range", {})
                 .get("end", "22:00"),
             },
             "ONCE_PER_DAY": config_data["notification"]
-            .get("silent_push", {})
+            .get("push_window", {})
             .get("once_per_day", True),
             "RECORD_RETENTION_DAYS": config_data["notification"]
-            .get("silent_push", {})
+            .get("push_window", {})
             .get("push_record_retention_days", 7),
         },
         "WEIGHT_CONFIG": {
@@ -328,7 +328,7 @@ class PushRecordManager:
 
     def cleanup_old_records(self):
         """清理过期的推送记录"""
-        retention_days = CONFIG["SILENT_PUSH"]["RECORD_RETENTION_DAYS"]
+        retention_days = CONFIG["PUSH_WINDOW"]["RECORD_RETENTION_DAYS"]
         current_time = get_beijing_time()
 
         for record_file in self.record_dir.glob("push_record_*.json"):
@@ -380,7 +380,35 @@ class PushRecordManager:
         """检查当前时间是否在指定时间范围内"""
         now = get_beijing_time()
         current_time = now.strftime("%H:%M")
-        return start_time <= current_time <= end_time
+    
+        def normalize_time(time_str: str) -> str:
+            """将时间字符串标准化为 HH:MM 格式"""
+            try:
+                parts = time_str.strip().split(":")
+                if len(parts) != 2:
+                    raise ValueError(f"时间格式错误: {time_str}")
+            
+                hour = int(parts[0])
+                minute = int(parts[1])
+            
+                if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                    raise ValueError(f"时间范围错误: {time_str}")
+            
+                return f"{hour:02d}:{minute:02d}"
+            except Exception as e:
+                print(f"时间格式化错误 '{time_str}': {e}")
+                return time_str
+    
+        normalized_start = normalize_time(start_time)
+        normalized_end = normalize_time(end_time)
+        normalized_current = normalize_time(current_time)
+    
+        result = normalized_start <= normalized_current <= normalized_end
+    
+        if not result:
+            print(f"时间窗口判断：当前 {normalized_current}，窗口 {normalized_start}-{normalized_end}")
+    
+        return result
 
 
 # === 数据获取 ===
@@ -1632,10 +1660,15 @@ def render_html_content(
                 position: relative;
             }
             
-            .save-btn {
+            .save-buttons {
                 position: absolute;
                 top: 16px;
                 right: 16px;
+                display: flex;
+                gap: 8px;
+            }
+            
+            .save-btn {
                 background: rgba(255, 255, 255, 0.2);
                 border: 1px solid rgba(255, 255, 255, 0.3);
                 color: white;
@@ -1646,6 +1679,7 @@ def render_html_content(
                 font-weight: 500;
                 transition: all 0.2s ease;
                 backdrop-filter: blur(10px);
+                white-space: nowrap;
             }
             
             .save-btn:hover {
@@ -1656,6 +1690,11 @@ def render_html_content(
             
             .save-btn:active {
                 transform: translateY(0);
+            }
+            
+            .save-btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
             }
             
             .header-title {
@@ -2001,13 +2040,17 @@ def render_html_content(
                 .news-item { gap: 8px; }
                 .new-item { gap: 8px; }
                 .news-number { width: 20px; height: 20px; font-size: 12px; }
-                .save-btn {
+                .save-buttons {
                     position: static;
                     margin-bottom: 16px;
-                    display: block;
-                    width: fit-content;
-                    margin-left: auto;
-                    margin-right: auto;
+                    display: flex;
+                    gap: 8px;
+                    justify-content: center;
+                    flex-direction: column;
+                    width: 100%;
+                }
+                .save-btn {
+                    width: 100%;
                 }
             }
         </style>
@@ -2015,7 +2058,10 @@ def render_html_content(
     <body>
         <div class="container">
             <div class="header">
-                <button class="save-btn" onclick="saveAsImage()">保存为图片</button>
+                <div class="save-buttons">
+                    <button class="save-btn" onclick="saveAsImage()">保存为图片</button>
+                    <button class="save-btn" onclick="saveAsMultipleImages()">分段保存</button>
+                </div>
                 <div class="header-title">热点新闻分析</div>
                 <div class="header-info">
                     <div class="info-item">
@@ -2267,7 +2313,7 @@ def render_html_content(
         
         <script>
             async function saveAsImage() {
-                const button = document.querySelector('.save-btn');
+                const button = event.target;
                 const originalText = button.textContent;
                 
                 try {
@@ -2279,16 +2325,13 @@ def render_html_content(
                     await new Promise(resolve => setTimeout(resolve, 200));
                     
                     // 截图前隐藏按钮
-                    button.style.visibility = 'hidden';
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'hidden';
                     
                     // 再次等待确保按钮完全隐藏
                     await new Promise(resolve => setTimeout(resolve, 100));
                     
                     const container = document.querySelector('.container');
-                    
-                    // 获取容器的精确位置和尺寸
-                    const rect = container.getBoundingClientRect();
-                    const computedStyle = window.getComputedStyle(container);
                     
                     const canvas = await html2canvas(container, {
                         backgroundColor: '#ffffff',
@@ -2309,7 +2352,7 @@ def render_html_content(
                         windowHeight: window.innerHeight
                     });
                     
-                    button.style.visibility = 'visible';
+                    buttons.style.visibility = 'visible';
                     
                     const link = document.createElement('a');
                     const now = new Date();
@@ -2330,7 +2373,239 @@ def render_html_content(
                     }, 2000);
                     
                 } catch (error) {
-                    button.style.visibility = 'visible';
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'visible';
+                    button.textContent = '保存失败';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                }
+            }
+            
+            async function saveAsMultipleImages() {
+                const button = event.target;
+                const originalText = button.textContent;
+                const container = document.querySelector('.container');
+                const scale = 1.5; 
+                const maxHeight = 5000 / scale;
+                
+                try {
+                    button.textContent = '分析中...';
+                    button.disabled = true;
+                    
+                    // 获取所有可能的分割元素
+                    const newsItems = Array.from(container.querySelectorAll('.news-item'));
+                    const wordGroups = Array.from(container.querySelectorAll('.word-group'));
+                    const newSection = container.querySelector('.new-section');
+                    const errorSection = container.querySelector('.error-section');
+                    const header = container.querySelector('.header');
+                    const footer = container.querySelector('.footer');
+                    
+                    // 计算元素位置和高度
+                    const containerRect = container.getBoundingClientRect();
+                    const elements = [];
+                    
+                    // 添加header作为必须包含的元素
+                    elements.push({
+                        type: 'header',
+                        element: header,
+                        top: 0,
+                        bottom: header.offsetHeight,
+                        height: header.offsetHeight
+                    });
+                    
+                    // 添加错误信息（如果存在）
+                    if (errorSection) {
+                        const rect = errorSection.getBoundingClientRect();
+                        elements.push({
+                            type: 'error',
+                            element: errorSection,
+                            top: rect.top - containerRect.top,
+                            bottom: rect.bottom - containerRect.top,
+                            height: rect.height
+                        });
+                    }
+                    
+                    // 按word-group分组处理news-item
+                    wordGroups.forEach(group => {
+                        const groupRect = group.getBoundingClientRect();
+                        const groupNewsItems = group.querySelectorAll('.news-item');
+                        
+                        // 添加word-group的header部分
+                        const wordHeader = group.querySelector('.word-header');
+                        if (wordHeader) {
+                            const headerRect = wordHeader.getBoundingClientRect();
+                            elements.push({
+                                type: 'word-header',
+                                element: wordHeader,
+                                parent: group,
+                                top: groupRect.top - containerRect.top,
+                                bottom: headerRect.bottom - containerRect.top,
+                                height: headerRect.height
+                            });
+                        }
+                        
+                        // 添加每个news-item
+                        groupNewsItems.forEach(item => {
+                            const rect = item.getBoundingClientRect();
+                            elements.push({
+                                type: 'news-item',
+                                element: item,
+                                parent: group,
+                                top: rect.top - containerRect.top,
+                                bottom: rect.bottom - containerRect.top,
+                                height: rect.height
+                            });
+                        });
+                    });
+                    
+                    // 添加新增新闻部分
+                    if (newSection) {
+                        const rect = newSection.getBoundingClientRect();
+                        elements.push({
+                            type: 'new-section',
+                            element: newSection,
+                            top: rect.top - containerRect.top,
+                            bottom: rect.bottom - containerRect.top,
+                            height: rect.height
+                        });
+                    }
+                    
+                    // 添加footer
+                    const footerRect = footer.getBoundingClientRect();
+                    elements.push({
+                        type: 'footer',
+                        element: footer,
+                        top: footerRect.top - containerRect.top,
+                        bottom: footerRect.bottom - containerRect.top,
+                        height: footer.offsetHeight
+                    });
+                    
+                    // 计算分割点
+                    const segments = [];
+                    let currentSegment = { start: 0, end: 0, height: 0, includeHeader: true };
+                    let headerHeight = header.offsetHeight;
+                    currentSegment.height = headerHeight;
+                    
+                    for (let i = 1; i < elements.length; i++) {
+                        const element = elements[i];
+                        const potentialHeight = element.bottom - currentSegment.start;
+                        
+                        // 检查是否需要创建新分段
+                        if (potentialHeight > maxHeight && currentSegment.height > headerHeight) {
+                            // 在前一个元素结束处分割
+                            currentSegment.end = elements[i - 1].bottom;
+                            segments.push(currentSegment);
+                            
+                            // 开始新分段
+                            currentSegment = {
+                                start: currentSegment.end,
+                                end: 0,
+                                height: element.bottom - currentSegment.end,
+                                includeHeader: false
+                            };
+                        } else {
+                            currentSegment.height = potentialHeight;
+                            currentSegment.end = element.bottom;
+                        }
+                    }
+                    
+                    // 添加最后一个分段
+                    if (currentSegment.height > 0) {
+                        currentSegment.end = container.offsetHeight;
+                        segments.push(currentSegment);
+                    }
+                    
+                    button.textContent = `生成中 (0/${segments.length})...`;
+                    
+                    // 隐藏保存按钮
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'hidden';
+                    
+                    // 为每个分段生成图片
+                    const images = [];
+                    for (let i = 0; i < segments.length; i++) {
+                        const segment = segments[i];
+                        button.textContent = `生成中 (${i + 1}/${segments.length})...`;
+                        
+                        // 创建临时容器用于截图
+                        const tempContainer = document.createElement('div');
+                        tempContainer.style.cssText = `
+                            position: absolute;
+                            left: -9999px;
+                            top: 0;
+                            width: ${container.offsetWidth}px;
+                            background: white;
+                        `;
+                        tempContainer.className = 'container';
+                        
+                        // 克隆容器内容
+                        const clonedContainer = container.cloneNode(true);
+                        
+                        // 移除克隆内容中的保存按钮
+                        const clonedButtons = clonedContainer.querySelector('.save-buttons');
+                        if (clonedButtons) {
+                            clonedButtons.style.display = 'none';
+                        }
+                        
+                        tempContainer.appendChild(clonedContainer);
+                        document.body.appendChild(tempContainer);
+                        
+                        // 等待DOM更新
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // 使用html2canvas截取特定区域
+                        const canvas = await html2canvas(clonedContainer, {
+                            backgroundColor: '#ffffff',
+                            scale: scale,
+                            useCORS: true,
+                            allowTaint: false,
+                            imageTimeout: 10000,
+                            logging: false,
+                            width: container.offsetWidth,
+                            height: segment.end - segment.start,
+                            x: 0,
+                            y: segment.start,
+                            windowWidth: window.innerWidth,
+                            windowHeight: window.innerHeight
+                        });
+                        
+                        images.push(canvas.toDataURL('image/png', 1.0));
+                        
+                        // 清理临时容器
+                        document.body.removeChild(tempContainer);
+                    }
+                    
+                    // 恢复按钮显示
+                    buttons.style.visibility = 'visible';
+                    
+                    // 下载所有图片
+                    const now = new Date();
+                    const baseFilename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+                    
+                    for (let i = 0; i < images.length; i++) {
+                        const link = document.createElement('a');
+                        link.download = `${baseFilename}_part${i + 1}.png`;
+                        link.href = images[i];
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // 延迟一下避免浏览器阻止多个下载
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                    button.textContent = `已保存 ${segments.length} 张图片!`;
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('分段保存失败:', error);
+                    const buttons = document.querySelector('.save-buttons');
+                    buttons.style.visibility = 'visible';
                     button.textContent = '保存失败';
                     setTimeout(() => {
                         button.textContent = originalText;
@@ -2968,24 +3243,24 @@ def send_to_notifications(
     """发送数据到多个通知平台"""
     results = {}
 
-    if CONFIG["SILENT_PUSH"]["ENABLED"]:
+    if CONFIG["PUSH_WINDOW"]["ENABLED"]:
         push_manager = PushRecordManager()
-        time_range_start = CONFIG["SILENT_PUSH"]["TIME_RANGE"]["START"]
-        time_range_end = CONFIG["SILENT_PUSH"]["TIME_RANGE"]["END"]
+        time_range_start = CONFIG["PUSH_WINDOW"]["TIME_RANGE"]["START"]
+        time_range_end = CONFIG["PUSH_WINDOW"]["TIME_RANGE"]["END"]
 
         if not push_manager.is_in_time_range(time_range_start, time_range_end):
             now = get_beijing_time()
             print(
-                f"静默模式：当前时间 {now.strftime('%H:%M')} 不在推送时间范围 {time_range_start}-{time_range_end} 内，跳过推送"
+                f"推送窗口控制：当前时间 {now.strftime('%H:%M')} 不在推送时间窗口 {time_range_start}-{time_range_end} 内，跳过推送"
             )
             return results
 
-        if CONFIG["SILENT_PUSH"]["ONCE_PER_DAY"]:
+        if CONFIG["PUSH_WINDOW"]["ONCE_PER_DAY"]:
             if push_manager.has_pushed_today():
-                print(f"静默模式：今天已推送过，跳过本次推送")
+                print(f"推送窗口控制：今天已推送过，跳过本次推送")
                 return results
             else:
-                print(f"静默模式：今天首次推送")
+                print(f"推送窗口控制：今天首次推送")
 
     report_data = prepare_report_data(stats, failed_ids, new_titles, id_to_name, mode)
 
@@ -3065,8 +3340,8 @@ def send_to_notifications(
 
     # 如果成功发送了任何通知，且启用了每天只推一次，则记录推送
     if (
-        CONFIG["SILENT_PUSH"]["ENABLED"]
-        and CONFIG["SILENT_PUSH"]["ONCE_PER_DAY"]
+        CONFIG["PUSH_WINDOW"]["ENABLED"]
+        and CONFIG["PUSH_WINDOW"]["ONCE_PER_DAY"]
         and any(results.values())
     ):
         push_manager = PushRecordManager()
@@ -3480,12 +3755,20 @@ def send_to_ntfy(
     mode: str = "daily",
 ) -> bool:
     """发送到ntfy（支持分批发送，严格遵守4KB限制）"""
+    # 避免 HTTP header 编码问题
+    report_type_en_map = {
+        "当日汇总": "Daily Summary",
+        "当前榜单汇总": "Current Ranking",
+        "增量更新": "Incremental Update",
+    }
+    report_type_en = report_type_en_map.get(report_type, report_type)
+
     headers = {
         "Content-Type": "text/plain; charset=utf-8",
         "Markdown": "yes",
-        "Title": f"TrendRadar 热点分析报告 - {report_type}",
+        "Title": report_type_en,
         "Priority": "default",
-        "Tags": "newspaper,📰",
+        "Tags": "news",
     }
 
     if token:
@@ -3506,27 +3789,37 @@ def send_to_ntfy(
         report_data, "ntfy", update_info, max_bytes=3800, mode=mode
     )
 
-    print(f"ntfy消息分为 {len(batches)} 批次发送 [{report_type}]")
+    total_batches = len(batches)
+    print(f"ntfy消息分为 {total_batches} 批次发送 [{report_type}]")
 
-    # 逐批发送
+    # 反转批次顺序，使得在ntfy客户端显示时顺序正确
+    # ntfy显示最新消息在上面，所以我们从最后一批开始推送
+    reversed_batches = list(reversed(batches))
+    
+    print(f"ntfy将按反向顺序推送（最后批次先推送），确保客户端显示顺序正确")
+
+    # 逐批发送（反向顺序）
     success_count = 0
-    for i, batch_content in enumerate(batches, 1):
+    for idx, batch_content in enumerate(reversed_batches, 1):
+        # 计算正确的批次编号（用户视角的编号）
+        actual_batch_num = total_batches - idx + 1
+        
         batch_size = len(batch_content.encode("utf-8"))
         print(
-            f"发送ntfy第 {i}/{len(batches)} 批次，大小：{batch_size} 字节 [{report_type}]"
+            f"发送ntfy第 {actual_batch_num}/{total_batches} 批次（推送顺序: {idx}/{total_batches}），大小：{batch_size} 字节 [{report_type}]"
         )
 
         # 检查消息大小，确保不超过4KB
         if batch_size > 4096:
-            print(f"警告：ntfy第 {i} 批次消息过大（{batch_size} 字节），可能被拒绝")
+            print(f"警告：ntfy第 {actual_batch_num} 批次消息过大（{batch_size} 字节），可能被拒绝")
 
-        # 添加批次标识
+        # 添加批次标识（使用正确的批次编号）
         current_headers = headers.copy()
-        if len(batches) > 1:
-            batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
+        if total_batches > 1:
+            batch_header = f"**[第 {actual_batch_num}/{total_batches} 批次]**\n\n"
             batch_content = batch_header + batch_content
             current_headers["Title"] = (
-                f"TrendRadar 热点分析报告 - {report_type} ({i}/{len(batches)})"
+                f"{report_type_en} ({actual_batch_num}/{total_batches})"
             )
 
         try:
@@ -3539,15 +3832,15 @@ def send_to_ntfy(
             )
 
             if response.status_code == 200:
-                print(f"ntfy第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
+                print(f"ntfy第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]")
                 success_count += 1
-                if i < len(batches):
+                if idx < total_batches:
                     # 公共服务器建议 2-3 秒，自托管可以更短
                     interval = 2 if "ntfy.sh" in server_url else 1
                     time.sleep(interval)
             elif response.status_code == 429:
                 print(
-                    f"ntfy第 {i}/{len(batches)} 批次速率限制 [{report_type}]，等待后重试"
+                    f"ntfy第 {actual_batch_num}/{total_batches} 批次速率限制 [{report_type}]，等待后重试"
                 )
                 time.sleep(10)  # 等待10秒后重试
                 # 重试一次
@@ -3559,19 +3852,19 @@ def send_to_ntfy(
                     timeout=30,
                 )
                 if retry_response.status_code == 200:
-                    print(f"ntfy第 {i}/{len(batches)} 批次重试成功 [{report_type}]")
+                    print(f"ntfy第 {actual_batch_num}/{total_batches} 批次重试成功 [{report_type}]")
                     success_count += 1
                 else:
                     print(
-                        f"ntfy第 {i}/{len(batches)} 批次重试失败，状态码：{retry_response.status_code}"
+                        f"ntfy第 {actual_batch_num}/{total_batches} 批次重试失败，状态码：{retry_response.status_code}"
                     )
             elif response.status_code == 413:
                 print(
-                    f"ntfy第 {i}/{len(batches)} 批次消息过大被拒绝 [{report_type}]，消息大小：{batch_size} 字节"
+                    f"ntfy第 {actual_batch_num}/{total_batches} 批次消息过大被拒绝 [{report_type}]，消息大小：{batch_size} 字节"
                 )
             else:
                 print(
-                    f"ntfy第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
+                    f"ntfy第 {actual_batch_num}/{total_batches} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
                 )
                 try:
                     error_detail = response.text[:200]  # 只显示前200字符的错误信息
@@ -3580,20 +3873,20 @@ def send_to_ntfy(
                     pass
 
         except requests.exceptions.ConnectTimeout:
-            print(f"ntfy第 {i}/{len(batches)} 批次连接超时 [{report_type}]")
+            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]")
         except requests.exceptions.ReadTimeout:
-            print(f"ntfy第 {i}/{len(batches)} 批次读取超时 [{report_type}]")
+            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]")
         except requests.exceptions.ConnectionError as e:
-            print(f"ntfy第 {i}/{len(batches)} 批次连接错误 [{report_type}]：{e}")
+            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}")
         except Exception as e:
-            print(f"ntfy第 {i}/{len(batches)} 批次发送异常 [{report_type}]：{e}")
+            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}")
 
     # 判断整体发送是否成功
-    if success_count == len(batches):
-        print(f"ntfy所有 {len(batches)} 批次发送完成 [{report_type}]")
+    if success_count == total_batches:
+        print(f"ntfy所有 {total_batches} 批次发送完成 [{report_type}]")
         return True
     elif success_count > 0:
-        print(f"ntfy部分发送成功：{success_count}/{len(batches)} 批次 [{report_type}]")
+        print(f"ntfy部分发送成功：{success_count}/{total_batches} 批次 [{report_type}]")
         return True  # 部分成功也视为成功
     else:
         print(f"ntfy发送完全失败 [{report_type}]")

@@ -1,0 +1,60 @@
+name: TrendRadar Daily (Feishu)
+
+on:
+  schedule:
+    # 工作日：北京时间 08:30 运行（UTC 00:30）
+    - cron: "30 0 * * 1-5"
+    # 周末：北京时间 10:00 运行（UTC 02:00）
+    - cron: "0 2 * * 6,0"
+  workflow_dispatch: {}  # 允许手动触发
+
+# 防止重复运行（例如上次还没结束）
+concurrency:
+  group: trendradar-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      # 让脚本里获取到本地时区（若有“工作时段/当日”相关逻辑更准确）
+      TZ: Asia/Shanghai
+      # 从 Secrets 注入飞书 Webhook（不要把 Webhook 写进仓库文件）
+      FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install -U pip
+          fi
+
+      # （可选）打印当前时区和时间，排查“时间不对点”的问题时很有用
+      - name: Show time
+        run: |
+          date
+          python - << 'PY'
+          import datetime, zoneinfo
+          tz = zoneinfo.ZoneInfo("Asia/Shanghai")
+          print("Shanghai time:", datetime.datetime.now(tz))
+          PY
+
+      - name: Run TrendRadar
+        run: |
+          # 如果你需要指定运行模式或其它启动参数，可在这里加：
+          # 例如：python main.py --mode daily
+          python main.py

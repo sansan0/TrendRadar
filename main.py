@@ -380,7 +380,35 @@ class PushRecordManager:
         """检查当前时间是否在指定时间范围内"""
         now = get_beijing_time()
         current_time = now.strftime("%H:%M")
-        return start_time <= current_time <= end_time
+    
+        def normalize_time(time_str: str) -> str:
+            """将时间字符串标准化为 HH:MM 格式"""
+            try:
+                parts = time_str.strip().split(":")
+                if len(parts) != 2:
+                    raise ValueError(f"时间格式错误: {time_str}")
+            
+                hour = int(parts[0])
+                minute = int(parts[1])
+            
+                if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                    raise ValueError(f"时间范围错误: {time_str}")
+            
+                return f"{hour:02d}:{minute:02d}"
+            except Exception as e:
+                print(f"时间格式化错误 '{time_str}': {e}")
+                return time_str
+    
+        normalized_start = normalize_time(start_time)
+        normalized_end = normalize_time(end_time)
+        normalized_current = normalize_time(current_time)
+    
+        result = normalized_start <= normalized_current <= normalized_end
+    
+        if not result:
+            print(f"时间窗口判断：当前 {normalized_current}，窗口 {normalized_start}-{normalized_end}")
+    
+        return result
 
 
 # === 数据获取 ===

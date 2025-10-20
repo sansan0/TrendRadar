@@ -20,7 +20,7 @@ import requests
 import yaml
 
 
-VERSION = "2.4.3"
+VERSION = "2.4.4"
 
 
 # === SMTP邮件配置 ===
@@ -3760,8 +3760,10 @@ def send_to_ntfy(
         "当日汇总": "Daily Summary",
         "当前榜单汇总": "Current Ranking",
         "增量更新": "Incremental Update",
+        "实时增量": "Realtime Incremental", 
+        "实时当前榜单": "Realtime Current Ranking",  
     }
-    report_type_en = report_type_en_map.get(report_type, report_type)
+    report_type_en = report_type_en_map.get(report_type, "News Report") 
 
     headers = {
         "Content-Type": "text/plain; charset=utf-8",

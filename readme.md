@@ -1,3 +1,5 @@
+> 预告：下一次更新是 v3.0.0 版本，主要是 **AI** 有关的各种分析新闻资讯的功能
+
 <div align="center" id="trendradar">
 
 <a href="https://github.com/sansan0/TrendRadar" title="TrendRadar">
@@ -11,7 +13,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v2.4.3-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v2.4.4-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
 [![Telegram通知](https://img.shields.io/badge/Telegram-通知-00D4AA?style=flat-square)](https://telegram.org/)
@@ -29,14 +31,15 @@
 
 > 本项目以轻量，易部署为目标
 >
-> 开源路上，感谢有你，国庆快乐~😉
+> 开源路上，感谢有你~😉
 
-- **为项目点 star** 的观众们，你们的每一个 star 都是对开源精神最好的支持
-- **关注公众号并积极互动** 的读者们，你们的留言，点赞和分享让内容更有温度，问题反馈让项目更加完善
-- **给予资金点赞支持** 的朋友们，你们的慷慨已化身为键盘旁的零食饮料，陪伴着项目的每一次迭代
+- 感谢**耐心反馈 bug** 的贡献者,你们的每一条反馈让项目更加完善;  
+- 感谢**为项目点 star** 的观众们,你们的每一个 star 都是对开源精神最好的支持;  
+- 感谢**关注[公众号](#问题答疑与1元点赞)并积极互动** 的读者们,你们的**留言**、**点赞**、**分享**和**推荐**让内容更有温度;  
+- 感谢**给予资金支持** 的朋友们,你们的慷慨已化身为键盘旁的零食饮料,陪伴着项目的每一次迭代。
 
 <details>
-<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥29🔥</strong> 位)</summary>
+<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥32🔥</strong> 位)</summary>
 
 ### 数据支持
 
@@ -56,6 +59,9 @@
 
 |           点赞人            |  金额  |  日期  |             备注             |
 | :-------------------------: | :----: | :----: | :-----------------------: |
+|           *纪           |  5  | 2025.10.14  | TrendRadar         |
+|           J*d           |  1  | 2025.10.14  | 谢谢你的工具，很好玩...          |
+|           *H           |  1  | 2025.10.14  |           |
 |           那*O           |  10  | 2025.10.13  |           |
 |           *圆           |  1  | 2025.10.13  |           |
 |           P*g           |  6  | 2025.10.13  |           |
@@ -476,6 +482,20 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - **小版本更新**：从 v2.x 升级到 v2.y, 用本项目的 `main.py` 代码替换你 fork 仓库中的对应文件
 - **大版本升级**：从 v1.x 升级到 v2.y, 建议删除现有 fork 后重新 fork，这样更省力且避免配置冲突
 
+### 2025/10/15 - v2.4.4
+
+- **更新内容**：
+    - 修复 ntfy 推送编码问题 + 1
+    - 修复推送时间窗口判断问题
+
+- **更新提示**：
+  - 建议【小版本升级】
+
+
+<details>
+<summary><strong>👉 历史更新</strong></summary>
+
+
 ### 2025/10/10 - v2.4.3
 
 > 感谢 [nidaye996](https://github.com/sansan0/TrendRadar/issues/98) 发现的体验问题
@@ -488,9 +508,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - **更新提示**：
   - 这个仅仅是重构，可以不用升级
 
-
-<details>
-<summary><strong>👉 历史更新</strong></summary>
 
 ### 2025/10/8 - v2.4.2
 

@@ -8,7 +8,13 @@ ENV SUPERCRONIC_VERSION=v0.2.34
 
 RUN set -ex && \
     apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates && \
+    # 添加 locales 包
+    apt-get install -y --no-install-recommends curl ca-certificates locales && \
+    # 配置中文 locale
+    sed -i -e 's/# zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen && \
+    sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen && \
+    # 下载 supercronic（只支持 amd64 和 arm64）
     case ${TARGETARCH} in \
     amd64) \
     export SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64; \
@@ -20,18 +26,8 @@ RUN set -ex && \
     export SUPERCRONIC_SHA1SUM=4ab6343b52bf9da592e8b4bb7ae6eb5a8e21b71e; \
     export SUPERCRONIC=supercronic-linux-arm64; \
     ;; \
-    arm) \
-    export SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-arm; \
-    export SUPERCRONIC_SHA1SUM=4ba4cd0da62082056b6def085fa9377d965fbe01; \
-    export SUPERCRONIC=supercronic-linux-arm; \
-    ;; \
-    386) \
-    export SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-386; \
-    export SUPERCRONIC_SHA1SUM=80b4fff03a8d7bf2f24a1771f37640337855e949; \
-    export SUPERCRONIC=supercronic-linux-386; \
-    ;; \
     *) \
-    echo "Unsupported architecture: ${TARGETARCH}"; \
+    echo "Unsupported architecture: ${TARGETARCH}. Only amd64 and arm64 are supported."; \
     exit 1; \
     ;; \
     esac && \
@@ -75,8 +71,13 @@ RUN sed -i 's/\r$//' /entrypoint.sh.tmp && \
     chmod +x manage.py && \
     mkdir -p /app/config /app/output
 
+# 添加 locale 相关环境变量
 ENV PYTHONUNBUFFERED=1 \
     CONFIG_PATH=/app/config/config.yaml \
-    FREQUENCY_WORDS_PATH=/app/config/frequency_words.txt
+    FREQUENCY_WORDS_PATH=/app/config/frequency_words.txt \
+    LANG=zh_CN.UTF-8 \
+    LANGUAGE=zh_CN:zh:en_US:en \
+    LC_ALL=zh_CN.UTF-8 \
+    PYTHONIOENCODING=utf-8
 
 ENTRYPOINT ["/entrypoint.sh"]

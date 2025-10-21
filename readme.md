@@ -1,6 +1,8 @@
-<div align="center">
+<div align="center" id="trendradar">
 
-# 🎯TrendRadar
+<a href="https://github.com/sansan0/TrendRadar" title="TrendRadar">
+  <img src="/_image/banner.jpg" alt="TrendRadar Banner" width="50%">
+</a>
 
 🚀 最快<strong>30秒</strong>部署的热点助手 —— 告别无效刷屏，只看真正关心的新闻资讯
 
@@ -9,35 +11,33 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v2.3.2-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.0.1-green.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
 [![Telegram通知](https://img.shields.io/badge/Telegram-通知-00D4AA?style=flat-square)](https://telegram.org/)
 [![dingtalk通知](https://img.shields.io/badge/钉钉-通知-00D4AA?style=flat-square)](#)
 [![飞书通知](https://img.shields.io/badge/飞书-通知-00D4AA?style=flat-square)](https://www.feishu.cn/)
-[![邮件通知](https://img.shields.io/badge/Email-通知-00D4AA?style=flat-square)](mailto:) 
+[![邮件通知](https://img.shields.io/badge/Email-通知-00D4AA?style=flat-square)](#) 
+[![ntfy通知](https://img.shields.io/badge/ntfy-通知-00D4AA?style=flat-square)](https://github.com/binwiederhier/ntfy)
+
+
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-自动化-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/sansan0/TrendRadar)
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-部署-4285F4?style=flat-square&logo=github&logoColor=white)](https://sansan0.github.io/TrendRadar)
 [![Docker](https://img.shields.io/badge/Docker-部署-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/)
+[![MCP Support](https://img.shields.io/badge/MCP-AI分析支持-FF6B6B?style=flat-square&logo=ai&logoColor=white)](https://modelcontextprotocol.io/)
 
 </div>
 
 
-> 本项目以轻量，易部署为目标
-> 
-> 遇到问题可选以下 2 种方式求助【[两者区别](#问题答疑与1元点赞)】
+> 本项目以轻量，易部署为目标。开源路上，感谢有你~😉
 
-- **详细问题** → 选择 【[GitHub Issues](https://github.com/sansan0/TrendRadar/issues)】，准备好截图和日志等 
-- **快速咨询** → 选择【[硅基茶水间](#问题答疑与1元点赞)】公众号文章留言或私信，尽量说清核心问题
+- 感谢**耐心反馈 bug** 的贡献者,你们的每一条反馈让项目更加完善;  
+- 感谢**为项目点 star** 的观众们,你们的每一个 star 都是对开源精神最好的支持;  
+- 感谢**关注[公众号](#问题答疑与1元点赞)并积极互动** 的读者们,你们的**留言**、**点赞**、**分享**和**推荐**让内容更有温度;  
+- 感谢**给予资金支持** 的朋友们,你们的慷慨已化身为键盘旁的零食饮料,陪伴着项目的每一次迭代。
 
 <details>
-<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥24🔥</strong> 位)</summary>
-
-### 感谢
-
-- **fork 并为项目点 star** 的观众们，你们的认可是项目继续前进的动力
-- **关注公众号并积极互动** 的读者们，你们的留言和点赞让内容更有温度
-- **给予资金点赞支持** 的朋友们，你们的慷慨让项目得以持续发展
+<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥39🔥</strong> 位)</summary>
 
 ### 数据支持
 
@@ -45,7 +45,7 @@
 
 ### 推广助力
 
-> 感谢以下平台和个人的推荐(按时间排列)，以及各微信群，qq群等给到这个项目帮助的人
+> 感谢以下平台和个人的推荐(按时间排列)
 
 - [小众软件](https://mp.weixin.qq.com/s/fvutkJ_NPUelSW9OGK39aA) - 开源软件推荐平台
 - [LinuxDo 社区](https://linux.do/) - 技术爱好者的聚集地
@@ -57,6 +57,21 @@
 
 |           点赞人            |  金额  |  日期  |             备注             |
 | :-------------------------: | :----: | :----: | :-----------------------: |
+|           P*n           |  1  | 2025.10.20  |          |
+|           *杰           |  1  | 2025.10.19  |          |
+|           *徐           |  1  | 2025.10.18  |          |
+|           *志           |  1  | 2025.10.17  |          |
+|           *😀           |  10  | 2025.10.16  |     点赞     |
+|           **杰           |  10  | 2025.10.16  |          |
+|           *啸           |  10  | 2025.10.16  |          |
+|           *纪           |  5  | 2025.10.14  | TrendRadar         |
+|           J*d           |  1  | 2025.10.14  | 谢谢你的工具，很好玩...          |
+|           *H           |  1  | 2025.10.14  |           |
+|           那*O           |  10  | 2025.10.13  |           |
+|           *圆           |  1  | 2025.10.13  |           |
+|           P*g           |  6  | 2025.10.13  |           |
+|           Ocean           |  20  | 2025.10.12  |  ...真的太棒了！！！小白级别也能直接用...         |
+|           **培           |  5.2  | 2025.10.2  |  github-yzyf1312:开源万岁         |
 |           *椿           |  3  | 2025.9.23  |  加油，很不错         |
 |           *🍍           |  10  | 2025.9.21  |           |
 |           E*f           |  1  | 2025.9.20  |           |
@@ -99,7 +114,7 @@
 - 今日头条
 - 微博
 
-默认监控 11 个主流平台，如想额外增加其它平台，可自行增加
+默认监控 11 个主流平台，也可自行增加额外的平台
 
 <details>
 <summary><strong>👉 自定义监控平台</strong></summary>
@@ -119,6 +134,8 @@ platforms:
     name: "华尔街见闻"
   # 添加更多平台...
 ```
+如果不会看的话，就直接复制他人整理好的部分[平台配置](https://github.com/sansan0/TrendRadar/issues/95)
+
 </details>
 
 ### **智能推送策略**
@@ -127,16 +144,24 @@ platforms:
 
 | 模式 | 适用人群 | 推送时机 | 显示内容 | 适用场景 |
 |------|----------|----------|----------|----------|
-| **当日汇总**<br/>`daily` | 📋 企业管理者/普通用户 | 按时推送 | 当日所有匹配新闻<br/>+ 新增新闻区域 | 日报总结<br/>全面了解当日热点趋势 |
-| **当前榜单**<br/>`current` | 📰 自媒体人/内容创作者 | 按时推送 | 当前榜单匹配新闻<br/>+ 新增新闻区域 | 实时热点追踪<br/>了解当前最火的内容 |
+| **当日汇总**<br/>`daily` | 📋 企业管理者/普通用户 | 按时推送(默认每小时推送一次) | 当日所有匹配新闻<br/>+ 新增新闻区域 | 日报总结<br/>全面了解当日热点趋势 |
+| **当前榜单**<br/>`current` | 📰 自媒体人/内容创作者 | 按时推送(默认每小时推送一次) | 当前榜单匹配新闻<br/>+ 新增新闻区域 | 实时热点追踪<br/>了解当前最火的内容 |
 | **增量监控**<br/>`incremental` | 📈 投资者/交易员 | 有新增才推送 | 新出现的匹配频率词新闻 | 避免重复信息干扰<br/>高频监控场景 |
 
-**静默推送模式**：
+**附加功能 - 推送时间窗口控制**（可选）：
 
-- **时间范围控制**：设定推送时间窗口（如 9:00-18:00），仅在指定时间内推送
-- **适用场景**：
-  - 时间内每次执行都推送
-  - 时间范围内只推送一次
+此功能独立于上述三种推送模式,可与任意模式搭配使用:
+
+- **时间窗口限制**: 设定推送时间范围（如 09:00-18:00 或 20:00-22:00）,只在指定时间内推送
+- **推送频率控制**:
+  - 窗口内多次推送: 时间窗口内每次执行都推送
+  - 每天仅推送一次: 时间窗口内只推送一次（适合当日汇总或当前榜单模式）
+- **典型场景**:
+  - 工作时间推送: 只在工作日 09:00-18:00 接收消息
+  - 晚间汇总推送: 希望在晚上固定时间（如 20:00-22:00）收到汇总
+  - 避免打扰: 防止非工作时间收到推送通知
+
+> 提示: 此功能默认关闭,需在 `config/config.yaml` 中手动启用 `push_window.enabled`
 
 ### **精准内容筛选**
 
@@ -316,7 +341,7 @@ OPPO
 - **持续性分析**：区分一次性热点话题和持续发酵的深度新闻
 - **跨平台对比**：同一新闻在不同平台的排名表现，看出媒体关注度差异
 
-**实际效果**：不再错过重要新闻的完整发展过程，从话题萌芽到高峰热议，全程掌握
+> 不再错过重要新闻的完整发展过程，从话题萌芽到高峰热议，全程掌握
 
 <details>
 <summary><strong>👉 推送格式说明</strong></summary>
@@ -383,9 +408,7 @@ OPPO
 - **关注持续出现的话题**（占30%）：反复出现的新闻更重要  
 - **考虑排名质量**（占10%）：不仅多次出现，还经常排在前列
 
-**实际效果**：把分散在各个平台的热搜合并起来，按照你关心的热度重新排序
-
-> 这三个比例可以选择适合自己的场景进行调整
+> 把分散在各个平台的热搜合并起来，按照你关心的热度重新排序，这三个比例可以选择适合自己的场景进行调整
 
 <details>
 <summary><strong>👉 热点权重调整</strong></summary>
@@ -424,16 +447,27 @@ weight:
 
 ### **多渠道实时推送**
 
-支持**企业微信**(+ 微信推送方案)、**飞书**、**钉钉**、**Telegram**、**邮件**，消息直达手机和邮箱
-
-- **邮件推送**：支持 QQ邮箱、Gmail、Outlook、163邮箱等主流邮箱服务
-- **智能识别**：自动识别邮箱服务商，也可以手动配置 SMTP 服务器
-- **HTML 格式**：精美的 HTML 邮件格式，与网页版效果一致
+支持**企业微信**(+ 微信推送方案)、**飞书**、**钉钉**、**Telegram**、**邮件**、**ntfy**，消息直达手机和邮箱
 
 ### **多端适配**
 - **GitHub Pages**：自动生成精美网页报告，PC/移动端适配
 - **Docker部署**：支持多架构容器化运行
 - **数据持久化**：HTML/TXT多格式历史记录保存
+
+
+### **AI 智能分析（v3.0.0 新增）**
+
+基于 MCP (Model Context Protocol) 协议的 AI 对话分析系统，让你用自然语言深度挖掘新闻数据
+
+- **对话式查询**：用自然语言提问，如"查询昨天知乎的热点"、"分析比特币最近的热度趋势"
+- **13 种分析工具**：涵盖基础查询、智能检索、趋势分析、数据洞察、情感分析等
+- **多客户端支持**：Cherry Studio（GUI 配置）、Claude Desktop、Cursor、Cline 等
+- **深度分析能力**：
+  - 话题趋势追踪（热度变化、生命周期、爆火检测、趋势预测）
+  - 跨平台数据对比（活跃度统计、关键词共现）
+  - 智能摘要生成、相似新闻查找、历史关联检索
+
+> 告别手动翻阅数据文件，AI 助手帮你秒懂新闻背后的故事
 
 ### **零技术门槛部署**
 
@@ -463,10 +497,90 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 >**升级说明**：
 - **提示**：不要通过 **Sync fork** 更新本项目, 建议查看【历史更新】，明确具体的【升级方式】和【功能内容】
-- **小版本更新**：从 v2.x 升级到 v2.y, 用本项目的 `main.py` 代码替换你 fork 仓库中的对应文件 
+- **小版本更新**：从 v2.x 升级到 v2.y, 用本项目的 `main.py` 代码替换你 fork 仓库中的对应文件
 - **大版本升级**：从 v1.x 升级到 v2.y, 建议删除现有 fork 后重新 fork，这样更省力且避免配置冲突
 
-> 挖坑：下一次**新功能**，大概会是 ai 分析功能(●'◡'●)
+### 2025/10/21 - v3.0.1
+
+- **更新内容**：
+    - 尝试修复 ntfy 推送编码问题 + 2
+    - docker 移除对 linux/arm/v7 架构的支持
+
+### 2025/10/20 - v3.0.0
+
+**重大更新 - AI 分析功能上线** 🤖
+
+- **核心功能**：
+  - 新增基于 MCP (Model Context Protocol) 的 AI 分析服务器
+  - 支持13种智能分析工具：基础查询、智能检索、高级分析、系统管理
+  - 自然语言交互：通过对话方式查询和分析新闻数据
+  - 多客户端支持：Claude Desktop、Cherry Studio、Cursor、Cline 等
+
+- **分析能力**：
+  - 话题趋势分析（热度追踪、生命周期、爆火检测、趋势预测）
+  - 数据洞察（平台对比、活跃度统计、关键词共现）
+  - 情感分析、相似新闻查找、智能摘要生成
+  - 历史相关新闻检索、多模式搜索
+
+- **更新提示**：
+  - 这是独立的 AI 分析功能，不影响现有的推送功能
+  - 可选择性使用，无需升级现有部署
+
+
+<details>
+<summary><strong>👉 历史更新</strong></summary>
+
+### 2025/10/15 - v2.4.4
+
+- **更新内容**：
+    - 修复 ntfy 推送编码问题 + 1
+    - 修复推送时间窗口判断问题
+
+- **更新提示**：
+  - 建议【小版本升级】
+
+
+### 2025/10/10 - v2.4.3
+
+> 感谢 [nidaye996](https://github.com/sansan0/TrendRadar/issues/98) 发现的体验问题
+
+- **更新内容**：
+    - 重构"静默推送模式"命名为"推送时间窗口控制"，提升功能理解度
+    - 明确推送时间窗口作为可选附加功能，可与三种推送模式搭配使用
+    - 改进注释和文档描述，使功能定位更加清晰
+
+- **更新提示**：
+  - 这个仅仅是重构，可以不用升级
+
+
+### 2025/10/8 - v2.4.2
+
+- **更新内容**：
+    - 修复 ntfy 推送编码问题
+    - 修复配置文件缺失问题
+    - 优化 ntfy 推送效果
+    - 增加 github page 图片分段导出功能
+
+- **更新提示**：
+  - 建议使用【大版本更新】
+
+
+### 2025/10/2 - v2.4.0
+
+**新增 ntfy 推送通知**
+
+- **核心功能**：
+  - 支持 ntfy.sh 公共服务和自托管服务器
+
+- **使用场景**：
+  - 适合追求隐私的用户（支持自托管）
+  - 跨平台推送（iOS、Android、Desktop、Web）
+  - 无需注册账号（公共服务器）
+  - 开源免费（MIT 协议）
+
+- **更新提示**：
+  - 建议使用【大版本更新】
+
 
 ### 2025/09/26 - v2.3.2
 
@@ -474,9 +588,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 **修复说明**：
 - 解决了即使正确配置邮件通知，系统仍提示"未配置任何webhook"的问题
-
-<details>
-<summary><strong>👉 历史更新</strong></summary>
 
 ### 2025/09/22 - v2.3.1
 
@@ -522,7 +633,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - **推送频率可选**：时间段内支持单次推送或多次推送
 
 **更新提示**：
-- 本功能默认关闭，需手动在 config.yaml 中开启静默推送模式
+- 本功能默认关闭，需手动在 config.yaml 中开启推送时间窗口控制
 - 升级需同时更新 main.py 和 config.yaml 两个文件
 
 ### 2025/08/27 - v2.0.4
@@ -670,9 +781,9 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    #### 手机端设置：
    1. 打开企业微信 App → 进入目标内部群聊
-   2. 点击右上角"…"按钮 → 选择"群机器人"
-   3. 点击"添加" → 点击"新建" → 设置机器人昵称
-   4. 复制 Webhook 地址，配置到上方的 GitHub Secret 中
+   2. 点击右上角"…"按钮 → 选择"消息推送"
+   3. 点击"添加" → 名称输入"TrendRadar"
+   4. 复制 Webhook 地址，点击保存，复制的内容配置到上方的 GitHub Secret 中
 
    #### PC 端设置流程类似
    </details>
@@ -684,8 +795,49 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    **GitHub Secret 配置：**
    - 名称：`FEISHU_WEBHOOK_URL`
    - 值：你的飞书机器人 Webhook 地址
+   <br>
 
-   **机器人设置步骤：**
+   有两个方案，**方案一**配置简单，**方案二**配置复杂(老方法)
+
+   其中方案一，由 **ziventian**发现并提供建议，在这里感谢他，默认是个人推送，也可以配置群组推送操作[#97](https://github.com/sansan0/TrendRadar/issues/97) 
+
+   **方案一：**
+
+   1. 电脑浏览器打开 https://botbuilder.feishu.cn/home/my-command
+
+   2. 点击"新建机器人指令" 
+
+   3. 点击"选择触发器"，往下滑动，点击"Webhook 触发"
+
+   4. 此时你会看到"Webhook 地址"，把这个链接先复制到本地记事本暂存，继续接下来的操作
+
+   5. "参数"里面放上下面的内容，然后点击"完成"
+
+   ```json
+   {
+     "message_type": "text",
+     "content": {
+       "total_titles": "{{内容}}",
+       "timestamp": "{{内容}}",
+       "report_type": "{{内容}}",
+       "text": "{{内容}}"
+     }
+   }
+   ```
+
+   6. 点击"选择操作" > "通过官方机器人发消息"
+
+   7. 消息标题填写"TrendRadar 热点监控"
+
+   8. 最关键的部分来了，点击 + 按钮，选择"Webhook 触发"，然后按照下面的图片摆放
+
+   ![飞书机器人配置示例](_image/image.png)
+
+   9. 配置完成后，将第 4 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
+
+   <br>
+
+   **方案二：**
 
    1. 电脑浏览器打开 https://botbuilder.feishu.cn/home/my-app
 
@@ -720,6 +872,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    ![飞书机器人配置示例](_image/image.png)
 
    10. 配置完成后，将第 5 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
+
    </details>
 
    <details>
@@ -825,33 +978,153 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    </details>
 
+   <details>
+   <summary> <strong>👉 ntfy 推送</strong>（开源免费，支持自托管）</summary>
+   <br>
+
+   **两种使用方式：**
+
+   ### 方式一：免费使用（推荐新手） 🆓
+
+   **特点**：
+   - ✅ 无需注册账号，立即使用
+   - ✅ 每天 250 条消息（足够 90% 用户）
+   - ✅ Topic 名称即"密码"（需选择不易猜测的名称）
+   - ⚠️ 消息未加密，不适合敏感信息, 但适合我们这个项目的不敏感信息
+
+   **快速开始：**
+
+   1. **下载 ntfy 应用**：
+      - Android：[Google Play](https://play.google.com/store/apps/details?id=io.heckel.ntfy) / [F-Droid](https://f-droid.org/en/packages/io.heckel.ntfy/)
+      - iOS：[App Store](https://apps.apple.com/us/app/ntfy/id1625396347)
+      - 桌面：访问 [ntfy.sh](https://ntfy.sh)
+
+   2. **订阅主题**（选择一个难猜的名称）：
+      ```
+      建议格式：trendradar-{你的名字缩写}-{随机数字}
+   
+      ✅ 好例子：trendradar-zs-8492
+      ❌ 坏例子：news、alerts（太容易被猜到）
+      ```
+
+   3. **配置 GitHub Secret**：
+      - `NTFY_TOPIC`：填写你刚才订阅的主题名称
+      - `NTFY_SERVER_URL`：留空（默认使用 ntfy.sh）
+      - `NTFY_TOKEN`：留空
+
+   4. **测试**：
+      ```bash
+      curl -d "测试消息" ntfy.sh/你的主题名称
+      ```
+
+   ---
+
+   ### 方式二：自托管（完全隐私控制） 🔒
+
+   **适合人群**：有服务器、追求完全隐私、技术能力强
+
+   **优势**：
+   - ✅ 完全开源（Apache 2.0 + GPLv2）
+   - ✅ 数据完全自主控制
+   - ✅ 无任何限制
+   - ✅ 零费用
+
+   **Docker 一键部署**：
+   ```bash
+   docker run -d \
+     --name ntfy \
+     -p 80:80 \
+     -v /var/cache/ntfy:/var/cache/ntfy \
+     binwiederhier/ntfy \
+     serve --cache-file /var/cache/ntfy/cache.db
+   ```
+
+   **配置 TrendRadar**：
+   ```yaml
+   NTFY_SERVER_URL: https://ntfy.yourdomain.com
+   NTFY_TOPIC: trendradar-alerts  # 自托管可用简单名称
+   NTFY_TOKEN: tk_your_token  # 可选：启用访问控制
+   ```
+
+   **在应用中订阅**：
+   - 点击"Use another server"
+   - 输入你的服务器地址
+   - 输入主题名称
+   - （可选）输入登录凭据
+
+   ---
+
+   **常见问题：**
+
+   <details>
+   <summary><strong>Q1: 免费版够用吗？</strong></summary>
+
+   每天 250 条消息对大多数用户足够。按 30 分钟抓取一次计算，每天约 48 次推送，完全够用。
+   </details>
+
+   <details>
+   <summary><strong>Q2: Topic 名称真的安全吗？</strong></summary>
+
+   如果你选择随机的、足够长的名称（如 `trendradar-zs-8492-news`），暴力破解几乎不可能：
+   - ntfy 有严格的速率限制（1 秒 1 次请求）
+   - 64 个字符选择（A-Z, a-z, 0-9, _, -）
+   - 10 位随机字符串有 64^10 种可能性（需要数年才能破解）
+   </details>
+
+   ---
+
+   **推荐选择：**
+
+   | 用户类型 | 推荐方案 | 理由 |
+   |---------|---------|------|
+   | 普通用户 | 方式一（免费） | 简单快速，够用 |
+   | 技术用户 | 方式二（自托管） | 完全控制，无限制 |
+   | 高频用户 | 方式三（付费） | 这个自己去官网看吧 |
+
+   **相关链接：**
+   - [ntfy 官方文档](https://docs.ntfy.sh/)
+   - [自托管教程](https://docs.ntfy.sh/install/)
+   - [GitHub 仓库](https://github.com/binwiederhier/ntfy)
+
+   </details>
+
+
 3. **配置说明：**:
 
     - **推送设置**：在 [config/config.yaml](config/config.yaml) 中配置推送模式和通知选项
     - **关键词设置**：在 [config/frequency_words.txt](config/frequency_words.txt) 中添加你关心的关键词
 
-    **注意**：建议只调整文档中明确说明的配置项，其他选项主要供开发和测试使用。
+    **注意**：建议只调整文档中明确说明的配置项，其他选项主要供作者开发时测试使用
     
 
 
 <details>
 <summary><strong>👉 Docker 部署</strong></summary>
 
-### 🐳 Docker 部署
-
 #### 方式一：快速体验（一行命令）
 
+**Linux/macOS 系统：**
 ```bash
-# 直接运行，使用默认配置（仅体验功能，无推送通知）
-docker run -d --name trend-radar \
-  -v ./config:/app/config:ro \
-  -v ./output:/app/output \
-  -e CRON_SCHEDULE="*/30 * * * *" \
-  -e RUN_MODE="cron" \
-  -e IMMEDIATE_RUN="true" \
-  wantcat/trendradar:latest
+# 创建配置目录并下载配置文件
+mkdir -p config output
+wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml -P config/
+wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt -P config/
+```
+或者**手动创建**：
+1. 在当前目录创建 `config` 文件夹
+2. 下载配置文件：
+   - 访问 https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml → 右键"另存为" → 保存到 `config\config.yaml`
+   - 访问 https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt → 右键"另存为" → 保存到 `config\frequency_words.txt`
 
-# 或者启用手机应用推送通知或邮件通知
+完成后的目录结构应该是：
+```
+当前目录/
+└── config/
+    ├── config.yaml
+    └── frequency_words.txt
+```
+
+```bash
 docker run -d --name trend-radar \
   -v ./config:/app/config:ro \
   -v ./output:/app/output \
@@ -867,30 +1140,6 @@ docker run -d --name trend-radar \
   -e RUN_MODE="cron" \
   -e IMMEDIATE_RUN="true" \
   wantcat/trendradar:latest
-```
-
-**注意**：快速体验模式需要先准备配置文件：
-
-**Linux/macOS 系统：**
-```bash
-# 创建配置目录并下载配置文件
-mkdir -p config output
-wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml -P config/
-wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt -P config/
-```
-或者**手动创建**：
-1. 在当前目录下创建两个文件夹：`config` 和 `output`
-2. 下载配置文件到对应位置：
-   - 访问 https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml → 右键"另存为" → 保存到 `config\config.yaml`
-   - 访问 https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt → 右键"另存为" → 保存到 `config\frequency_words.txt`
-
-完成后的目录结构应该是：
-```
-当前目录/
-├── config/
-│   ├── config.yaml
-│   └── frequency_words.txt
-└── output/
 ```
 
 #### 方式二：使用 docker-compose（推荐）
@@ -1031,25 +1280,55 @@ docker exec -it trend-radar ls -la /app/config/
 </details>
 
 
+## 🤖 AI 智能分析部署
+
+TrendRadar v3.0.0 新增了基于 **MCP (Model Context Protocol)** 的 AI 分析功能，让你可以通过自然语言与新闻数据对话，进行深度分析。
+
+### 快速部署
+
+Cherry Studio 提供 GUI 配置界面，可快速部署。
+
+**详细教程**：[README-Cherry-Studio.md](README-Cherry-Studio.md)
+
+
+### 与 AI 对话的姿势
+
+**基础查询**：
+```
+"给我看看最新的新闻"
+"查询昨天知乎的热点"
+"我关注的词今天出现了多少次"
+```
+
+**趋势分析**：
+```
+"分析'比特币'最近一周的热度趋势"
+"看看'iPhone'话题是昙花一现还是持续热点"
+```
+
+**详细教程**：[README-MCP-FAQ.md](README-MCP-FAQ.md)
+
+>如果还有配置部署方面的问题，后续我会根据反馈出个**图文教程**，届时会更新到我的公众号上
+
 ## ☕问题答疑与1元点赞
 
-> 心意到就行，收到的**点赞**用于提高开发者开源的积极性。你们的**点赞**已记录于最顶部的**致谢名单**
+> 心意到就行，收到的**点赞**用于提高开发者开源的积极性。**点赞**已收录于**致谢名单**
+
+- **GitHub Issues**：适合针对性强的解答。提问时请提供完整信息（截图、错误日志、系统环境等）。
+- **公众号交流**：适合快速咨询。建议优先在相关文章下的公共留言区交流，如私信，请文明礼貌用语😉
+
 
 |公众号关注 |微信点赞 | 支付宝点赞 |
 |:---:|:---:|:---:| 
-| <img src="_image/weixin.png" width="300" title="硅基茶水间"/> | <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2025%2F07%2F17%2F2ae0a88d98079f7e876c2b4dc85233c6-9e8025.JPG" width="300" title="微信支付"/> | <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2025%2F07%2F17%2Fed4f20ab8e35be51f8e84c94e6e239b4-fe4947.JPG" width="300" title="支付宝支付"/> |
-
-| 答疑方式 | 适用场景 | 响应时间 | 详细程度 | 社区参与度 | 如何提问 |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| **GitHub Issues** | 部署配置问题<br/>功能异常 | 1-2天内 | 针对性强 | **公开讨论**<br/>其他用户可参与<br/>问题记录可搜索 | 📋 **提供完整信息**：<br/>• 尽量截图<br/>• 错误日志<br/>• 系统环境等等 |
-| **公众号交流** | 快速咨询<br/>使用疑问<br/>功能了解 | 几小时 | 简要指导 | 可以文章下留言<br/>也可以私信交流 | 💡 **抓住问题核心**：<br/>• 一句话描述问题<br/>• 说明想要的效果 |
+| <img src="_image/weixin.png" width="300" title="硅基茶水间"/> | <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2025%2F07%2F17%2F2ae0a88d98079f7e876c2b4dc85233c6-9e8025.JPG" width="300" title="微信支付"/> | <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2025%2F07%2F17%2F1ed4f20ab8e35be51f8e84c94e6e239b4-fe4947.JPG" width="300" title="支付宝支付"/> |
 
 ### 项目相关
 
-> **3 篇文章**：
+> **4 篇文章**：
 
 - [可在该文章下方留言，方便项目作者用手机答疑](https://mp.weixin.qq.com/s/KYEPfTPVzZNWFclZh4am_g)
 - [2个月破 1000 star，我的GitHub项目推广实战经验](https://mp.weixin.qq.com/s/jzn0vLiQFX408opcfpPPxQ)
+- [github fork 运行本项目的注意事项 ](https://mp.weixin.qq.com/s/C8evK-U7onG1sTTdwdW2zg)
 - [基于本项目，如何开展公众号或者新闻资讯类文章写作](https://mp.weixin.qq.com/s/8ghyfDAtQZjLrnWTQabYOQ)
 
 >**AI 开发**：
@@ -1084,49 +1363,56 @@ docker exec -it trend-radar ls -la /app/config/
 
 </details>
 
-<details>
-<summary><strong>👉 本项目流程图</strong></summary>
+### 本项目流程图
 
 ```mermaid
 flowchart TD
-    A[👤 用户开始] --> B[🍴 Fork 项目]
-    B --> C[⚙️ 选择通知方式]
+    A[👤 用户开始] --> B{🚀 选择部署方式}
     
-    C --> D1[📱 企业微信群机器人<br/>最简单快速]
-    C --> D2[💬 飞书机器人<br/>显示效果最佳]
-    C --> D3[🔔 钉钉机器人<br/>]
-    C --> D4[📟 Telegram Bot<br/>]
+    B -->|云端部署| C1[🍴 Fork 项目到 GitHub]
+    B -->|本地部署| C2[🐳 Docker 部署]
     
-    D1 --> E[🔑 配置 GitHub Secrets<br/>填入机器人 Webhook 地址]
-    D2 --> E
-    D3 --> E  
-    D4 --> E
+    C1 --> D[⚙️ 配置通知渠道<br/>可同时配置多个]
+    C2 --> D
     
-    E --> F[📝 编辑关键词配置<br/>config/frequency_words.txt<br/>添加你关心的词汇]
-    F --> G[🎯 选择运行模式<br/>config/config.yaml<br/>daily/current/incremental]
+    D --> E[选择通知方式：<br/>📱企业微信 💬飞书 🔔钉钉<br/>📟Telegram 📧邮件]
     
-    G --> H[✅ 配置完成]
-    H --> I[🤖 系统根据设定时间自动运行]
+    E --> F[🔑 填写通知参数<br/>GitHub Secrets 或环境变量]
     
-    I --> J[📊 爬取各大平台热点]
-    J --> K[🔍 根据关键词筛选]
-    K --> L[📱 推送到你的手机]
+    F --> G[📝 配置关键词<br/>config/frequency_words.txt<br/>普通词/必须词+/过滤词!]
     
-    L --> M[📈 查看推送结果]
-    M --> N{满意效果?}
-    N -->|不满意| F
-    N -->|满意| O[🎉 持续接收精准推送]
+    G --> H[🎯 选择运行模式<br/>config/config.yaml]
     
-    style A fill:#e1f5fe
+    H --> H1[📋 daily - 当日汇总<br/>定时推送所有匹配新闻]
+    H --> H2[📰 current - 当前榜单<br/>定时推送最新榜单]
+    H --> H3[📈 incremental - 增量监控<br/>仅推送新增内容]
+    
+    H1 --> I[可选：推送时间窗口控制<br/>⏰ 限制推送时间范围]
+    H2 --> I
+    H3 --> I
+    
+    I --> J[✅ 配置完成]
+    
+    J --> K[🤖 系统自动运行]
+    
+    K --> L[🕷️ 爬取11+平台热点]
+    L --> M[🔍 关键词筛选]
+    M --> N[⚖️ 权重算法排序<br/>排名60% + 频次30% + 热度10%]
+    N --> O[📊 生成报告<br/>HTML网页 + 推送消息]
+    O --> P[📱 多渠道推送通知]
+    
+    P --> Q[🎉 持续接收精准推送<br/>告别信息过载]
+    
+    style A fill:#e3f2fd
     style B fill:#f3e5f5
-    style E fill:#fff3e0
-    style F fill:#e8f5e8
-    style G fill:#e8f5e8
-    style L fill:#ffebee
-    style O fill:#e8f5e8
+    style D fill:#fff3e0
+    style F fill:#fff9c4
+    style G fill:#e8f5e9
+    style H fill:#e0f2f1
+    style I fill:#fce4ec
+    style O fill:#e1bee7
+    style Q fill:#c8e6c9
 ```
-
-</details>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=sansan0/TrendRadar&type=Date)](https://www.star-history.com/#sansan0/TrendRadar&Date)
 
@@ -1138,8 +1424,6 @@ GPL-3.0 License
 ---
 
 <div align="center">
-
-**⭐ 如果这个工具对你有帮助，请给项目点个 Star 支持开发！**
 
 [🔝 回到顶部](#trendradar)
 

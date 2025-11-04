@@ -20,16 +20,6 @@ RUN set -ex && \
     export SUPERCRONIC_SHA1SUM=4ab6343b52bf9da592e8b4bb7ae6eb5a8e21b71e; \
     export SUPERCRONIC=supercronic-linux-arm64; \
     ;; \
-    arm) \
-    export SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-arm; \
-    export SUPERCRONIC_SHA1SUM=4ba4cd0da62082056b6def085fa9377d965fbe01; \
-    export SUPERCRONIC=supercronic-linux-arm; \
-    ;; \
-    386) \
-    export SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-386; \
-    export SUPERCRONIC_SHA1SUM=80b4fff03a8d7bf2f24a1771f37640337855e949; \
-    export SUPERCRONIC=supercronic-linux-386; \
-    ;; \
     *) \
     echo "Unsupported architecture: ${TARGETARCH}"; \
     exit 1; \

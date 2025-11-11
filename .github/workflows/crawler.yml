@@ -70,3 +70,34 @@ jobs:
           git config --global user.email 'actions@github.com'
           git add -A
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" && git push)
+    # ===== 新增：微信模板消息推送 =====
+wechat-push:
+    needs: crawl          # 等爬虫 job 跑完再执行
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3   # 把仓库拉下来，方便读输出文件
+
+      - name: 发送微信模板消息
+        env:
+          APP_ID:     ${{ secrets.WECHAT_APP_ID }}
+          APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
+          TEMPLATE_ID:${{ secrets.WECHAT_TEMPLATE_ID }}
+          OPENID:     ${{ secrets.WECHAT_OPENID }}
+        run: |
+          # 1. 获取 access_token
+          TOKEN=$(curl -s "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APP_ID}&secret=${APP_SECRET}" | jq -r .access_token)
+
+          # 2. 把上一步生成的结果文件内容转义成 JSON 字符串
+          #    TrendRadar 默认把列表写在 trending.txt，如有不同请改文件名
+          CONTENT=$(jq -Rs . < trending.txt)
+
+          # 3. 组装并发送模板消息
+          curl -X POST "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=$TOKEN" \
+               -H 'Content-Type: application/json' \
+               -d "{
+                 \"touser\":\"${OPENID}\",
+                 \"template_id\":\"${TEMPLATE_ID}\",
+                 \"data\":{
+                   \"news\": { \"value\":${CONTENT}, \"color\":\"#173177\" }
+                 }
+               }"

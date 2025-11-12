@@ -1211,8 +1211,8 @@ docker run -d --name trend-radar \
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt -P config/
    
    # 下载 docker-compose 配置
-   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/.env
-   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/docker-compose.yml
+   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/.env -P docker/
+   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/docker-compose.yml -P docker/
    ```
 
 完成后的目录结构应该是：

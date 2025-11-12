@@ -1,0 +1,49 @@
+name: Run Tests (Docker Build)
+# This workflow is used to run Playwright tests in a Docker container built from the current branch
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: wantcat/trendradar
+
+jobs:
+  build:
+    runs-on: ${{ matrix.settings.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: ubuntu-24.04
+            platform: 'linux/amd64'
+
+          - host: ubuntu-24.04-arm
+            platform: 'linux/arm64'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Get version
+        run: |
+          IMAGE_TAG=$(cat version)
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: ${{ matrix.settings.platform }}
+          load: true
+          push: false
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}

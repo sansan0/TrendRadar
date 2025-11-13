@@ -1378,6 +1378,15 @@ docker exec -it trend-radar /bin/bash
 docker exec -it trend-radar ls -la /app/config/
 ```
 
+## 云部署
+
+### EdgeOne Pages
+
+[![使用 EdgeOne Pages 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?repository-url=https://github.com/BLUE-YBZ/TrendRadar.git)
+
+当用户点击此按钮时，会配置当前仓库为部署源，点击部署后会自动 fork 到用户名下，然后自动部署。
+部署完成后会生成一个可访问的 URL，用户可以通过此 URL 访问部署的应用（支持配置自定义域名）。
+![TrendRadar deploy](image.png)
 
 ## 🤖 AI 智能分析部署
 

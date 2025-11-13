@@ -62,7 +62,7 @@ def load_config():
     with open(config_path, "r", encoding="utf-8") as f:
         config_data = yaml.safe_load(f)
 
-    print(f"配置文件加载成功: {config_path}")
+    print(f"設定ファイル読み込み成功: {config_path}")  # 原文: 配置文件加载成功
 
     # 构建配置
     config = {
@@ -205,17 +205,17 @@ def load_config():
         notification_sources.append(f"ntfy({server_source})")
 
     if notification_sources:
-        print(f"通知渠道配置来源: {', '.join(notification_sources)}")
+        print(f"通知チャネル設定元: {', '.join(notification_sources)}")  # 原文: 通知渠道配置来源
     else:
-        print("未配置任何通知渠道")
+        print("通知チャネルが設定されていません")  # 原文: 未配置任何通知渠道
 
     return config
 
 
-print("正在加载配置...")
+print("設定を読み込み中...")  # 原文: 正在加载配置...
 CONFIG = load_config()
-print(f"TrendRadar v{VERSION} 配置加载完成")
-print(f"监控平台数量: {len(CONFIG['PLATFORMS'])}")
+print(f"TrendRadar v{VERSION} 設定読み込み完了")  # 原文: 配置加载完成
+print(f"監視プラットフォーム数: {len(CONFIG['PLATFORMS'])}")  # 原文: 监控平台数量
 
 
 # === 工具函数 ===
@@ -278,14 +278,14 @@ def check_version_update(
         response.raise_for_status()
 
         remote_version = response.text.strip()
-        print(f"当前版本: {current_version}, 远程版本: {remote_version}")
+        print(f"現在のバージョン: {current_version}, リモートバージョン: {remote_version}")  # 原文: 当前版本...远程版本
 
         # 比较版本
         def parse_version(version_str):
             try:
                 parts = version_str.strip().split(".")
                 if len(parts) != 3:
-                    raise ValueError("版本号格式不正确")
+                    raise ValueError("バージョン番号の形式が正しくありません")  # 原文: 版本号格式不正确
                 return int(parts[0]), int(parts[1]), int(parts[2])
             except:
                 return 0, 0, 0
@@ -297,7 +297,7 @@ def check_version_update(
         return need_update, remote_version if need_update else None
 
     except Exception as e:
-        print(f"版本检查失败: {e}")
+        print(f"バージョンチェック失敗: {e}")  # 原文: 版本检查失败
         return False, None
 
 
@@ -1044,7 +1044,7 @@ def count_word_frequency(
 
     # 如果没有配置词组，创建一个包含所有新闻的虚拟词组
     if not word_groups:
-        print("频率词配置为空，将显示所有新闻")
+        print("頻度ワード設定が空です。全てのニュースを表示します")  # 原文: 频率词配置为空，将显示所有新闻
         word_groups = [{"required": [], "normal": [], "group_key": "全部新闻"}]
         filter_words = []  # 清空过滤词，显示所有新闻
 
@@ -1086,7 +1086,7 @@ def count_word_frequency(
                             results_to_process[source_id] = filtered_titles
 
                 print(
-                    f"当前榜单模式：最新时间 {latest_time}，筛选出 {sum(len(titles) for titles in results_to_process.values())} 条当前榜单新闻"
+                    f"現在のランキングモード：最新時刻 {latest_time}、{sum(len(titles) for titles in results_to_process.values())} 件の現在ランキングニュースを抽出"  # 原文: 当前榜单模式：最新时间...筛选出...条当前榜单新闻
                 )
             else:
                 results_to_process = results
@@ -1099,11 +1099,11 @@ def count_word_frequency(
         all_news_are_new = False
         total_input_news = sum(len(titles) for titles in results.values())
         filter_status = (
-            "全部显示"
+            "全て表示"  # 原文: 全部显示
             if len(word_groups) == 1 and word_groups[0]["group_key"] == "全部新闻"
-            else "频率词过滤"
+            else "頻度ワードフィルタ"  # 原文: 频率词过滤
         )
-        print(f"当日汇总模式：处理 {total_input_news} 条新闻，模式：{filter_status}")
+        print(f"当日まとめモード：{total_input_news} 件のニュースを処理、モード：{filter_status}")  # 原文: 当日汇总模式：处理...条新闻，模式
 
     word_stats = {}
     total_titles = 0
@@ -1267,7 +1267,7 @@ def count_word_frequency(
                 else "频率词匹配"
             )
             print(
-                f"增量模式：当天第一次爬取，{total_input_news} 条新闻中有 {matched_new_count} 条{filter_status}"
+                f"増分モード：当日初回クロール、{total_input_news} 件のニュース中 {matched_new_count} 件が{filter_status}"  # 原文: 增量模式：当天第一次爬取...条新闻中有...条
             )
         else:
             if new_titles:
@@ -1276,15 +1276,15 @@ def count_word_frequency(
                     "全部显示"
                     if len(word_groups) == 1
                     and word_groups[0]["group_key"] == "全部新闻"
-                    else "匹配频率词"
+                    else "頻度ワードマッチ"  # 原文: 匹配频率词
                 )
                 print(
-                    f"增量模式：{total_new_count} 条新增新闻中，有 {matched_new_count} 条{filter_status}"
+                    f"増分モード：{total_new_count} 件の新着ニュース中、{matched_new_count} 件が{filter_status}"  # 原文: 增量模式...条新增新闻中，有...条
                 )
                 if matched_new_count == 0 and len(word_groups) > 1:
-                    print("增量模式：没有新增新闻匹配频率词，将不会发送通知")
+                    print("増分モード：頻度ワードにマッチする新着ニュースがありません。通知を送信しません")  # 原文: 增量模式：没有新增新闻匹配频率词，将不会发送通知
             else:
-                print("增量模式：未检测到新增新闻")
+                print("増分モード：新着ニュースは検出されませんでした")  # 原文: 增量模式：未检测到新増新闻
     elif mode == "current":
         total_input_news = sum(len(titles) for titles in results_to_process.values())
         if is_first_today:
@@ -1294,17 +1294,17 @@ def count_word_frequency(
                 else "频率词匹配"
             )
             print(
-                f"当前榜单模式：当天第一次爬取，{total_input_news} 条当前榜单新闻中有 {matched_new_count} 条{filter_status}"
+                f"現在のランキングモード：当日初回クロール、{total_input_news} 件の現在ランキングニュース中 {matched_new_count} 件が{filter_status}"  # 原文: 当前榜单模式：当天第一次爬取...条当前榜单新闻中有...条
             )
         else:
             matched_count = sum(stat["count"] for stat in word_stats.values())
             filter_status = (
                 "全部显示"
                 if len(word_groups) == 1 and word_groups[0]["group_key"] == "全部新闻"
-                else "频率词匹配"
+                else "頻度ワードマッチ"  # 原文: 频率词匹配
             )
             print(
-                f"当前榜单模式：{total_input_news} 条当前榜单新闻中有 {matched_count} 条{filter_status}"
+                f"現在のランキングモード：{total_input_news} 件の現在ランキングニュース中 {matched_count} 件が{filter_status}"  # 原文: 当前榜单模式...条当前榜单新闻中有...条
             )
 
     stats = []

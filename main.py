@@ -20,16 +20,16 @@ import requests
 import yaml
 
 
-VERSION = "3.0.5"
+VERSION = "3.0.4"
 
 
 # === SMTP邮件配置 ===
 SMTP_CONFIGS = {
-    # Gmail（使用 STARTTLS）
+    # Gmail
     "gmail.com": {"server": "smtp.gmail.com", "port": 587, "encryption": "TLS"},
-    # QQ邮箱（使用 SSL，更稳定）
-    "qq.com": {"server": "smtp.qq.com", "port": 465, "encryption": "SSL"},
-    # Outlook（使用 STARTTLS）
+    # QQ邮箱
+    "qq.com": {"server": "smtp.qq.com", "port": 587, "encryption": "TLS"},
+    # Outlook
     "outlook.com": {
         "server": "smtp-mail.outlook.com",
         "port": 587,
@@ -41,13 +41,13 @@ SMTP_CONFIGS = {
         "encryption": "TLS",
     },
     "live.com": {"server": "smtp-mail.outlook.com", "port": 587, "encryption": "TLS"},
-    # 网易邮箱（使用 SSL，更稳定）
-    "163.com": {"server": "smtp.163.com", "port": 465, "encryption": "SSL"},
-    "126.com": {"server": "smtp.126.com", "port": 465, "encryption": "SSL"},
-    # 新浪邮箱（使用 SSL）
-    "sina.com": {"server": "smtp.sina.com", "port": 465, "encryption": "SSL"},
-    # 搜狐邮箱（使用 SSL）
-    "sohu.com": {"server": "smtp.sohu.com", "port": 465, "encryption": "SSL"},
+    # 网易邮箱
+    "163.com": {"server": "smtp.163.com", "port": 587, "encryption": "TLS"},
+    "126.com": {"server": "smtp.126.com", "port": 587, "encryption": "TLS"},
+    # 新浪邮箱
+    "sina.com": {"server": "smtp.sina.com", "port": 587, "encryption": "TLS"},
+    # 搜狐邮箱
+    "sohu.com": {"server": "smtp.sohu.com", "port": 587, "encryption": "TLS"},
 }
 
 
@@ -69,19 +69,12 @@ def load_config():
         "VERSION_CHECK_URL": config_data["app"]["version_check_url"],
         "SHOW_VERSION_UPDATE": config_data["app"]["show_version_update"],
         "REQUEST_INTERVAL": config_data["crawler"]["request_interval"],
-        "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
-        or config_data["report"]["mode"],
+        "REPORT_MODE": config_data["report"]["mode"],
         "RANK_THRESHOLD": config_data["report"]["rank_threshold"],
         "USE_PROXY": config_data["crawler"]["use_proxy"],
         "DEFAULT_PROXY": config_data["crawler"]["default_proxy"],
-        "ENABLE_CRAWLER": os.environ.get("ENABLE_CRAWLER", "").strip().lower()
-        in ("true", "1")
-        if os.environ.get("ENABLE_CRAWLER", "").strip()
-        else config_data["crawler"]["enable_crawler"],
-        "ENABLE_NOTIFICATION": os.environ.get("ENABLE_NOTIFICATION", "").strip().lower()
-        in ("true", "1")
-        if os.environ.get("ENABLE_NOTIFICATION", "").strip()
-        else config_data["notification"]["enable_notification"],
+        "ENABLE_CRAWLER": config_data["crawler"]["enable_crawler"],
+        "ENABLE_NOTIFICATION": config_data["notification"]["enable_notification"],
         "MESSAGE_BATCH_SIZE": config_data["notification"]["message_batch_size"],
         "DINGTALK_BATCH_SIZE": config_data["notification"].get(
             "dingtalk_batch_size", 20000
@@ -92,34 +85,23 @@ def load_config():
             "feishu_message_separator"
         ],
         "PUSH_WINDOW": {
-            "ENABLED": os.environ.get("PUSH_WINDOW_ENABLED", "").strip().lower()
-            in ("true", "1")
-            if os.environ.get("PUSH_WINDOW_ENABLED", "").strip()
-            else config_data["notification"]
+            "ENABLED": config_data["notification"]
             .get("push_window", {})
             .get("enabled", False),
             "TIME_RANGE": {
-                "START": os.environ.get("PUSH_WINDOW_START", "").strip()
-                or config_data["notification"]
+                "START": config_data["notification"]
                 .get("push_window", {})
                 .get("time_range", {})
                 .get("start", "08:00"),
-                "END": os.environ.get("PUSH_WINDOW_END", "").strip()
-                or config_data["notification"]
+                "END": config_data["notification"]
                 .get("push_window", {})
                 .get("time_range", {})
                 .get("end", "22:00"),
             },
-            "ONCE_PER_DAY": os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip().lower()
-            in ("true", "1")
-            if os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip()
-            else config_data["notification"]
+            "ONCE_PER_DAY": config_data["notification"]
             .get("push_window", {})
             .get("once_per_day", True),
-            "RECORD_RETENTION_DAYS": int(
-                os.environ.get("PUSH_WINDOW_RETENTION_DAYS", "").strip() or "0"
-            )
-            or config_data["notification"]
+            "RECORD_RETENTION_DAYS": config_data["notification"]
             .get("push_window", {})
             .get("push_record_retention_days", 7),
         },
@@ -1645,431 +1627,648 @@ def render_html_content(
     """渲染HTML内容"""
     html = """
     <!DOCTYPE html>
-    <html>
+    <html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="light dark">
         <title>热点新闻分析</title>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <style>
-            * { box-sizing: border-box; }
-            body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-                margin: 0; 
-                padding: 16px; 
-                background: #fafafa;
-                color: #333;
-                line-height: 1.5;
+            * {
+                box-sizing: border-box;
+                -webkit-font-smoothing: antialiased;
             }
-            
+
+            :root {
+                color-scheme: light;
+                --bg-gradient: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 28%, #f1f5f9 100%);
+                --card-bg: rgba(255, 255, 255, 0.9);
+                --border: rgba(148, 163, 184, 0.25);
+                --shadow: 0 20px 45px -22px rgba(15, 23, 42, 0.45);
+                --primary: #4f46e5;
+                --primary-dark: #4338ca;
+                --accent: #6366f1;
+                --hot: #ef4444;
+                --warm: #f97316;
+                --success: #059669;
+                --muted: #64748b;
+            }
+
+            body {
+                font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+                margin: 0;
+                padding: 40px 24px;
+                min-height: 100vh;
+                background: var(--bg-gradient);
+                color: #0f172a;
+                display: flex;
+                justify-content: center;
+            }
+
             .container {
-                max-width: 600px;
-                margin: 0 auto;
-                background: white;
-                border-radius: 12px;
+                width: min(960px, 100%);
+                background: var(--card-bg);
+                border-radius: 24px;
                 overflow: hidden;
-                box-shadow: 0 2px 16px rgba(0,0,0,0.06);
-            }
-            
-            .header {
-                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-                color: white;
-                padding: 32px 24px;
-                text-align: center;
+                border: 1px solid var(--border);
+                box-shadow: var(--shadow);
+                backdrop-filter: blur(24px);
                 position: relative;
             }
-            
+
+            .container::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(120deg, rgba(99, 102, 241, 0.08), rgba(236, 72, 153, 0.05));
+                pointer-events: none;
+            }
+
+            .header {
+                background: radial-gradient(circle at top left, rgba(76, 29, 149, 0.95), rgba(79, 70, 229, 0.92));
+                color: white;
+                padding: 48px 56px 44px;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .header::after {
+                content: "";
+                position: absolute;
+                inset: auto -25% -60% -25%;
+                background: radial-gradient(circle, rgba(147, 197, 253, 0.35), transparent 60%);
+                opacity: 0.6;
+            }
+
             .save-buttons {
                 position: absolute;
-                top: 16px;
-                right: 16px;
+                top: 24px;
+                right: 24px;
                 display: flex;
-                gap: 8px;
+                gap: 10px;
+                z-index: 2;
             }
-            
+
             .save-btn {
-                background: rgba(255, 255, 255, 0.2);
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                background: rgba(255, 255, 255, 0.12);
+                border: 1px solid rgba(255, 255, 255, 0.22);
                 color: white;
-                padding: 8px 16px;
-                border-radius: 6px;
+                padding: 10px 18px;
+                border-radius: 999px;
                 cursor: pointer;
                 font-size: 13px;
-                font-weight: 500;
-                transition: all 0.2s ease;
-                backdrop-filter: blur(10px);
+                font-weight: 600;
+                letter-spacing: 0.2px;
+                transition: all 0.22s ease;
+                backdrop-filter: blur(14px);
                 white-space: nowrap;
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
             }
-            
+
             .save-btn:hover {
-                background: rgba(255, 255, 255, 0.3);
-                border-color: rgba(255, 255, 255, 0.5);
+                background: rgba(255, 255, 255, 0.24);
+                border-color: rgba(255, 255, 255, 0.4);
                 transform: translateY(-1px);
+                box-shadow: 0 12px 25px -15px rgba(15, 23, 42, 0.65);
             }
-            
+
             .save-btn:active {
                 transform: translateY(0);
+                box-shadow: none;
             }
-            
+
             .save-btn:disabled {
-                opacity: 0.6;
+                opacity: 0.65;
                 cursor: not-allowed;
             }
-            
+
             .header-title {
-                font-size: 22px;
+                font-size: 32px;
                 font-weight: 700;
-                margin: 0 0 20px 0;
+                margin: 8px 0 24px;
+                letter-spacing: 0.6px;
+                position: relative;
+                z-index: 1;
             }
-            
+
+            .header-subtitle {
+                font-size: 15px;
+                opacity: 0.85;
+                margin: 0;
+                letter-spacing: 0.4px;
+            }
+
             .header-info {
                 display: grid;
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
                 gap: 16px;
                 font-size: 14px;
-                opacity: 0.95;
+                position: relative;
+                z-index: 1;
             }
-            
+
             .info-item {
-                text-align: center;
+                padding: 14px 16px;
+                border-radius: 18px;
+                background: rgba(15, 23, 42, 0.22);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                min-width: 0;
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
             }
-            
+
             .info-label {
                 display: block;
                 font-size: 12px;
-                opacity: 0.8;
-                margin-bottom: 4px;
+                opacity: 0.75;
+                margin-bottom: 6px;
+                letter-spacing: 0.3px;
             }
-            
+
             .info-value {
-                font-weight: 600;
-                font-size: 16px;
+                font-weight: 700;
+                font-size: 18px;
+                letter-spacing: 0.4px;
             }
-            
+
             .content {
-                padding: 24px;
+                padding: 40px 48px 48px;
+                position: relative;
+                z-index: 1;
             }
-            
+
             .word-group {
-                margin-bottom: 40px;
+                margin-bottom: 36px;
+                padding: 28px 28px 24px;
+                border-radius: 20px;
+                background: rgba(248, 250, 252, 0.9);
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                box-shadow: 0 18px 35px -26px rgba(30, 41, 59, 0.55);
+                position: relative;
             }
-            
-            .word-group:first-child {
-                margin-top: 0;
+
+            .word-group::before {
+                content: "";
+                position: absolute;
+                inset: 14px 0 auto;
+                height: 3px;
+                background: linear-gradient(90deg, rgba(79, 70, 229, 0.22), rgba(236, 72, 153, 0.25), rgba(59, 130, 246, 0.2));
+                opacity: 0;
+                transition: opacity 0.25s ease;
             }
-            
+
+            .word-group:hover::before {
+                opacity: 1;
+            }
+
             .word-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                margin-bottom: 20px;
-                padding-bottom: 8px;
-                border-bottom: 1px solid #f0f0f0;
+                margin-bottom: 22px;
+                gap: 16px;
+                flex-wrap: wrap;
             }
-            
+
             .word-info {
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 16px;
+                flex-wrap: wrap;
             }
-            
+
             .word-name {
-                font-size: 17px;
-                font-weight: 600;
-                color: #1a1a1a;
+                font-size: 20px;
+                font-weight: 700;
+                color: #0f172a;
+                letter-spacing: 0.4px;
             }
-            
+
             .word-count {
-                color: #666;
                 font-size: 13px;
-                font-weight: 500;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 1.2px;
+                border-radius: 999px;
+                padding: 6px 14px;
+                background: rgba(148, 163, 184, 0.16);
+                color: #475569;
+                border: 1px solid rgba(148, 163, 184, 0.38);
             }
-            
-            .word-count.hot { color: #dc2626; font-weight: 600; }
-            .word-count.warm { color: #ea580c; font-weight: 600; }
-            
+
+            .word-count.hot {
+                background: rgba(239, 68, 68, 0.16);
+                border-color: rgba(239, 68, 68, 0.4);
+                color: var(--hot);
+                box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.12);
+            }
+
+            .word-count.warm {
+                background: rgba(249, 115, 22, 0.16);
+                border-color: rgba(249, 115, 22, 0.4);
+                color: var(--warm);
+                box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.12);
+            }
+
             .word-index {
-                color: #999;
+                color: var(--muted);
                 font-size: 12px;
+                letter-spacing: 0.4px;
             }
-            
+
             .news-item {
-                margin-bottom: 20px;
-                padding: 16px 0;
-                border-bottom: 1px solid #f5f5f5;
-                position: relative;
                 display: flex;
-                gap: 12px;
-                align-items: center;
+                gap: 16px;
+                align-items: flex-start;
+                background: white;
+                border-radius: 18px;
+                padding: 18px 20px;
+                margin-bottom: 16px;
+                border: 1px solid rgba(226, 232, 240, 0.9);
+                box-shadow: 0 12px 30px -28px rgba(15, 23, 42, 0.7);
+                position: relative;
+                transition: transform 0.18s ease, box-shadow 0.18s ease;
             }
-            
+
+            .news-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 18px 38px -24px rgba(30, 41, 59, 0.35);
+            }
+
             .news-item:last-child {
-                border-bottom: none;
+                margin-bottom: 0;
             }
-            
+
             .news-item.new::after {
                 content: "NEW";
                 position: absolute;
-                top: 12px;
-                right: 0;
+                top: 16px;
+                right: 18px;
                 background: #fbbf24;
-                color: #92400e;
-                font-size: 9px;
+                color: #78350f;
+                font-size: 10px;
                 font-weight: 700;
-                padding: 3px 6px;
-                border-radius: 4px;
-                letter-spacing: 0.5px;
+                padding: 4px 10px;
+                border-radius: 999px;
+                letter-spacing: 1px;
+                box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.2);
             }
-            
+
             .news-number {
-                color: #999;
+                background: linear-gradient(135deg, #6366f1, #8b5cf6);
+                color: white;
                 font-size: 13px;
-                font-weight: 600;
-                min-width: 20px;
-                text-align: center;
-                flex-shrink: 0;
-                background: #f8f9fa;
-                border-radius: 50%;
-                width: 24px;
-                height: 24px;
+                font-weight: 700;
+                width: 34px;
+                height: 34px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                align-self: flex-start;
-                margin-top: 8px;
+                border-radius: 12px;
+                flex-shrink: 0;
+                box-shadow: 0 10px 18px -16px rgba(79, 70, 229, 0.75);
             }
-            
+
             .news-content {
                 flex: 1;
                 min-width: 0;
-                padding-right: 40px;
+                padding-right: 48px;
             }
-            
+
             .news-item.new .news-content {
-                padding-right: 50px;
+                padding-right: 60px;
             }
-            
+
             .news-header {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                margin-bottom: 8px;
+                gap: 10px;
+                margin-bottom: 10px;
                 flex-wrap: wrap;
             }
-            
+
             .source-name {
-                color: #666;
+                color: var(--muted);
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.6px;
+                text-transform: uppercase;
+            }
+
+            .rank-num {
+                color: white;
+                background: #6b7280;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 4px 9px;
+                border-radius: 999px;
+                min-width: 24px;
+                text-align: center;
+                letter-spacing: 0.8px;
+            }
+
+            .rank-num.top {
+                background: linear-gradient(135deg, #ef4444, #b91c1c);
+                box-shadow: 0 10px 18px -16px rgba(239, 68, 68, 0.65);
+            }
+
+            .rank-num.high {
+                background: linear-gradient(135deg, #f97316, #ea580c);
+                box-shadow: 0 10px 18px -16px rgba(249, 115, 22, 0.65);
+            }
+
+            .time-info {
+                color: #94a3b8;
                 font-size: 12px;
                 font-weight: 500;
+                letter-spacing: 0.2px;
             }
-            
-            .rank-num {
-                color: #fff;
-                background: #6b7280;
-                font-size: 10px;
-                font-weight: 700;
-                padding: 2px 6px;
-                border-radius: 10px;
-                min-width: 18px;
-                text-align: center;
-            }
-            
-            .rank-num.top { background: #dc2626; }
-            .rank-num.high { background: #ea580c; }
-            
-            .time-info {
-                color: #999;
-                font-size: 11px;
-            }
-            
+
             .count-info {
-                color: #059669;
-                font-size: 11px;
-                font-weight: 500;
+                color: var(--success);
+                font-size: 12px;
+                font-weight: 600;
             }
-            
+
             .news-title {
-                font-size: 15px;
-                line-height: 1.4;
-                color: #1a1a1a;
+                font-size: 16px;
+                line-height: 1.55;
+                color: #0f172a;
                 margin: 0;
             }
-            
+
             .news-link {
-                color: #2563eb;
+                color: var(--primary);
                 text-decoration: none;
+                font-weight: 600;
+                transition: color 0.18s ease;
             }
-            
+
             .news-link:hover {
-                text-decoration: underline;
+                color: var(--primary-dark);
             }
-            
+
             .news-link:visited {
                 color: #7c3aed;
             }
-            
+
             .new-section {
-                margin-top: 40px;
-                padding-top: 24px;
-                border-top: 2px solid #f0f0f0;
+                margin-top: 56px;
+                padding: 40px 32px 32px;
+                border-radius: 24px;
+                background: linear-gradient(160deg, rgba(236, 233, 254, 0.8), rgba(230, 245, 254, 0.85));
+                border: 1px solid rgba(165, 180, 252, 0.32);
+                box-shadow: 0 16px 40px -28px rgba(59, 130, 246, 0.38);
             }
-            
+
             .new-section-title {
-                color: #1a1a1a;
-                font-size: 16px;
-                font-weight: 600;
-                margin: 0 0 20px 0;
+                color: #1e1b4b;
+                font-size: 20px;
+                font-weight: 700;
+                margin: 0 0 26px;
+                letter-spacing: 0.5px;
             }
-            
+
             .new-source-group {
-                margin-bottom: 24px;
+                margin-bottom: 30px;
+                padding: 20px 20px 14px;
+                border-radius: 18px;
+                background: rgba(255, 255, 255, 0.86);
+                border: 1px solid rgba(191, 219, 254, 0.45);
+                box-shadow: inset 0 0 0 1px rgba(191, 219, 254, 0.18);
             }
-            
+
             .new-source-title {
-                color: #666;
-                font-size: 13px;
-                font-weight: 500;
-                margin: 0 0 12px 0;
-                padding-bottom: 6px;
-                border-bottom: 1px solid #f5f5f5;
+                color: #334155;
+                font-size: 14px;
+                font-weight: 700;
+                margin: 0 0 14px;
+                padding-bottom: 8px;
+                border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
+                letter-spacing: 0.4px;
             }
-            
+
             .new-item {
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                padding: 8px 0;
-                border-bottom: 1px solid #f9f9f9;
+                gap: 14px;
+                padding: 10px 0;
+                border-bottom: 1px solid rgba(226, 232, 240, 0.6);
             }
-            
+
             .new-item:last-child {
                 border-bottom: none;
+                padding-bottom: 0;
             }
-            
+
             .new-item-number {
-                color: #999;
+                background: rgba(79, 70, 229, 0.12);
+                color: var(--primary);
                 font-size: 12px;
-                font-weight: 600;
-                min-width: 18px;
-                text-align: center;
-                flex-shrink: 0;
-                background: #f8f9fa;
-                border-radius: 50%;
-                width: 20px;
-                height: 20px;
+                font-weight: 700;
+                min-width: 28px;
+                height: 28px;
+                border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-            }
-            
-            .new-item-rank {
-                color: #fff;
-                background: #6b7280;
-                font-size: 10px;
-                font-weight: 700;
-                padding: 3px 6px;
-                border-radius: 8px;
-                min-width: 20px;
-                text-align: center;
                 flex-shrink: 0;
             }
-            
-            .new-item-rank.top { background: #dc2626; }
-            .new-item-rank.high { background: #ea580c; }
-            
+
+            .new-item-rank {
+                color: white;
+                background: #475569;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 4px 10px;
+                border-radius: 999px;
+                min-width: 24px;
+                text-align: center;
+                letter-spacing: 0.6px;
+                flex-shrink: 0;
+            }
+
+            .new-item-rank.top {
+                background: linear-gradient(135deg, #ef4444, #b91c1c);
+            }
+
+            .new-item-rank.high {
+                background: linear-gradient(135deg, #f97316, #ea580c);
+            }
+
             .new-item-content {
                 flex: 1;
                 min-width: 0;
             }
-            
+
             .new-item-title {
-                font-size: 14px;
-                line-height: 1.4;
-                color: #1a1a1a;
+                font-size: 15px;
+                line-height: 1.55;
+                color: #0f172a;
                 margin: 0;
-            }
-            
-            .error-section {
-                background: #fef2f2;
-                border: 1px solid #fecaca;
-                border-radius: 8px;
-                padding: 16px;
-                margin-bottom: 24px;
-            }
-            
-            .error-title {
-                color: #dc2626;
-                font-size: 14px;
                 font-weight: 600;
-                margin: 0 0 8px 0;
             }
-            
+
+            .error-section {
+                background: rgba(254, 242, 242, 0.9);
+                border: 1px solid rgba(254, 202, 202, 0.9);
+                border-radius: 18px;
+                padding: 20px 22px;
+                margin-bottom: 28px;
+            }
+
+            .error-title {
+                color: #b91c1c;
+                font-size: 15px;
+                font-weight: 700;
+                margin: 0 0 10px;
+                letter-spacing: 0.3px;
+            }
+
             .error-list {
                 list-style: none;
                 padding: 0;
                 margin: 0;
             }
-            
+
             .error-item {
-                color: #991b1b;
+                color: #7f1d1d;
                 font-size: 13px;
-                padding: 2px 0;
-                font-family: 'SF Mono', Consolas, monospace;
+                padding: 3px 0;
+                font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
             }
-            
+
             .footer {
-                margin-top: 32px;
-                padding: 20px 24px;
-                background: #f8f9fa;
-                border-top: 1px solid #e5e7eb;
+                margin-top: 36px;
+                padding: 28px 40px 40px;
+                background: linear-gradient(180deg, rgba(15, 23, 42, 0.04), rgba(248, 250, 252, 0.78));
+                border-top: 1px solid rgba(148, 163, 184, 0.22);
                 text-align: center;
+                position: relative;
             }
-            
+
+            .footer::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 180px;
+                height: 3px;
+                background: linear-gradient(90deg, rgba(79, 70, 229, 0.2), rgba(236, 72, 153, 0.2), rgba(14, 165, 233, 0.18));
+            }
+
             .footer-content {
                 font-size: 13px;
-                color: #6b7280;
-                line-height: 1.6;
+                color: #475569;
+                line-height: 1.7;
             }
-            
+
             .footer-link {
-                color: #4f46e5;
+                color: var(--primary);
                 text-decoration: none;
-                font-weight: 500;
-                transition: color 0.2s ease;
-            }
-            
-            .footer-link:hover {
-                color: #7c3aed;
-                text-decoration: underline;
-            }
-            
-            .project-name {
                 font-weight: 600;
-                color: #374151;
+                transition: color 0.18s ease;
             }
-            
-            @media (max-width: 480px) {
-                body { padding: 12px; }
-                .header { padding: 24px 20px; }
-                .content { padding: 20px; }
-                .footer { padding: 16px 20px; }
-                .header-info { grid-template-columns: 1fr; gap: 12px; }
-                .news-header { gap: 6px; }
-                .news-content { padding-right: 45px; }
-                .news-item { gap: 8px; }
-                .new-item { gap: 8px; }
-                .news-number { width: 20px; height: 20px; font-size: 12px; }
+
+            .footer-link:hover {
+                color: var(--primary-dark);
+            }
+
+            .project-name {
+                font-weight: 700;
+                color: #1e1b4b;
+            }
+
+            @media (max-width: 720px) {
+                body {
+                    padding: 24px 14px;
+                }
+
+                .container {
+                    border-radius: 20px;
+                }
+
+                .header {
+                    padding: 36px 24px 32px;
+                }
+
                 .save-buttons {
                     position: static;
-                    margin-bottom: 16px;
-                    display: flex;
-                    gap: 8px;
+                    margin-bottom: 18px;
                     justify-content: center;
-                    flex-direction: column;
-                    width: 100%;
+                    flex-wrap: wrap;
                 }
-                .save-btn {
-                    width: 100%;
+
+                .header-title {
+                    font-size: 26px;
+                    text-align: center;
+                }
+
+                .header-info {
+                    gap: 12px;
+                }
+
+                .content {
+                    padding: 28px 20px 32px;
+                }
+
+                .word-group {
+                    padding: 24px 20px;
+                }
+
+                .news-item {
+                    flex-direction: column;
+                    padding: 18px 16px;
+                }
+
+                .news-number {
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 10px;
+                }
+
+                .news-content {
+                    padding-right: 0;
+                }
+
+                .news-item.new .news-content {
+                    padding-right: 0;
+                }
+
+                .new-section {
+                    padding: 32px 24px 26px;
+                }
+
+                .new-item {
+                    align-items: flex-start;
+                }
+
+                .footer {
+                    padding: 24px 20px 32px;
+                }
+            }
+
+            @media (max-width: 420px) {
+                .header-title {
+                    font-size: 24px;
+                }
+
+                .info-item {
+                    padding: 12px 14px;
+                }
+
+                .word-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+
+                .word-index {
+                    align-self: flex-start;
+                }
+
+                .new-item {
+                    gap: 10px;
                 }
             }
         </style>
@@ -2313,17 +2512,10 @@ def render_html_content(
             
             <div class="footer">
                 <div class="footer-content">
-                    由 <span class="project-name">TrendRadar</span> 生成 · 
-                    <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="footer-link">
-                        GitHub 开源项目
+                    <a href="https://github.com/LeekHub/LeekFund" target="_blank" class="footer-link">
+                        LeekFund
                     </a>"""
 
-    if update_info:
-        html += f"""
-                    <br>
-                    <span style="color: #ea580c; font-weight: 500;">
-                        发现新版本 {update_info['remote_version']}，当前版本 {update_info['current_version']}
-                    </span>"""
 
     html += """
                 </div>
@@ -3742,14 +3934,7 @@ def send_to_email(
             # 使用自定义 SMTP 配置
             smtp_server = custom_smtp_server
             smtp_port = int(custom_smtp_port)
-            # 根据端口判断加密方式：465=SSL, 587=TLS
-            if smtp_port == 465:
-                use_tls = False  # SSL 模式（SMTP_SSL）
-            elif smtp_port == 587:
-                use_tls = True   # TLS 模式（STARTTLS）
-            else:
-                # 其他端口优先尝试 TLS（更安全，更广泛支持）
-                use_tls = True
+            use_tls = smtp_port == 587
         elif domain in SMTP_CONFIGS:
             # 使用预设配置
             config = SMTP_CONFIGS[domain]

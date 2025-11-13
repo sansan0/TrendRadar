@@ -20,16 +20,16 @@ import requests
 import yaml
 
 
-VERSION = "3.0.4"
+VERSION = "3.0.5"
 
 
 # === SMTP邮件配置 ===
 SMTP_CONFIGS = {
-    # Gmail
+    # Gmail（使用 STARTTLS）
     "gmail.com": {"server": "smtp.gmail.com", "port": 587, "encryption": "TLS"},
-    # QQ邮箱
-    "qq.com": {"server": "smtp.qq.com", "port": 587, "encryption": "TLS"},
-    # Outlook
+    # QQ邮箱（使用 SSL，更稳定）
+    "qq.com": {"server": "smtp.qq.com", "port": 465, "encryption": "SSL"},
+    # Outlook（使用 STARTTLS）
     "outlook.com": {
         "server": "smtp-mail.outlook.com",
         "port": 587,
@@ -41,13 +41,13 @@ SMTP_CONFIGS = {
         "encryption": "TLS",
     },
     "live.com": {"server": "smtp-mail.outlook.com", "port": 587, "encryption": "TLS"},
-    # 网易邮箱
-    "163.com": {"server": "smtp.163.com", "port": 587, "encryption": "TLS"},
-    "126.com": {"server": "smtp.126.com", "port": 587, "encryption": "TLS"},
-    # 新浪邮箱
-    "sina.com": {"server": "smtp.sina.com", "port": 587, "encryption": "TLS"},
-    # 搜狐邮箱
-    "sohu.com": {"server": "smtp.sohu.com", "port": 587, "encryption": "TLS"},
+    # 网易邮箱（使用 SSL，更稳定）
+    "163.com": {"server": "smtp.163.com", "port": 465, "encryption": "SSL"},
+    "126.com": {"server": "smtp.126.com", "port": 465, "encryption": "SSL"},
+    # 新浪邮箱（使用 SSL）
+    "sina.com": {"server": "smtp.sina.com", "port": 465, "encryption": "SSL"},
+    # 搜狐邮箱（使用 SSL）
+    "sohu.com": {"server": "smtp.sohu.com", "port": 465, "encryption": "SSL"},
 }
 
 
@@ -69,12 +69,19 @@ def load_config():
         "VERSION_CHECK_URL": config_data["app"]["version_check_url"],
         "SHOW_VERSION_UPDATE": config_data["app"]["show_version_update"],
         "REQUEST_INTERVAL": config_data["crawler"]["request_interval"],
-        "REPORT_MODE": config_data["report"]["mode"],
+        "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
+        or config_data["report"]["mode"],
         "RANK_THRESHOLD": config_data["report"]["rank_threshold"],
         "USE_PROXY": config_data["crawler"]["use_proxy"],
         "DEFAULT_PROXY": config_data["crawler"]["default_proxy"],
-        "ENABLE_CRAWLER": config_data["crawler"]["enable_crawler"],
-        "ENABLE_NOTIFICATION": config_data["notification"]["enable_notification"],
+        "ENABLE_CRAWLER": os.environ.get("ENABLE_CRAWLER", "").strip().lower()
+        in ("true", "1")
+        if os.environ.get("ENABLE_CRAWLER", "").strip()
+        else config_data["crawler"]["enable_crawler"],
+        "ENABLE_NOTIFICATION": os.environ.get("ENABLE_NOTIFICATION", "").strip().lower()
+        in ("true", "1")
+        if os.environ.get("ENABLE_NOTIFICATION", "").strip()
+        else config_data["notification"]["enable_notification"],
         "MESSAGE_BATCH_SIZE": config_data["notification"]["message_batch_size"],
         "DINGTALK_BATCH_SIZE": config_data["notification"].get(
             "dingtalk_batch_size", 20000
@@ -85,23 +92,34 @@ def load_config():
             "feishu_message_separator"
         ],
         "PUSH_WINDOW": {
-            "ENABLED": config_data["notification"]
+            "ENABLED": os.environ.get("PUSH_WINDOW_ENABLED", "").strip().lower()
+            in ("true", "1")
+            if os.environ.get("PUSH_WINDOW_ENABLED", "").strip()
+            else config_data["notification"]
             .get("push_window", {})
             .get("enabled", False),
             "TIME_RANGE": {
-                "START": config_data["notification"]
+                "START": os.environ.get("PUSH_WINDOW_START", "").strip()
+                or config_data["notification"]
                 .get("push_window", {})
                 .get("time_range", {})
                 .get("start", "08:00"),
-                "END": config_data["notification"]
+                "END": os.environ.get("PUSH_WINDOW_END", "").strip()
+                or config_data["notification"]
                 .get("push_window", {})
                 .get("time_range", {})
                 .get("end", "22:00"),
             },
-            "ONCE_PER_DAY": config_data["notification"]
+            "ONCE_PER_DAY": os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip().lower()
+            in ("true", "1")
+            if os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip()
+            else config_data["notification"]
             .get("push_window", {})
             .get("once_per_day", True),
-            "RECORD_RETENTION_DAYS": config_data["notification"]
+            "RECORD_RETENTION_DAYS": int(
+                os.environ.get("PUSH_WINDOW_RETENTION_DAYS", "").strip() or "0"
+            )
+            or config_data["notification"]
             .get("push_window", {})
             .get("push_record_retention_days", 7),
         },
@@ -3724,7 +3742,14 @@ def send_to_email(
             # 使用自定义 SMTP 配置
             smtp_server = custom_smtp_server
             smtp_port = int(custom_smtp_port)
-            use_tls = smtp_port == 587
+            # 根据端口判断加密方式：465=SSL, 587=TLS
+            if smtp_port == 465:
+                use_tls = False  # SSL 模式（SMTP_SSL）
+            elif smtp_port == 587:
+                use_tls = True   # TLS 模式（STARTTLS）
+            else:
+                # 其他端口优先尝试 TLS（更安全，更广泛支持）
+                use_tls = True
         elif domain in SMTP_CONFIGS:
             # 使用预设配置
             config = SMTP_CONFIGS[domain]

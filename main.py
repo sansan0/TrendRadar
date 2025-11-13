@@ -18,6 +18,7 @@ from typing import Dict, List, Tuple, Optional, Union
 import pytz
 import requests
 import yaml
+import textwrap
 
 
 VERSION = "3.0.5"
@@ -179,6 +180,11 @@ def load_config():
         "ntfy_token", ""
     )
 
+    # Discord配置
+    config["DISCORD_WEBHOOK_URL"] = os.environ.get(
+        "DISCORD_WEBHOOK_URL", ""
+    ).strip() or webhooks.get("discord_url", "")
+
     # 输出配置来源信息
     notification_sources = []
     if config["FEISHU_WEBHOOK_URL"]:
@@ -203,6 +209,10 @@ def load_config():
     if config["NTFY_SERVER_URL"] and config["NTFY_TOPIC"]:
         server_source = "环境变量" if os.environ.get("NTFY_SERVER_URL") else "配置文件"
         notification_sources.append(f"ntfy({server_source})")
+
+    if config["DISCORD_WEBHOOK_URL"]:
+        source = "环境变量" if os.environ.get("DISCORD_WEBHOOK_URL") else "配置文件"
+        notification_sources.append(f"Discord({source})")
 
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
@@ -3339,6 +3349,7 @@ def send_to_notifications(
     ntfy_server_url = CONFIG["NTFY_SERVER_URL"]
     ntfy_topic = CONFIG["NTFY_TOPIC"]
     ntfy_token = CONFIG.get("NTFY_TOKEN", "")
+    discord_webhook_url = CONFIG["DISCORD_WEBHOOK_URL"]
 
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
@@ -3396,6 +3407,14 @@ def send_to_notifications(
             email_smtp_server,
             email_smtp_port,
         )
+
+    # 发送 Discord（使用企业微信的 Markdown 模板生成文本）
+    if discord_webhook_url:
+        discord_batches = split_content_into_batches(
+            report_data, "wework", update_info_to_send, mode=mode
+        )
+        discord_message = "\n\n------\n\n".join(discord_batches)
+        results["discord"] = send_discord_message(discord_message)
 
     if not results:
         print("未配置任何通知渠道，跳过通知发送")
@@ -3715,6 +3734,35 @@ def send_to_telegram(
 
     print(f"Telegram所有 {len(batches)} 批次发送完成 [{report_type}]")
     return True
+
+
+def send_discord_message(content: str) -> bool:
+    """使用 Discord Webhook 推送文本消息"""
+    webhook_url = CONFIG.get("DISCORD_WEBHOOK_URL", "")
+    if not webhook_url:
+        print("未配置 DISCORD_WEBHOOK_URL，跳过 Discord 推送")
+        return False
+
+    if not content:
+        print("Discord 推送内容为空，跳过发送")
+        return False
+
+    # Discord 单条消息最大 2000 字符，保险起见拆成 1800 字符一段
+    chunks = textwrap.wrap(content, 1800, replace_whitespace=False)
+
+    success = True
+    for chunk in chunks:
+        payload = {"content": chunk}
+        try:
+            resp = requests.post(webhook_url, json=payload, timeout=10)
+            if resp.status_code >= 400:
+                success = False
+                print(f"Discord 推送失败：{resp.status_code} {resp.text}")
+        except Exception as e:
+            success = False
+            print(f"Discord 推送异常：{e}")
+
+    return success
 
 
 def send_to_email(
@@ -4119,6 +4167,7 @@ class NewsAnalyzer:
                     and CONFIG["EMAIL_TO"]
                 ),
                 (CONFIG["NTFY_SERVER_URL"] and CONFIG["NTFY_TOPIC"]),
+                CONFIG["DISCORD_WEBHOOK_URL"],
             ]
         )
 

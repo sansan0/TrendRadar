@@ -57,7 +57,7 @@ def load_config():
     config_path = os.environ.get("CONFIG_PATH", "config/config.yaml")
 
     if not Path(config_path).exists():
-        raise FileNotFoundError(f"配置文件 {config_path} 不存在")
+        raise FileNotFoundError(f"設定ファイル {config_path} が存在しません")  # 原文: 配置文件 X 不存在
 
     with open(config_path, "r", encoding="utf-8") as f:
         config_data = yaml.safe_load(f)
@@ -614,7 +614,7 @@ def load_frequency_words(
 
     frequency_path = Path(frequency_file)
     if not frequency_path.exists():
-        raise FileNotFoundError(f"频率词文件 {frequency_file} 不存在")
+        raise FileNotFoundError(f"頻度ワードファイル {frequency_file} が存在しません")  # 原文: 频率词文件 X 不存在
 
     with open(frequency_path, "r", encoding="utf-8") as f:
         content = f.read()
@@ -1649,7 +1649,7 @@ def render_html_content(
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>热点新闻分析</title>
+        <title>ホットニュース分析</title>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <style>
             * { box-sizing: border-box; }
@@ -2078,33 +2078,33 @@ def render_html_content(
         <div class="container">
             <div class="header">
                 <div class="save-buttons">
-                    <button class="save-btn" onclick="saveAsImage()">保存为图片</button>
-                    <button class="save-btn" onclick="saveAsMultipleImages()">分段保存</button>
+                    <button class="save-btn" onclick="saveAsImage()">画像として保存</button>
+                    <button class="save-btn" onclick="saveAsMultipleImages()">分割保存</button>
                 </div>
-                <div class="header-title">热点新闻分析</div>
+                <div class="header-title">ホットニュース分析</div>
                 <div class="header-info">
                     <div class="info-item">
-                        <span class="info-label">报告类型</span>
+                        <span class="info-label">レポートタイプ</span>
                         <span class="info-value">"""
 
     # 处理报告类型显示
     if is_daily_summary:
         if mode == "current":
-            html += "当前榜单"
+            html += "現在のランキング"  # 原文: 当前榜单
         elif mode == "incremental":
-            html += "增量模式"
+            html += "増分モード"  # 原文: 增量模式
         else:
-            html += "当日汇总"
+            html += "当日まとめ"  # 原文: 当日汇总
     else:
-        html += "实时分析"
+        html += "リアルタイム分析"  # 原文: 实时分析
 
     html += """</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">新闻总数</span>
+                        <span class="info-label">ニュース総数</span>
                         <span class="info-value">"""
 
-    html += f"{total_titles} 条"
+    html += f"{total_titles} 件"  # 原文: 条
 
     # 计算筛选后的热点新闻数量
     hot_news_count = sum(len(stat["titles"]) for stat in report_data["stats"])
@@ -2112,15 +2112,15 @@ def render_html_content(
     html += """</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">热点新闻</span>
+                        <span class="info-label">注目ニュース</span>
                         <span class="info-value">"""
 
-    html += f"{hot_news_count} 条"
+    html += f"{hot_news_count} 件"  # 原文: 条
 
     html += """</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">生成时间</span>
+                        <span class="info-label">生成時刻</span>
                         <span class="info-value">"""
 
     now = get_beijing_time()
@@ -2137,7 +2137,7 @@ def render_html_content(
     if report_data["failed_ids"]:
         html += """
                 <div class="error-section">
-                    <div class="error-title">⚠️ 请求失败的平台</div>
+                    <div class="error-title">⚠️ リクエスト失敗したプラットフォーム</div>  <!-- 原文: 请求失败的平台 -->
                     <ul class="error-list">"""
         for id_value in report_data["failed_ids"]:
             html += f'<li class="error-item">{html_escape(id_value)}</li>'
@@ -2167,7 +2167,7 @@ def render_html_content(
                     <div class="word-header">
                         <div class="word-info">
                             <div class="word-name">{escaped_word}</div>
-                            <div class="word-count {count_class}">{count} 条</div>
+                            <div class="word-count {count_class}">{count} 件</div>  <!-- 原文: 条 -->
                         </div>
                         <div class="word-index">{i}/{total_count}</div>
                     </div>"""
@@ -2250,7 +2250,7 @@ def render_html_content(
     if report_data["new_titles"]:
         html += f"""
                 <div class="new-section">
-                    <div class="new-section-title">本次新增热点 (共 {report_data['total_new_count']} 条)</div>"""
+                    <div class="new-section-title">今回の新着ニュース (全 {report_data['total_new_count']} 件)</div>"""  <!-- 原文: 本次新增热点 (共 X 条) -->
 
         for source_data in report_data["new_titles"]:
             escaped_source = html_escape(source_data["source_name"])
@@ -2313,10 +2313,10 @@ def render_html_content(
             
             <div class="footer">
                 <div class="footer-content">
-                    由 <span class="project-name">TrendRadar</span> 生成 · 
+                    <span class="project-name">TrendRadar</span> により生成 ·
                     <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="footer-link">
-                        GitHub 开源项目
-                    </a>"""
+                        GitHub オープンソースプロジェクト
+                    </a>"""  <!-- 原文: 由...生成、GitHub 开源项目 -->
 
     if update_info:
         html += f"""
@@ -2375,26 +2375,26 @@ def render_html_content(
                     
                     const link = document.createElement('a');
                     const now = new Date();
-                    const filename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
-                    
+                    const filename = `TrendRadar_ホットニュース分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
+
                     link.download = filename;
                     link.href = canvas.toDataURL('image/png', 1.0);
-                    
+
                     // 触发下载
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-                    
-                    button.textContent = '保存成功!';
+
+                    button.textContent = '保存成功！';
                     setTimeout(() => {
                         button.textContent = originalText;
                         button.disabled = false;
                     }, 2000);
-                    
+
                 } catch (error) {
                     const buttons = document.querySelector('.save-buttons');
                     buttons.style.visibility = 'visible';
-                    button.textContent = '保存失败';
+                    button.textContent = '保存失敗';
                     setTimeout(() => {
                         button.textContent = originalText;
                         button.disabled = false;
@@ -2601,8 +2601,8 @@ def render_html_content(
                     
                     // 下载所有图片
                     const now = new Date();
-                    const baseFilename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-                    
+                    const baseFilename = `TrendRadar_ホットニュース分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+
                     for (let i = 0; i < images.length; i++) {
                         const link = document.createElement('a');
                         link.download = `${baseFilename}_part${i + 1}.png`;
@@ -2610,22 +2610,22 @@ def render_html_content(
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        
+
                         // 延迟一下避免浏览器阻止多个下载
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
-                    
-                    button.textContent = `已保存 ${segments.length} 张图片!`;
+
+                    button.textContent = `${segments.length}枚の画像を保存しました！`;
                     setTimeout(() => {
                         button.textContent = originalText;
                         button.disabled = false;
                     }, 2000);
-                    
+
                 } catch (error) {
-                    console.error('分段保存失败:', error);
+                    console.error('分割保存失敗:', error);
                     const buttons = document.querySelector('.save-buttons');
                     buttons.style.visibility = 'visible';
-                    button.textContent = '保存失败';
+                    button.textContent = '保存失敗';
                     setTimeout(() => {
                         button.textContent = originalText;
                         button.disabled = false;
@@ -2651,7 +2651,7 @@ def render_feishu_content(
     text_content = ""
 
     if report_data["stats"]:
-        text_content += f"📊 **热点词汇统计**\n\n"
+        text_content += f"📊 **注目キーワード統計**\n\n"  # 原文: 热点词汇统计
 
     total_count = len(report_data["stats"])
 
@@ -2662,11 +2662,11 @@ def render_feishu_content(
         sequence_display = f"<font color='grey'>[{i + 1}/{total_count}]</font>"
 
         if count >= 10:
-            text_content += f"🔥 {sequence_display} **{word}** : <font color='red'>{count}</font> 条\n\n"
+            text_content += f"🔥 {sequence_display} **{word}** : <font color='red'>{count}</font> 件\n\n"  # 原文: 条
         elif count >= 5:
-            text_content += f"📈 {sequence_display} **{word}** : <font color='orange'>{count}</font> 条\n\n"
+            text_content += f"📈 {sequence_display} **{word}** : <font color='orange'>{count}</font> 件\n\n"  # 原文: 条
         else:
-            text_content += f"📌 {sequence_display} **{word}** : {count} 条\n\n"
+            text_content += f"📌 {sequence_display} **{word}** : {count} 件\n\n"  # 原文: 条
 
         for j, title_data in enumerate(stat["titles"], 1):
             formatted_title = format_title_for_platform(
@@ -2682,24 +2682,24 @@ def render_feishu_content(
 
     if not text_content:
         if mode == "incremental":
-            mode_text = "增量模式下暂无新增匹配的热点词汇"
+            mode_text = "増分モードで新規マッチする注目キーワードはありません"  # 原文: 增量模式下暂无新增匹配的热点词汇
         elif mode == "current":
-            mode_text = "当前榜单模式下暂无匹配的热点词汇"
+            mode_text = "現在のランキングモードでマッチする注目キーワードはありません"  # 原文: 当前榜单模式下暂无匹配的热点词汇
         else:
-            mode_text = "暂无匹配的热点词汇"
+            mode_text = "マッチする注目キーワードはありません"  # 原文: 暂无匹配的热点词汇
         text_content = f"📭 {mode_text}\n\n"
 
     if report_data["new_titles"]:
-        if text_content and "暂无匹配" not in text_content:
+        if text_content and "ありません" not in text_content:  # 原文: 暂无匹配
             text_content += f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n"
 
         text_content += (
-            f"🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
+            f"🆕 **今回の新着ニュース** (全 {report_data['total_new_count']} 件)\n\n"  # 原文: 本次新增热点新闻 (共 X 条)
         )
 
         for source_data in report_data["new_titles"]:
             text_content += (
-                f"**{source_data['source_name']}** ({len(source_data['titles'])} 条):\n"
+                f"**{source_data['source_name']}** ({len(source_data['titles'])} 件):\n"  # 原文: 条
             )
 
             for j, title_data in enumerate(source_data["titles"], 1):
@@ -2716,17 +2716,17 @@ def render_feishu_content(
         if text_content and "暂无匹配" not in text_content:
             text_content += f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n"
 
-        text_content += "⚠️ **数据获取失败的平台：**\n\n"
+        text_content += "⚠️ **データ取得失敗したプラットフォーム：**\n\n"  # 原文: 数据获取失败的平台
         for i, id_value in enumerate(report_data["failed_ids"], 1):
             text_content += f"  • <font color='red'>{id_value}</font>\n"
 
     now = get_beijing_time()
     text_content += (
-        f"\n\n<font color='grey'>更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"
+        f"\n\n<font color='grey'>更新時刻：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"  # 原文: 更新时间
     )
 
     if update_info:
-        text_content += f"\n<font color='grey'>TrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}</font>"
+        text_content += f"\n<font color='grey'>TrendRadar 新バージョン {update_info['remote_version']} を発見、現在 {update_info['current_version']}</font>"  # 原文: 发现新版本...当前
 
     return text_content
 
@@ -2742,9 +2742,9 @@ def render_dingtalk_content(
     )
     now = get_beijing_time()
 
-    text_content += f"**总新闻数：** {total_titles}\n\n"
-    text_content += f"**时间：** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-    text_content += f"**类型：** 热点分析报告\n\n"
+    text_content += f"**ニュース総数：** {total_titles}\n\n"  # 原文: 总新闻数
+    text_content += f"**時刻：** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"  # 原文: 时间
+    text_content += f"**タイプ：** ホットニュース分析レポート\n\n"  # 原文: 类型：热点分析报告
 
     text_content += "---\n\n"
 

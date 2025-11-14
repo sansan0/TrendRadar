@@ -1632,7 +1632,7 @@ def render_html_content(
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="color-scheme" content="light">
-        <title>热点新闻分析</title>
+        <title>LeekHub热点新闻</title>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <style>
             *, *::before, *::after {
@@ -2359,9 +2359,7 @@ def render_html_content(
                 }
 
                 .save-buttons {
-                    position: static;
-                    justify-content: flex-end;
-                    margin-bottom: 16px;
+                    display: none;
                 }
 
                 .header-info {
@@ -2382,6 +2380,14 @@ def render_html_content(
                 }
 
                 .news-item::before {
+                    display: none;
+                }
+
+                .news-number {
+                    display: none;
+                }
+
+                .new-item-number {
                     display: none;
                 }
 
@@ -2732,7 +2738,7 @@ def render_html_content(
             
             <div class="footer">
                 <div class="footer-content">
-                    <a href="https://github.com/LeekHub/LeekFund" target="_blank" class="footer-link">
+                   VS Code插件 <a href="https://github.com/LeekHub/LeekFund" target="_blank" class="footer-link">
                         LeekFund
                     </a>"""
 

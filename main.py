@@ -116,7 +116,9 @@ def load_config():
             else config_data["notification"]
             .get("push_window", {})
             .get("once_per_day", True),
-            "RECORD_RETENTION_DAYS": int(os.environ.get("PUSH_WINDOW_RETENTION_DAYS", "0"))
+            "RECORD_RETENTION_DAYS": int(
+                os.environ.get("PUSH_WINDOW_RETENTION_DAYS", "").strip() or "0"
+            )
             or config_data["notification"]
             .get("push_window", {})
             .get("push_record_retention_days", 7),

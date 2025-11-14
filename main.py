@@ -1690,7 +1690,7 @@ def render_html_content(
             }
 
             .header {
-                padding: 48px clamp(20px, 6vw, 64px) 40px;
+                padding: 40px clamp(20px, 6vw, 64px) 32px;
                 position: relative;
             }
 
@@ -1707,7 +1707,7 @@ def render_html_content(
                 z-index: 1;
                 display: flex;
                 flex-direction: column;
-                gap: 24px;
+                gap: 20px;
             }
 
             .header-meta {
@@ -1742,40 +1742,45 @@ def render_html_content(
 
             .header-subtitle {
                 margin: 0;
-                font-size: 16px;
+                font-size: 15px;
                 color: #4b5563;
-                letter-spacing: 0.35px;
+                letter-spacing: 0.3px;
+                line-height: 1.5;
             }
 
             .header-info {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                gap: 18px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                align-items: center;
             }
 
             .info-item {
                 background: rgba(255, 255, 255, 0.85);
-                border-radius: var(--radius-medium);
+                border-radius: 12px;
                 border: 1px solid rgba(209, 213, 219, 0.45);
-                padding: 18px 20px 16px;
+                padding: 10px 16px;
                 backdrop-filter: blur(12px);
                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
             }
 
             .info-label {
-                display: block;
-                font-size: 12px;
+                font-size: 11px;
                 color: var(--color-muted);
-                letter-spacing: 0.45px;
-                margin-bottom: 6px;
+                letter-spacing: 0.4px;
                 text-transform: uppercase;
+                white-space: nowrap;
             }
 
             .info-value {
-                font-size: 22px;
+                font-size: 16px;
                 font-weight: 700;
-                letter-spacing: 0.4px;
+                letter-spacing: 0.3px;
                 color: var(--color-heading);
+                white-space: nowrap;
             }
 
             .save-buttons {
@@ -2355,7 +2360,7 @@ def render_html_content(
                 }
 
                 .header {
-                    padding: 36px 24px 32px;
+                    padding: 32px 24px 28px;
                 }
 
                 .save-buttons {
@@ -2363,7 +2368,19 @@ def render_html_content(
                 }
 
                 .header-info {
-                    gap: 14px;
+                    gap: 10px;
+                }
+
+                .info-item {
+                    padding: 8px 14px;
+                }
+
+                .info-label {
+                    font-size: 10px;
+                }
+
+                .info-value {
+                    font-size: 15px;
                 }
 
                 .content {
@@ -2410,11 +2427,11 @@ def render_html_content(
                 }
 
                 .header-subtitle {
-                    font-size: 15px;
+                    font-size: 14px;
                 }
 
                 .info-value {
-                    font-size: 20px;
+                    font-size: 14px;
                 }
 
                 .save-buttons {
@@ -2508,23 +2525,6 @@ def render_html_content(
                     <h1 class="header-title">热点新闻分析</h1>
                     <p class="header-subtitle">实时关注全网热点动态，帮助你快速掌握讨论焦点与信息热度</p>
                     <div class="header-info">
-                    <div class="info-item">
-                        <span class="info-label">报告类型</span>
-                        <span class="info-value">"""
-
-    # 处理报告类型显示
-    if is_daily_summary:
-        if mode == "current":
-            html += "当前榜单"
-        elif mode == "incremental":
-            html += "增量模式"
-        else:
-            html += "当日汇总"
-    else:
-        html += "实时分析"
-
-    html += """</span>
-                    </div>
                     <div class="info-item">
                         <span class="info-label">新闻总数</span>
                         <span class="info-value">"""

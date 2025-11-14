@@ -2383,7 +2383,7 @@ def render_html_content(
                 }
 
                 .content {
-                    padding: 14px 12px 18px;
+                    padding: 24px 0;
                 }
 
                 .word-group {
@@ -2443,7 +2443,7 @@ def render_html_content(
                 }
 
                 .content {
-                    padding: 12px 10px 16px;
+                    padding: 24px 0;
                 }
 
                 .word-group {
@@ -2475,7 +2475,7 @@ def render_html_content(
                 }
 
                 .content {
-                    padding: 11px 9px 14px;
+                    padding: 24px 0;
                 }
 
                 .header-info {

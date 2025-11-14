@@ -1681,12 +1681,7 @@ def render_html_content(
             }
 
             .container::before {
-                content: "";
-                position: absolute;
-                inset: 0;
-                pointer-events: none;
-                background: radial-gradient(circle at 20% -15%, rgba(76, 95, 213, 0.12), transparent 55%),
-                            radial-gradient(circle at 80% 0%, rgba(217, 70, 239, 0.08), transparent 50%);
+                display: none;
             }
 
             .header {
@@ -1695,11 +1690,7 @@ def render_html_content(
             }
 
             .header::after {
-                content: "";
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(145deg, rgba(29, 78, 216, 0.12), rgba(59, 130, 246, 0.08));
-                pointer-events: none;
+                display: none;
             }
 
             .header-inner {
@@ -2028,18 +2019,18 @@ def render_html_content(
             }
 
             .news-link {
-                color: var(--color-accent);
+                color: #333333;
                 text-decoration: none;
                 transition: color 0.18s ease;
                 font-weight: 600;
             }
 
             .news-link:hover {
-                color: var(--color-accent-strong);
+                color: #333333;
             }
 
             .news-link:visited {
-                color: rgba(91, 107, 223, 0.95);
+                color: #333333;
             }
 
             .new-section {
@@ -2367,7 +2358,7 @@ def render_html_content(
                 }
 
                 .header {
-                    padding: 32px 24px 28px;
+                    padding: 24px 16px;
                 }
 
                 .save-buttons {
@@ -2479,7 +2470,7 @@ def render_html_content(
 
             @media (max-width: 420px) {
                 .header {
-                    padding: 28px 18px 28px;
+                    padding: 24px 16px;
                 }
 
                 .content {
@@ -2529,7 +2520,7 @@ def render_html_content(
                         <span class="header-badge">Trend Insight</span>
                         <span>聚合热点 / 洞察趋势</span>
                     </div>
-                    <h1 class="header-title">热点新闻分析</h1>
+                    <h1 class="header-title">热点新闻</h1>
                     <p class="header-subtitle">实时关注全网热点动态，帮助你快速掌握讨论焦点与信息热度</p>
                     <div class="header-info">
                     <div class="info-item">
@@ -2744,7 +2735,7 @@ def render_html_content(
             
             <div class="footer">
                 <div class="footer-content">
-                   VS Code插件 <a href="https://github.com/LeekHub/LeekFund" target="_blank" class="footer-link">
+                   VS Code插件 <a href="https://github.com/LeekHub/leek-fund" target="_blank" class="footer-link">
                         LeekFund
                     </a>"""
 

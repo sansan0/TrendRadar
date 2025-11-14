@@ -1797,20 +1797,21 @@ def render_html_content(
                 font-size: 13px;
                 font-weight: 600;
                 letter-spacing: 0.2px;
-                border: 1px solid rgba(76, 95, 213, 0.35);
+                border: 1px solid rgba(156, 163, 175, 0.4);
                 background: rgba(255, 255, 255, 0.92);
-                color: var(--color-accent-strong);
+                color: #4b5563;
                 cursor: pointer;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
                 transition: all 0.18s ease;
-                box-shadow: 0 10px 26px -20px rgba(50, 73, 199, 0.85);
+                box-shadow: 0 10px 26px -20px rgba(107, 114, 128, 0.3);
             }
 
             .save-btn:hover {
-                border-color: rgba(76, 95, 213, 0.6);
-                background: rgba(76, 95, 213, 0.14);
+                border-color: rgba(107, 114, 128, 0.5);
+                background: rgba(243, 244, 246, 0.9);
+                color: #374151;
             }
 
             .save-btn:active {
@@ -1943,15 +1944,15 @@ def render_html_content(
             .news-number {
                 font-size: 12px;
                 font-weight: 700;
-                color: var(--color-accent-strong);
+                color: #6b7280;
                 border-radius: 12px;
-                border: 1px solid rgba(76, 95, 213, 0.35);
+                border: 1px solid rgba(209, 213, 219, 0.6);
                 min-width: 32px;
                 height: 32px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: rgba(76, 95, 213, 0.08);
+                background: rgba(243, 244, 246, 0.8);
             }
 
             .news-content {
@@ -2080,9 +2081,9 @@ def render_html_content(
                 min-width: 28px;
                 height: 28px;
                 border-radius: 999px;
-                border: 1px solid rgba(76, 95, 213, 0.35);
-                background: rgba(76, 95, 213, 0.08);
-                color: var(--color-accent-strong);
+                border: 1px solid rgba(209, 213, 219, 0.6);
+                background: rgba(243, 244, 246, 0.8);
+                color: #6b7280;
                 font-size: 12px;
                 font-weight: 700;
                 display: flex;
@@ -2547,7 +2548,7 @@ def render_html_content(
                     <span>生成时间："""
 
     now = get_beijing_time()
-    html += now.strftime("%m-%d %H:%M")
+    html += now.strftime("%Y-%m-%d %H:%M:%S")
 
     html += """</span>
                 </div>

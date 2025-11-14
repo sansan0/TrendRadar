@@ -1720,6 +1720,13 @@ def render_html_content(
                 letter-spacing: 0.38px;
             }
 
+            .header-time {
+                font-size: 12px;
+                color: rgba(107, 114, 128, 0.8);
+                letter-spacing: 0.3px;
+                margin-top: 4px;
+            }
+
             .header-badge {
                 padding: 6px 14px;
                 border-radius: 999px;
@@ -1826,7 +1833,7 @@ def render_html_content(
             }
 
             .content {
-                padding: 32px clamp(20px, 6vw, 64px) 40px;
+                padding: 16px clamp(10px, 3vw, 32px) 20px;
             }
 
             .word-group {
@@ -2384,7 +2391,7 @@ def render_html_content(
                 }
 
                 .content {
-                    padding: 28px 24px 36px;
+                    padding: 14px 12px 18px;
                 }
 
                 .word-group {
@@ -2444,7 +2451,7 @@ def render_html_content(
                 }
 
                 .content {
-                    padding: 24px 20px 32px;
+                    padding: 12px 10px 16px;
                 }
 
                 .word-group {
@@ -2476,7 +2483,7 @@ def render_html_content(
                 }
 
                 .content {
-                    padding: 22px 18px 28px;
+                    padding: 11px 9px 14px;
                 }
 
                 .header-info {
@@ -2544,15 +2551,14 @@ def render_html_content(
 
     html += """</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">生成时间</span>
-                        <span class="info-value">"""
+                </div>
+                <div class="header-meta header-time">
+                    <span>生成时间："""
 
     now = get_beijing_time()
     html += now.strftime("%m-%d %H:%M")
 
     html += """</span>
-                    </div>
                 </div>
             </div>
             

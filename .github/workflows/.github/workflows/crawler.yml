@@ -1,0 +1,82 @@
+name: TrendRadar Dual-Config Crawler
+
+on:
+  schedule:
+    - cron: '0 1,13 * * *'
+  workflow_dispatch:
+
+jobs:
+  feishu-crawler:
+    name: "V1-飞书个人热点"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 设置Python环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 运行爬虫-飞书配置
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          python main.py
+
+      - name: 上传输出文件
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feishu-output
+          path: output/
+
+  dingtalk-crawler:
+    name: "V2-钉钉竞品监测"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 设置Python环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 临时切换配置目录
+        run: |
+          mv config config_backup
+          mv config_auto config
+          echo "✅ 已切换到V2竞品监测配置"
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 运行爬虫-钉钉配置
+        env:
+          DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
+        run: |
+          python main.py
+
+      - name: 恢复配置目录
+        if: always()
+        run: |
+          mv config config_auto_used
+          mv config_backup config
+          echo "✅ 已恢复V1配置"
+
+      - name: 上传输出文件
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dingtalk-output
+          path: output/

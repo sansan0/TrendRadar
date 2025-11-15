@@ -1,4 +1,4 @@
-module github.com/sansan0/TrendRadar/go
+module github.com/sansan0/TrendRadar
 
 go 1.25.4
 

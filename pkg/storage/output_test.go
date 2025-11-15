@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sansan0/TrendRadar/go/pkg/crawler"
+	"github.com/sansan0/TrendRadar/pkg/crawler"
 )
 
 func TestWriterSaveTitlesToFile(t *testing.T) {

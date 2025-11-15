@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sansan0/TrendRadar/go/pkg/app"
-	"github.com/sansan0/TrendRadar/go/pkg/crawler"
-	"github.com/sansan0/TrendRadar/go/pkg/storage"
+	"github.com/sansan0/TrendRadar/pkg/app"
+	"github.com/sansan0/TrendRadar/pkg/crawler"
+	"github.com/sansan0/TrendRadar/pkg/storage"
 )
 
 type TriggerArgs struct {

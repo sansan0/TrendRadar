@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sansan0/TrendRadar/go/pkg/analysis"
-	"github.com/sansan0/TrendRadar/go/pkg/config"
-	"github.com/sansan0/TrendRadar/go/pkg/keywords"
-	"github.com/sansan0/TrendRadar/go/pkg/parser"
+	"github.com/sansan0/TrendRadar/pkg/analysis"
+	"github.com/sansan0/TrendRadar/pkg/config"
+	"github.com/sansan0/TrendRadar/pkg/keywords"
+	"github.com/sansan0/TrendRadar/pkg/parser"
 )
 
 const (

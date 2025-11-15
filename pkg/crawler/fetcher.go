@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	cfgpkg "github.com/sansan0/TrendRadar/go/pkg/config"
+	cfgpkg "github.com/sansan0/TrendRadar/pkg/config"
 )
 
 const (

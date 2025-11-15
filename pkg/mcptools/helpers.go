@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sansan0/TrendRadar/go/pkg/analysis"
-	"github.com/sansan0/TrendRadar/go/pkg/app"
-	"github.com/sansan0/TrendRadar/go/pkg/parser"
+	"github.com/sansan0/TrendRadar/pkg/analysis"
+	"github.com/sansan0/TrendRadar/pkg/app"
+	"github.com/sansan0/TrendRadar/pkg/parser"
 )
 
 var ErrInvalidQuery = fmt.Errorf("查询条件不能为空")

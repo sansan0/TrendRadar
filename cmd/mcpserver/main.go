@@ -7,9 +7,9 @@ import (
 	"github.com/metoro-io/mcp-golang"
 	"github.com/metoro-io/mcp-golang/transport/stdio"
 
-	"github.com/sansan0/TrendRadar/go/pkg/app"
-	"github.com/sansan0/TrendRadar/go/pkg/config"
-	"github.com/sansan0/TrendRadar/go/pkg/mcptools"
+	"github.com/sansan0/TrendRadar/pkg/app"
+	"github.com/sansan0/TrendRadar/pkg/config"
+	"github.com/sansan0/TrendRadar/pkg/mcptools"
 )
 
 func main() {

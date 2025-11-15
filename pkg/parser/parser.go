@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sansan0/TrendRadar/go/pkg/analysis"
+	"github.com/sansan0/TrendRadar/pkg/analysis"
 )
 
 var beijing *time.Location

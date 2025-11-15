@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sansan0/TrendRadar/go/pkg/crawler"
+	"github.com/sansan0/TrendRadar/pkg/crawler"
 )
 
 var beijing *time.Location

@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	cfgpkg "github.com/sansan0/TrendRadar/go/pkg/config"
-	"github.com/sansan0/TrendRadar/go/pkg/keywords"
+	cfgpkg "github.com/sansan0/TrendRadar/pkg/config"
+	"github.com/sansan0/TrendRadar/pkg/keywords"
 )
 
 // CountWordFrequency 统计词频并生成分组结果。

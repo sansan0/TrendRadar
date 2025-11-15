@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	cfgpkg "github.com/sansan0/TrendRadar/go/pkg/config"
+	cfgpkg "github.com/sansan0/TrendRadar/pkg/config"
 )
 
 func TestFetcherCrawlPlatforms(t *testing.T) {

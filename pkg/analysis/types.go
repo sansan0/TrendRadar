@@ -1,8 +1,8 @@
 package analysis
 
 import (
-	cfgpkg "github.com/sansan0/TrendRadar/go/pkg/config"
-	"github.com/sansan0/TrendRadar/go/pkg/keywords"
+	cfgpkg "github.com/sansan0/TrendRadar/pkg/config"
+	"github.com/sansan0/TrendRadar/pkg/keywords"
 )
 
 // Mode 定义统计模式。

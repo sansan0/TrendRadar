@@ -32,7 +32,7 @@
 
 > 本项目以轻量，易部署为目标
 >
-> ⚠️ **重要提示**：从当前版本开始，TrendRadar 已全面迁移至 Go 实现（位于 `TrendRader_go/`），旧的 Python 入口与脚本已移除，请使用下方的 Go / Docker / MCP 指南完成部署。
+> ⚠️ **重要提示**：项目已全面迁移至 Go 实现（仓库根目录即 Go 版源码），旧的 Python 入口与脚本已移除，请以本指南中的 Go / Docker / MCP 流程部署。
 
 ## 📑 快速导航
 
@@ -825,7 +825,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 1. **克隆项目并准备配置**
    ```bash
    git clone https://github.com/sansan0/TrendRadar.git
-   cd TrendRadar/TrendRader_go
+   cd TrendRadar
    # 根据需要修改 config/config.yaml 与 config/frequency_words.txt
    ```
 2. **安装依赖并运行**
@@ -833,7 +833,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    cd ..
    make go-run
    ```
-   默认会在 `TrendRader_go/output/` 下生成最新一次抓取结果，同时在终端打印按关注词统计的热点。
+   默认会在 `output/` 下生成最新一次抓取结果，同时在终端打印按关注词统计的热点。
 3. **可选：启动 MCP Server**
    ```bash
    make go-mcp
@@ -1212,12 +1212,12 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 ```bash
 # Prepare config once
-mkdir -p TrendRader_go/config TrendRader_go/output
-# TrendRader_go/config 已包含默认配置，可直接编辑 config.yaml 与 frequency_words.txt
+mkdir -p config output
+# config/ 下已包含默认配置，可直接编辑 config.yaml 与 frequency_words.txt
 
 docker run -d --name trendradar-go \
-  -v $PWD/TrendRader_go/config:/app/config:ro \
-  -v $PWD/TrendRader_go/output:/app/output \
+  -v $PWD/config:/app/config:ro \
+  -v $PWD/output:/app/output \
   -e FEISHU_WEBHOOK_URL="你的飞书webhook" \
   -e DINGTALK_WEBHOOK_URL="你的钉钉webhook" \
   trendradar-go:latest
@@ -1228,8 +1228,8 @@ docker run -d --name trendradar-go \
 ```bash
 docker run -it --rm \
   -e GO_APP=mcpserver \
-  -v $PWD/TrendRader_go/config:/app/config:ro \
-  -v $PWD/TrendRader_go/output:/app/output \
+  -v $PWD/config:/app/config:ro \
+  -v $PWD/output:/app/output \
   trendradar-go:latest
 ```
 

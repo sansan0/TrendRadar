@@ -3,8 +3,8 @@ package mcptools
 import (
 	"time"
 
-	"github.com/sansan0/TrendRadar/go/pkg/analysis"
-	"github.com/sansan0/TrendRadar/go/pkg/app"
+	"github.com/sansan0/TrendRadar/pkg/analysis"
+	"github.com/sansan0/TrendRadar/pkg/app"
 )
 
 type TrendingTopicsArgs struct {

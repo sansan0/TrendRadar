@@ -2,10 +2,10 @@ FROM golang:1.22 AS builder
 
 WORKDIR /src
 
-COPY TrendRader_go/go.mod TrendRader_go/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY TrendRader_go/ .
+COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/trendradar ./cmd/trendradar && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/mcpserver ./cmd/mcpserver
@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 COPY --from=builder /out/trendradar /usr/local/bin/trendradar
 COPY --from=builder /out/mcpserver /usr/local/bin/mcpserver
-COPY TrendRader_go/config ./config
-COPY TrendRader_go/docker-entrypoint.sh /usr/local/bin/trend-entrypoint
+COPY config ./config
+COPY docker-entrypoint.sh /usr/local/bin/trend-entrypoint
 
 RUN chmod +x /usr/local/bin/trend-entrypoint
 

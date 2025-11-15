@@ -3,8 +3,8 @@ package analysis
 import (
 	"testing"
 
-	cfgpkg "github.com/sansan0/TrendRadar/go/pkg/config"
-	"github.com/sansan0/TrendRadar/go/pkg/keywords"
+	cfgpkg "github.com/sansan0/TrendRadar/pkg/config"
+	"github.com/sansan0/TrendRadar/pkg/keywords"
 )
 
 func TestCountWordFrequency_DefaultAllNews(t *testing.T) {

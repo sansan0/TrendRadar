@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sansan0/TrendRadar/go/pkg/app"
+	"github.com/sansan0/TrendRadar/pkg/app"
 )
 
 var positiveKeywords = []string{"上涨", "增长", "突破", "创新", "利好", "喜迎", "大涨", "好转", "乐观", "领先"}

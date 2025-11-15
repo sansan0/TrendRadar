@@ -31,6 +31,8 @@
 
 
 > 本项目以轻量，易部署为目标
+>
+> ⚠️ **重要提示**：从当前版本开始，TrendRadar 已全面迁移至 Go 实现（位于 `TrendRader_go/`），旧的 Python 入口与脚本已移除，请使用下方的 Go / Docker / MCP 指南完成部署。
 
 ## 📑 快速导航
 
@@ -818,6 +820,30 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 ## 🚀 快速开始
 
+### Go 本地运行（推荐）
+
+1. **克隆项目并准备配置**
+   ```bash
+   git clone https://github.com/sansan0/TrendRadar.git
+   cd TrendRadar/TrendRader_go
+   # 根据需要修改 config/config.yaml 与 config/frequency_words.txt
+   ```
+2. **安装依赖并运行**
+   ```bash
+   cd ..
+   make go-run
+   ```
+   默认会在 `TrendRader_go/output/` 下生成最新一次抓取结果，同时在终端打印按关注词统计的热点。
+3. **可选：启动 MCP Server**
+   ```bash
+   make go-mcp
+   ```
+   将该命令配置到 Cherry Studio / Claude 等 MCP 客户端即可使用 `get_latest_news`、`analyze_topic_trend`、`search_news` 等工具。
+
+更多容器化部署方式请参见下方[🐳 Docker 部署](#-docker-部署)。
+
+---
+
 > 配置完成后，新闻数据一小时后才会更新，如想加快，可参照【第4步】手动测试配置效果
 
 1. **Fork 本项目**到你的 GitHub 账户
@@ -1180,139 +1206,54 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 ## 🐳 Docker 部署
 
-#### 方式一：快速体验（一行命令）
+> Go 版镜像已经内置 CLI 与 MCP Server，可通过环境变量 `GO_APP=trendradar`（默认）或 `GO_APP=mcpserver` 切换模式。
 
-**Linux/macOS 系统：**
-```bash
-# 创建配置目录并下载配置文件
-mkdir -p config output
-wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml -P config/
-wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt -P config/
-```
-或者**手动创建**：
-1. 在当前目录创建 `config` 文件夹
-2. 下载配置文件：
-   - 访问 https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml → 右键"另存为" → 保存到 `config\config.yaml`
-   - 访问 https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt → 右键"另存为" → 保存到 `config\frequency_words.txt`
-
-完成后的目录结构应该是：
-```
-当前目录/
-└── config/
-    ├── config.yaml
-    └── frequency_words.txt
-```
+### 方式一：直接运行镜像
 
 ```bash
-docker run -d --name trend-radar \
-  -v ./config:/app/config:ro \
-  -v ./output:/app/output \
+# Prepare config once
+mkdir -p TrendRader_go/config TrendRader_go/output
+# TrendRader_go/config 已包含默认配置，可直接编辑 config.yaml 与 frequency_words.txt
+
+docker run -d --name trendradar-go \
+  -v $PWD/TrendRader_go/config:/app/config:ro \
+  -v $PWD/TrendRader_go/output:/app/output \
   -e FEISHU_WEBHOOK_URL="你的飞书webhook" \
   -e DINGTALK_WEBHOOK_URL="你的钉钉webhook" \
-  -e WEWORK_WEBHOOK_URL="你的企业微信webhook" \
-  -e TELEGRAM_BOT_TOKEN="你的telegram_bot_token" \
-  -e TELEGRAM_CHAT_ID="你的telegram_chat_id" \
-  -e EMAIL_FROM="你的发件邮箱" \
-  -e EMAIL_PASSWORD="你的邮箱密码或授权码" \
-  -e EMAIL_TO="收件人邮箱" \
-  -e CRON_SCHEDULE="*/30 * * * *" \
-  -e RUN_MODE="cron" \
-  -e IMMEDIATE_RUN="true" \
-  wantcat/trendradar:latest
+  trendradar-go:latest
 ```
 
-#### 方式二：使用 docker-compose（推荐）
-
-1. **创建项目目录和配置**:
-   ```bash
-   # 创建目录结构
-   mkdir -p trendradar/{config,docker}
-   cd trendradar
-   
-   # 下载配置文件模板
-   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml -P config/
-   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt -P config/
-   
-   # 下载 docker-compose 配置
-   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/.env
-   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/docker-compose.yml
-   ```
-
-完成后的目录结构应该是：
-```
-当前目录/
-├── config/
-│   ├── config.yaml
-│   └── frequency_words.txt
-└── docker/
-    ├── .env
-    └── docker-compose.yml
-```
-
-2. **配置文件说明**:
-   - `config/config.yaml` - 应用主配置（报告模式、推送设置等）
-   - `config/frequency_words.txt` - 关键词配置（设置你关心的热点词汇）
-   - `.env` - 环境变量配置（webhook URLs 和定时任务）
-
-   **⚙️ 环境变量覆盖机制（v3.0.5+）**
-
-   如果你在 NAS 或其他 Docker 环境中遇到**修改 `config.yaml` 后配置不生效**的问题，可以通过环境变量直接覆盖配置：
-
-   | 环境变量 | 对应配置 | 示例值 | 说明 |
-   |---------|---------|-------|------|
-   | `ENABLE_CRAWLER` | `crawler.enable_crawler` | `true` / `false` | 是否启用爬虫 |
-   | `ENABLE_NOTIFICATION` | `notification.enable_notification` | `true` / `false` | 是否启用通知 |
-   | `REPORT_MODE` | `report.mode` | `daily` / `incremental` / `current`| 报告模式 |
-   | `PUSH_WINDOW_ENABLED` | `notification.push_window.enabled` | `true` / `false` | 推送时间窗口开关 |
-   | `PUSH_WINDOW_START` | `notification.push_window.time_range.start` | `08:00` | 推送开始时间 |
-   | `PUSH_WINDOW_END` | `notification.push_window.time_range.end` | `22:00` | 推送结束时间 |
-   | `FEISHU_WEBHOOK_URL` | `notification.webhooks.feishu_url` | `https://...` | 飞书 Webhook |
-
-   **配置优先级**：环境变量 > config.yaml
-
-   **使用方法**：
-   - 修改 `.env` 文件，取消注释并填写需要的配置
-   - 或在 NAS/群晖 Docker 管理界面的"环境变量"中直接添加
-   - 重启容器后生效：`docker-compose restart`
-
-
-3. **启动服务**:
-   ```bash
-   # 拉取最新镜像并启动
-   docker-compose pull
-   docker-compose up -d
-   ```
-
-4. **查看运行状态**:
-   ```bash
-   # 查看日志
-   docker logs -f trend-radar
-   
-   # 查看容器状态
-   docker ps | grep trend-radar
-   ```
-
-#### 方式三：本地构建（开发者选项）
-
-如果需要自定义修改代码或构建自己的镜像：
+切换为 MCP Server：
 
 ```bash
-# 克隆项目
-git clone https://github.com/sansan0/TrendRadar.git
-cd TrendRadar
-
-# 修改配置文件
-vim config/config.yaml
-vim config/frequency_words.txt
-
-# 使用构建版本的 docker-compose
-cd docker
-cp docker-compose-build.yml docker-compose.yml
-
-# 构建并启动
-docker-compose build
-docker-compose up -d
+docker run -it --rm \
+  -e GO_APP=mcpserver \
+  -v $PWD/TrendRader_go/config:/app/config:ro \
+  -v $PWD/TrendRader_go/output:/app/output \
+  trendradar-go:latest
 ```
+
+### 方式二：docker-compose
+
+项目自带 `docker/docker-compose-go.yml`，示例：
+
+```bash
+cd TrendRadar
+cp docker/docker-compose-go.yml docker-compose.yml
+docker compose up -d trendradar-go      # CLI 模式
+docker compose up -d mcp-go             # MCP 模式
+```
+
+两个服务默认共享配置与输出目录，你可以按需修改端口、WebHook 环境变量以及 `GO_APP`。
+
+### 方式三：本地构建镜像
+
+```bash
+cd TrendRadar
+make docker-go-build
+```
+
+镜像构建完成后即可配合上方 run / compose 命令使用。
 
 #### 镜像更新
 

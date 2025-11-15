@@ -19,6 +19,7 @@ const (
 	maxRetries            = 2
 	minRetryWait          = 3 * time.Second
 	maxRetryWait          = 5 * time.Second
+	defaultAPIBase        = "https://newsnow.busiyi.world"
 )
 
 type apiResponse struct {
@@ -50,9 +51,14 @@ type Fetcher struct {
 	requestInterval time.Duration
 	random          *rand.Rand
 	useProxy        bool
+	baseURL         string
 }
 
 func NewFetcher(cfg *cfgpkg.Config) (*Fetcher, error) {
+	return newFetcherWithBaseURL(cfg, defaultAPIBase)
+}
+
+func newFetcherWithBaseURL(cfg *cfgpkg.Config, baseURL string) (*Fetcher, error) {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -84,6 +90,7 @@ func NewFetcher(cfg *cfgpkg.Config) (*Fetcher, error) {
 		requestInterval: time.Duration(cfg.Crawler.RequestInterval) * time.Millisecond,
 		random:          rand.New(rand.NewSource(time.Now().UnixNano())),
 		useProxy:        cfg.Crawler.UseProxy && cfg.Crawler.DefaultProxy != "",
+		baseURL:         strings.TrimRight(baseURL, "/"),
 	}, nil
 }
 
@@ -125,8 +132,8 @@ func (f *Fetcher) CrawlPlatforms(ctx context.Context, platforms []cfgpkg.Platfor
 }
 
 func (f *Fetcher) fetchPlatform(ctx context.Context, platformID string) (*apiResponse, error) {
-	url := fmt.Sprintf("https://newsnow.busiyi.world/api/s?id=%s&latest", platformID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	requestURL := fmt.Sprintf("%s/api/s?id=%s&latest", f.baseURL, platformID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, err
 	}

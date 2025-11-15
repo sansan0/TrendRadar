@@ -54,7 +54,14 @@ func (w *Writer) SaveTitlesToFile(result *crawler.CrawlOutput) (string, error) {
 	}
 	defer file.Close()
 
-	for id, titles := range result.Results {
+	ids := make([]string, 0, len(result.Results))
+	for id := range result.Results {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	for _, id := range ids {
+		titles := result.Results[id]
 		name := result.IDToName[id]
 		if name != "" && name != id {
 			fmt.Fprintf(file, "%s | %s\n", id, name)

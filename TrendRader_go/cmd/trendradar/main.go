@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -8,16 +9,30 @@ import (
 	"os"
 
 	"github.com/sansan0/TrendRadar/go/pkg/config"
+	"github.com/sansan0/TrendRadar/go/pkg/crawler"
+	"github.com/sansan0/TrendRadar/go/pkg/storage"
 )
 
 func main() {
 	configPath := flag.String("config", "", "配置文件路径（默认读取 CONFIG_PATH 或 config/config.yaml）")
 	outputJSON := flag.Bool("json", false, "以 JSON 格式输出配置摘要")
+	runCrawler := flag.Bool("crawl", false, "执行一次抓取并写入 output 目录")
+	outputDir := flag.String("output", "output", "抓取输出根目录")
 	flag.Parse()
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalf("加载配置失败: %v", err)
+	}
+
+	if *runCrawler {
+		if !cfg.Crawler.EnableCrawler {
+			log.Fatalf("配置禁用了爬虫（enable_crawler=false）")
+		}
+		if err := executeCrawl(cfg, *outputDir); err != nil {
+			log.Fatalf("抓取失败: %v", err)
+		}
+		return
 	}
 
 	if *outputJSON {
@@ -26,6 +41,32 @@ func main() {
 	}
 
 	printSummary(cfg)
+}
+
+func executeCrawl(cfg *config.Config, outputDir string) error {
+	fmt.Println("开始抓取配置中的平台...")
+	fetcher, err := crawler.NewFetcher(cfg)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	result, err := fetcher.CrawlPlatforms(ctx, cfg.Platforms)
+	if err != nil {
+		return err
+	}
+
+	writer := storage.NewWriter(outputDir)
+	path, err := writer.SaveTitlesToFile(result)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("抓取完成，已写入 %s\n", path)
+	if len(result.FailedIDs) > 0 {
+		fmt.Printf("请求失败的ID: %v\n", result.FailedIDs)
+	}
+	return nil
 }
 
 func printSummary(cfg *config.Config) {

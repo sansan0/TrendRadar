@@ -6,37 +6,17 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/sansan0/TrendRadar/go/pkg/analysis"
+	"github.com/sansan0/TrendRadar/go/pkg/app"
 	"github.com/sansan0/TrendRadar/go/pkg/config"
 	"github.com/sansan0/TrendRadar/go/pkg/crawler"
-	"github.com/sansan0/TrendRadar/go/pkg/keywords"
-	parserpkg "github.com/sansan0/TrendRadar/go/pkg/parser"
 	"github.com/sansan0/TrendRadar/go/pkg/storage"
 )
 
-const (
-	defaultOutputDir      = "output"
-	defaultKeywordsPath   = "config/frequency_words.txt"
-	frequencyWordsEnvKey  = "FREQUENCY_WORDS_PATH"
-	defaultReportMode     = analysis.ModeDaily
-	defaultConfigPathEnv  = "CONFIG_PATH"
-	defaultAsiaShanghaiTZ = "Asia/Shanghai"
-)
-
-var beijingLocation = func() *time.Location {
-	loc, err := time.LoadLocation(defaultAsiaShanghaiTZ)
-	if err != nil {
-		return time.FixedZone("CST", 8*3600)
-	}
-	return loc
-}()
-
 func main() {
-	cfg, err := config.Load(os.Getenv(defaultConfigPathEnv))
+	cfg, err := config.Load("")
 	if err != nil {
 		log.Fatalf("加载配置失败: %v", err)
 	}
@@ -48,25 +28,26 @@ func main() {
 		return
 	}
 
-	if err := runFullFlow(cfg); err != nil {
+	env := app.NewEnvironment(cfg)
+	if err := runFullFlow(env); err != nil {
 		log.Fatalf("执行流程失败: %v", err)
 	}
 }
 
-func runFullFlow(cfg *config.Config) error {
+func runFullFlow(env *app.Environment) error {
 	fmt.Println("开始抓取配置中的平台...")
-	fetcher, err := crawler.NewFetcher(cfg)
+	fetcher, err := crawler.NewFetcher(env.Config)
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
-	result, err := fetcher.CrawlPlatforms(ctx, cfg.Platforms)
+	result, err := fetcher.CrawlPlatforms(ctx, env.Config.Platforms)
 	if err != nil {
 		return err
 	}
 
-	writer := storage.NewWriter(defaultOutputDir)
+	writer := storage.NewWriter(env.OutputDir)
 	path, err := writer.SaveTitlesToFile(result)
 	if err != nil {
 		return err
@@ -76,14 +57,14 @@ func runFullFlow(cfg *config.Config) error {
 		fmt.Printf("请求失败的ID: %v\n", result.FailedIDs)
 	}
 
-	parser := parserpkg.New(defaultOutputDir)
-	platformIDs := collectPlatformIDs(cfg)
+	parser := env.Parser
+	platformIDs := env.CollectPlatformIDs()
 	allTitles, err := parser.ReadAllTitles(time.Time{}, platformIDs)
 	if err != nil {
 		return fmt.Errorf("读取当天数据失败: %w", err)
 	}
 
-	wordList := loadKeywordList()
+	wordList := env.LoadKeywordList()
 	newTitles, err := parser.DetectLatestNewTitles(platformIDs)
 	if err != nil {
 		fmt.Printf("检测新增新闻失败: %v\n", err)
@@ -95,82 +76,16 @@ func runFullFlow(cfg *config.Config) error {
 		WordList:      wordList,
 		SourceNames:   allTitles.SourceName,
 		TitleInfo:     allTitles.TitleInfo,
-		RankThreshold: cfg.Report.RankThreshold,
+		RankThreshold: env.Config.Report.RankThreshold,
 		NewTitles:     newTitles,
-		Mode:          toAnalysisMode(cfg.Report.Mode),
-		IsFirstCrawl:  isFirstCrawlToday(defaultOutputDir),
-		Weight:        cfg.Weight,
+		Mode:          env.AnalysisMode(),
+		IsFirstCrawl:  env.IsFirstCrawlToday(),
+		Weight:        env.Config.Weight,
 	}
 
 	stats, total := analysis.CountWordFrequency(opts)
 	printAnalysis(stats, total, opts.Mode)
 	return nil
-}
-
-func loadKeywordList() *keywords.List {
-	wordsPath := strings.TrimSpace(os.Getenv(frequencyWordsEnvKey))
-	if wordsPath == "" {
-		wordsPath = defaultKeywordsPath
-	}
-
-	list, err := keywords.Load(wordsPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Printf("未找到频率词文件 %s，默认显示全部新闻\n", wordsPath)
-		} else {
-			fmt.Printf("加载频率词失败: %v，默认显示全部新闻\n", err)
-		}
-		return keywords.DefaultAllNews()
-	}
-
-	list.Rebuild()
-	if list.Len() == 0 {
-		return keywords.DefaultAllNews()
-	}
-	return list
-}
-
-func collectPlatformIDs(cfg *config.Config) []string {
-	ids := make([]string, 0, len(cfg.Platforms))
-	for _, p := range cfg.Platforms {
-		ids = append(ids, p.ID)
-	}
-	return ids
-}
-
-func toAnalysisMode(mode string) analysis.Mode {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
-	case "incremental":
-		return analysis.ModeIncremental
-	case "current":
-		return analysis.ModeCurrent
-	case "daily":
-		return analysis.ModeDaily
-	default:
-		return defaultReportMode
-	}
-}
-
-func isFirstCrawlToday(outputDir string) bool {
-	dateFolder := time.Now().In(beijingLocation).Format("2006年01月02日")
-	txtDir := filepath.Join(outputDir, dateFolder, "txt")
-	entries, err := os.ReadDir(txtDir)
-	if err != nil {
-		return true
-	}
-
-	count := 0
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		name := strings.ToLower(entry.Name())
-		if strings.HasSuffix(name, ".txt") {
-			count++
-		}
-	}
-
-	return count <= 1
 }
 
 func printAnalysis(stats []analysis.GroupStat, total int, mode analysis.Mode) {

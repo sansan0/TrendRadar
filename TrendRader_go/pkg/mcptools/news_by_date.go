@@ -1,8 +1,6 @@
 package mcptools
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -10,67 +8,20 @@ import (
 	"github.com/sansan0/TrendRadar/go/pkg/app"
 )
 
-type NewsByDateTool struct {
-	Env *app.Environment
-}
-
-type newsByDateArgs struct {
-	Date       string   `json:"date_query"`
+type NewsByDateArgs struct {
+	DateQuery  string   `json:"date_query"`
 	Platforms  []string `json:"platforms"`
 	Limit      int      `json:"limit"`
 	IncludeURL bool     `json:"include_url"`
 }
 
-func (t *NewsByDateTool) Name() string {
-	return "get_news_by_date"
-}
-
-func (t *NewsByDateTool) Description() string {
-	return "按指定日期获取新闻数据，日期格式支持 YYYY-MM-DD/今天/昨天。"
-}
-
-func (t *NewsByDateTool) InputSchema() map[string]interface{} {
-	return map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"date_query": map[string]interface{}{
-				"type":        "string",
-				"description": "日期字符串，如 2025-01-15、今天、昨天，默认今天",
-			},
-			"platforms": map[string]interface{}{
-				"type":        "array",
-				"description": "可选的平台 ID 列表",
-				"items":       map[string]interface{}{"type": "string"},
-			},
-			"limit": map[string]interface{}{
-				"type":        "integer",
-				"default":     50,
-				"description": "返回新闻数量上限",
-			},
-			"include_url": map[string]interface{}{
-				"type":        "boolean",
-				"default":     false,
-				"description": "是否包含URL字段",
-			},
-		},
-		"additionalProperties": false,
-	}
-}
-
-func (t *NewsByDateTool) Call(ctx context.Context, raw json.RawMessage) (interface{}, error) {
-	var args newsByDateArgs
-	if len(raw) > 0 {
-		if err := json.Unmarshal(raw, &args); err != nil {
-			return nil, err
-		}
-	}
-
-	targetDate, err := parseDateQuery(args.Date)
+func NewsByDate(env *app.Environment, args NewsByDateArgs) (map[string]interface{}, error) {
+	targetDate, err := parseDateQuery(args.DateQuery)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := t.Env.Parser.ReadAllTitles(targetDate, args.Platforms)
+	data, err := env.Parser.ReadAllTitles(targetDate, args.Platforms)
 	if err != nil {
 		return nil, err
 	}

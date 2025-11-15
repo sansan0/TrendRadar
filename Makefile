@@ -14,8 +14,8 @@ setup:
 
 go-build:
 	@mkdir -p $(GO_BIN)
-	cd $(GO_DIR) && go build -o ../bin/trendradar ./cmd/trendradar
-	cd $(GO_DIR) && go build -o ../bin/mcpserver ./cmd/mcpserver
+	cd $(GO_DIR) && go build -o ./bin/trendradar ./cmd/trendradar
+	cd $(GO_DIR) && go build -o ./bin/mcpserver ./cmd/mcpserver
 	@echo "二进制已生成在 $(GO_BIN)"
 
 go-run:

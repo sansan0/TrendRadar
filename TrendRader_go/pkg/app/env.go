@@ -62,6 +62,14 @@ func (e *Environment) CollectPlatformIDs() []string {
 	return ids
 }
 
+// ResolvePlatforms 如果传入为空则使用配置中的平台。
+func (e *Environment) ResolvePlatforms(platforms []string) []string {
+	if len(platforms) > 0 {
+		return platforms
+	}
+	return e.CollectPlatformIDs()
+}
+
 // AnalysisMode 根据配置返回分析模式。
 func (e *Environment) AnalysisMode() analysis.Mode {
 	switch strings.ToLower(strings.TrimSpace(e.Config.Report.Mode)) {

@@ -38,6 +38,34 @@ func main() {
 		return mcptools.CurrentConfig(env), nil
 	})
 
+	registerJSONTool(server, "analyze_topic_trend", "话题趋势/生命周期/预测分析", func(args mcptools.TopicTrendArgs) (interface{}, error) {
+		return mcptools.AnalyzeTopicTrend(env, args)
+	})
+
+	registerJSONTool(server, "analyze_data_insights", "数据洞察（平台分布、新增等）", func(args mcptools.DataInsightsArgs) (interface{}, error) {
+		return mcptools.AnalyzeDataInsights(env, args)
+	})
+
+	registerJSONTool(server, "analyze_sentiment", "简单情感分析", func(args mcptools.SentimentArgs) (interface{}, error) {
+		return mcptools.AnalyzeSentiment(env, args)
+	})
+
+	registerJSONTool(server, "search_news", "关键词检索历史新闻", func(args mcptools.SearchArgs) (interface{}, error) {
+		return mcptools.SearchNews(env, args)
+	})
+
+	registerJSONTool(server, "search_related_news_history", "基于参考文本检索历史新闻", func(args mcptools.RelatedArgs) (interface{}, error) {
+		return mcptools.SearchRelatedNews(env, args)
+	})
+
+	registerJSONTool(server, "get_system_status", "查看系统输出目录与配置状态", func(_ struct{}) (interface{}, error) {
+		return mcptools.GetSystemStatus(env)
+	})
+
+	registerJSONTool(server, "trigger_crawl", "手动触发抓取任务", func(args mcptools.TriggerArgs) (interface{}, error) {
+		return mcptools.TriggerCrawl(env, args)
+	})
+
 	if err := server.Serve(); err != nil {
 		log.Fatalf("MCP server 运行失败: %v", err)
 	}

@@ -3435,8 +3435,6 @@ def split_content_into_batches(
             base_footer += f"\n> TrendRadar 发现新版本 **{update_info['remote_version']}**，当前 **{update_info['current_version']}**"
     elif format_type == "telegram":
         base_footer = f"\n\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
-        if update_info:
-            base_footer += f"\nTrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}"
     elif format_type == "ntfy":
         base_footer = f"\n\n> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
         if update_info:
@@ -4006,7 +4004,7 @@ def send_to_feishu(
         marker_index = last_batch.find(new_section_marker)
         if marker_index != -1:
             last_batch = last_batch[marker_index:]
-        last_batch += "\n\n完整热点新闻分析：https://news.leekhub.com/"
+        last_batch += "\n\n完整热点新闻分析：https://news.leekhub.com"
         batches = [last_batch]
 
     print(f"飞书消息分为 {len(batches)} 批次发送 [{report_type}]")

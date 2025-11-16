@@ -4005,9 +4005,19 @@ def send_to_feishu(
         mode=mode,
     )
 
+    # 只发送最后一个批次中的“本次新增热点新闻”部分，并追加完整分析链接
+    if batches:
+        last_batch = batches[-1]
+        new_section_marker = "🆕"
+        marker_index = last_batch.find(new_section_marker)
+        if marker_index != -1:
+            last_batch = last_batch[marker_index:]
+        last_batch += "\n\n完整热点新闻分析：https://news.leekhub.com/"
+        batches = [last_batch]
+
     print(f"飞书消息分为 {len(batches)} 批次发送 [{report_type}]")
 
-    # 逐批发送
+    # 逐批发送（当前逻辑下只会发送一批）
     for i, batch_content in enumerate(batches, 1):
         batch_size = len(batch_content.encode("utf-8"))
         print(
@@ -4095,9 +4105,19 @@ def send_to_dingtalk(
         mode=mode,
     )
 
+    # 只发送最后一个批次中的“本次新增热点新闻”部分，并追加完整分析链接
+    if batches:
+        last_batch = batches[-1]
+        new_section_marker = "🆕"
+        marker_index = last_batch.find(new_section_marker)
+        if marker_index != -1:
+            last_batch = last_batch[marker_index:]
+        last_batch += "\n\n完整热点新闻分析：https://news.leekhub.com/"
+        batches = [last_batch]
+
     print(f"钉钉消息分为 {len(batches)} 批次发送 [{report_type}]")
 
-    # 逐批发送
+    # 逐批发送（当前逻辑下只会发送一批）
     for i, batch_content in enumerate(batches, 1):
         batch_size = len(batch_content.encode("utf-8"))
         print(
@@ -4170,9 +4190,19 @@ def send_to_wework(
     # 获取分批内容
     batches = split_content_into_batches(report_data, "wework", update_info, mode=mode)
 
+    # 只发送最后一个批次中的“本次新增热点新闻”部分，并追加完整分析链接
+    if batches:
+        last_batch = batches[-1]
+        new_section_marker = "🆕"
+        marker_index = last_batch.find(new_section_marker)
+        if marker_index != -1:
+            last_batch = last_batch[marker_index:]
+        last_batch += "\n\n完整热点新闻分析：https://news.leekhub.com/"
+        batches = [last_batch]
+
     print(f"企业微信消息分为 {len(batches)} 批次发送 [{report_type}]")
 
-    # 逐批发送
+    # 逐批发送（当前逻辑下只会发送一批）
     for i, batch_content in enumerate(batches, 1):
         batch_size = len(batch_content.encode("utf-8"))
         print(
@@ -4237,9 +4267,19 @@ def send_to_telegram(
         report_data, "telegram", update_info, mode=mode
     )
 
+    # 只发送最后一个批次中的“本次新增热点新闻”部分，并追加完整分析链接
+    if batches:
+        last_batch = batches[-1]
+        new_section_marker = "🆕"
+        marker_index = last_batch.find(new_section_marker)
+        if marker_index != -1:
+            last_batch = last_batch[marker_index:]
+        last_batch += "\n\n完整热点新闻分析：https://news.leekhub.com/"
+        batches = [last_batch]
+
     print(f"Telegram消息分为 {len(batches)} 批次发送 [{report_type}]")
 
-    # 逐批发送
+    # 逐批发送（当前逻辑下只会发送一批）
     for i, batch_content in enumerate(batches, 1):
         batch_size = len(batch_content.encode("utf-8"))
         print(
@@ -4467,6 +4507,16 @@ def send_to_ntfy(
         report_data, "ntfy", update_info, max_bytes=3800, mode=mode
     )
 
+    # 只发送最后一个批次中的“本次新增热点新闻”部分，并追加完整分析链接
+    if batches:
+        last_batch = batches[-1]
+        new_section_marker = "🆕"
+        marker_index = last_batch.find(new_section_marker)
+        if marker_index != -1:
+            last_batch = last_batch[marker_index:]
+        last_batch += "\n\n完整热点新闻分析：https://news.leekhub.com/"
+        batches = [last_batch]
+
     total_batches = len(batches)
     print(f"ntfy消息分为 {total_batches} 批次发送 [{report_type}]")
 
@@ -4476,7 +4526,7 @@ def send_to_ntfy(
     
     print(f"ntfy将按反向顺序推送（最后批次先推送），确保客户端显示顺序正确")
 
-    # 逐批发送（反向顺序）
+    # 逐批发送（反向顺序）（当前逻辑下只会发送一批）
     success_count = 0
     for idx, batch_content in enumerate(reversed_batches, 1):
         # 计算正确的批次编号（用户视角的编号）

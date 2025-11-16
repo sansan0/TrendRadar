@@ -23,13 +23,13 @@ import yaml
 VERSION = "3.0.5"
 
 
-# === SMTP邮件配置 ===
+# === SMTP 이메일 설정 ===
 SMTP_CONFIGS = {
-    # Gmail（使用 STARTTLS）
+    # Gmail (STARTTLS 사용)
     "gmail.com": {"server": "smtp.gmail.com", "port": 587, "encryption": "TLS"},
-    # QQ邮箱（使用 SSL，更稳定）
+    # QQ 메일 (SSL 사용, 더 안정적)
     "qq.com": {"server": "smtp.qq.com", "port": 465, "encryption": "SSL"},
-    # Outlook（使用 STARTTLS）
+    # Outlook (STARTTLS 사용)
     "outlook.com": {
         "server": "smtp-mail.outlook.com",
         "port": 587,
@@ -41,30 +41,30 @@ SMTP_CONFIGS = {
         "encryption": "TLS",
     },
     "live.com": {"server": "smtp-mail.outlook.com", "port": 587, "encryption": "TLS"},
-    # 网易邮箱（使用 SSL，更稳定）
+    # NetEase 메일 (SSL 사용, 더 안정적)
     "163.com": {"server": "smtp.163.com", "port": 465, "encryption": "SSL"},
     "126.com": {"server": "smtp.126.com", "port": 465, "encryption": "SSL"},
-    # 新浪邮箱（使用 SSL）
+    # Sina 메일 (SSL 사용)
     "sina.com": {"server": "smtp.sina.com", "port": 465, "encryption": "SSL"},
-    # 搜狐邮箱（使用 SSL）
+    # Sohu 메일 (SSL 사용)
     "sohu.com": {"server": "smtp.sohu.com", "port": 465, "encryption": "SSL"},
 }
 
 
-# === 配置管理 ===
+# === 설정 관리 ===
 def load_config():
-    """加载配置文件"""
+    """설정 파일 로드"""
     config_path = os.environ.get("CONFIG_PATH", "config/config.yaml")
 
     if not Path(config_path).exists():
-        raise FileNotFoundError(f"配置文件 {config_path} 不存在")
+        raise FileNotFoundError(f"설정 파일 {config_path}이(가) 존재하지 않습니다")
 
     with open(config_path, "r", encoding="utf-8") as f:
         config_data = yaml.safe_load(f)
 
-    print(f"配置文件加载成功: {config_path}")
+    print(f"설정 파일 로드 성공: {config_path}")
 
-    # 构建配置
+    # 설정 구축
     config = {
         "VERSION_CHECK_URL": config_data["app"]["version_check_url"],
         "SHOW_VERSION_UPDATE": config_data["app"]["show_version_update"],
@@ -131,7 +131,7 @@ def load_config():
         "PLATFORMS": config_data["platforms"],
     }
 
-    # 通知渠道配置（环境变量优先）
+    # 알림 채널 설정 (환경 변수 우선)
     notification = config_data.get("notification", {})
     webhooks = notification.get("webhooks", {})
 
@@ -151,7 +151,7 @@ def load_config():
         "TELEGRAM_CHAT_ID", ""
     ).strip() or webhooks.get("telegram_chat_id", "")
 
-    # 邮件配置
+    # 이메일 설정
     config["EMAIL_FROM"] = os.environ.get("EMAIL_FROM", "").strip() or webhooks.get(
         "email_from", ""
     )
@@ -168,7 +168,7 @@ def load_config():
         "EMAIL_SMTP_PORT", ""
     ).strip() or webhooks.get("email_smtp_port", "")
 
-    # ntfy配置
+    # ntfy 설정
     config["NTFY_SERVER_URL"] = os.environ.get(
         "NTFY_SERVER_URL", "https://ntfy.sh"
     ).strip() or webhooks.get("ntfy_server_url", "https://ntfy.sh")
@@ -179,63 +179,63 @@ def load_config():
         "ntfy_token", ""
     )
 
-    # 输出配置来源信息
+    # 설정 출처 정보 출력
     notification_sources = []
     if config["FEISHU_WEBHOOK_URL"]:
-        source = "环境变量" if os.environ.get("FEISHU_WEBHOOK_URL") else "配置文件"
-        notification_sources.append(f"飞书({source})")
+        source = "환경 변수" if os.environ.get("FEISHU_WEBHOOK_URL") else "설정 파일"
+        notification_sources.append(f"Feishu({source})")
     if config["DINGTALK_WEBHOOK_URL"]:
-        source = "环境变量" if os.environ.get("DINGTALK_WEBHOOK_URL") else "配置文件"
-        notification_sources.append(f"钉钉({source})")
+        source = "환경 변수" if os.environ.get("DINGTALK_WEBHOOK_URL") else "설정 파일"
+        notification_sources.append(f"DingTalk({source})")
     if config["WEWORK_WEBHOOK_URL"]:
-        source = "环境变量" if os.environ.get("WEWORK_WEBHOOK_URL") else "配置文件"
-        notification_sources.append(f"企业微信({source})")
+        source = "환경 변수" if os.environ.get("WEWORK_WEBHOOK_URL") else "설정 파일"
+        notification_sources.append(f"기업 위챗({source})")
     if config["TELEGRAM_BOT_TOKEN"] and config["TELEGRAM_CHAT_ID"]:
         token_source = (
-            "环境变量" if os.environ.get("TELEGRAM_BOT_TOKEN") else "配置文件"
+            "환경 변수" if os.environ.get("TELEGRAM_BOT_TOKEN") else "설정 파일"
         )
-        chat_source = "环境变量" if os.environ.get("TELEGRAM_CHAT_ID") else "配置文件"
+        chat_source = "환경 변수" if os.environ.get("TELEGRAM_CHAT_ID") else "설정 파일"
         notification_sources.append(f"Telegram({token_source}/{chat_source})")
     if config["EMAIL_FROM"] and config["EMAIL_PASSWORD"] and config["EMAIL_TO"]:
-        from_source = "环境变量" if os.environ.get("EMAIL_FROM") else "配置文件"
-        notification_sources.append(f"邮件({from_source})")
+        from_source = "환경 변수" if os.environ.get("EMAIL_FROM") else "설정 파일"
+        notification_sources.append(f"이메일({from_source})")
 
     if config["NTFY_SERVER_URL"] and config["NTFY_TOPIC"]:
-        server_source = "环境变量" if os.environ.get("NTFY_SERVER_URL") else "配置文件"
+        server_source = "환경 변수" if os.environ.get("NTFY_SERVER_URL") else "설정 파일"
         notification_sources.append(f"ntfy({server_source})")
 
     if notification_sources:
-        print(f"通知渠道配置来源: {', '.join(notification_sources)}")
+        print(f"알림 채널 설정 출처: {', '.join(notification_sources)}")
     else:
-        print("未配置任何通知渠道")
+        print("알림 채널이 설정되지 않았습니다")
 
     return config
 
 
-print("正在加载配置...")
+print("설정 로드 중...")
 CONFIG = load_config()
-print(f"TrendRadar v{VERSION} 配置加载完成")
-print(f"监控平台数量: {len(CONFIG['PLATFORMS'])}")
+print(f"TrendRadar v{VERSION} 설정 로드 완료")
+print(f"모니터링 플랫폼 수: {len(CONFIG['PLATFORMS'])}")
 
 
-# === 工具函数 ===
+# === 유틸리티 함수 ===
 def get_beijing_time():
-    """获取北京时间"""
+    """베이징 시간 가져오기"""
     return datetime.now(pytz.timezone("Asia/Shanghai"))
 
 
 def format_date_folder():
-    """格式化日期文件夹"""
-    return get_beijing_time().strftime("%Y年%m月%d日")
+    """날짜 폴더 형식 지정"""
+    return get_beijing_time().strftime("%Y년%m월%d일")
 
 
 def format_time_filename():
-    """格式化时间文件名"""
-    return get_beijing_time().strftime("%H时%M分")
+    """시간 파일명 형식 지정"""
+    return get_beijing_time().strftime("%H시%M분")
 
 
 def clean_title(title: str) -> str:
-    """清理标题中的特殊字符"""
+    """제목의 특수 문자 정리"""
     if not isinstance(title, str):
         title = str(title)
     cleaned_title = title.replace("\n", " ").replace("\r", " ")
@@ -245,12 +245,12 @@ def clean_title(title: str) -> str:
 
 
 def ensure_directory_exists(directory: str):
-    """确保目录存在"""
+    """디렉토리 존재 확인"""
     Path(directory).mkdir(parents=True, exist_ok=True)
 
 
 def get_output_path(subfolder: str, filename: str) -> str:
-    """获取输出路径"""
+    """출력 경로 가져오기"""
     date_folder = format_date_folder()
     output_dir = Path("output") / date_folder / subfolder
     ensure_directory_exists(str(output_dir))
@@ -260,7 +260,7 @@ def get_output_path(subfolder: str, filename: str) -> str:
 def check_version_update(
     current_version: str, version_url: str, proxy_url: Optional[str] = None
 ) -> Tuple[bool, Optional[str]]:
-    """检查版本更新"""
+    """버전 업데이트 확인"""
     try:
         proxies = None
         if proxy_url:
@@ -278,14 +278,14 @@ def check_version_update(
         response.raise_for_status()
 
         remote_version = response.text.strip()
-        print(f"当前版本: {current_version}, 远程版本: {remote_version}")
+        print(f"현재 버전: {current_version}, 원격 버전: {remote_version}")
 
-        # 比较版本
+        # 버전 비교
         def parse_version(version_str):
             try:
                 parts = version_str.strip().split(".")
                 if len(parts) != 3:
-                    raise ValueError("版本号格式不正确")
+                    raise ValueError("버전 번호 형식이 올바르지 않습니다")
                 return int(parts[0]), int(parts[1]), int(parts[2])
             except:
                 return 0, 0, 0
@@ -297,12 +297,12 @@ def check_version_update(
         return need_update, remote_version if need_update else None
 
     except Exception as e:
-        print(f"版本检查失败: {e}")
+        print(f"버전 확인 실패: {e}")
         return False, None
 
 
 def is_first_crawl_today() -> bool:
-    """检测是否是当天第一次爬取"""
+    """당일 첫 크롤링 여부 확인"""
     date_folder = format_date_folder()
     txt_dir = Path("output") / date_folder / "txt"
 
@@ -314,7 +314,7 @@ def is_first_crawl_today() -> bool:
 
 
 def html_escape(text: str) -> str:
-    """HTML转义"""
+    """HTML 이스케이프"""
     if not isinstance(text, str):
         text = str(text)
 
@@ -327,9 +327,9 @@ def html_escape(text: str) -> str:
     )
 
 
-# === 推送记录管理 ===
+# === 푸시 기록 관리 ===
 class PushRecordManager:
-    """推送记录管理器"""
+    """푸시 기록 관리자"""
 
     def __init__(self):
         self.record_dir = Path("output") / ".push_records"
@@ -337,16 +337,16 @@ class PushRecordManager:
         self.cleanup_old_records()
 
     def ensure_record_dir(self):
-        """确保记录目录存在"""
+        """기록 디렉토리 존재 확인"""
         self.record_dir.mkdir(parents=True, exist_ok=True)
 
     def get_today_record_file(self) -> Path:
-        """获取今天的记录文件路径"""
+        """오늘의 기록 파일 경로 가져오기"""
         today = get_beijing_time().strftime("%Y%m%d")
         return self.record_dir / f"push_record_{today}.json"
 
     def cleanup_old_records(self):
-        """清理过期的推送记录"""
+        """만료된 푸시 기록 정리"""
         retention_days = CONFIG["PUSH_WINDOW"]["RECORD_RETENTION_DAYS"]
         current_time = get_beijing_time()
 
@@ -358,12 +358,12 @@ class PushRecordManager:
 
                 if (current_time - file_date).days > retention_days:
                     record_file.unlink()
-                    print(f"清理过期推送记录: {record_file.name}")
+                    print(f"만료된 푸시 기록 정리: {record_file.name}")
             except Exception as e:
-                print(f"清理记录文件失败 {record_file}: {e}")
+                print(f"기록 파일 정리 실패 {record_file}: {e}")
 
     def has_pushed_today(self) -> bool:
-        """检查今天是否已经推送过"""
+        """오늘 이미 푸시했는지 확인"""
         record_file = self.get_today_record_file()
 
         if not record_file.exists():
@@ -374,11 +374,11 @@ class PushRecordManager:
                 record = json.load(f)
             return record.get("pushed", False)
         except Exception as e:
-            print(f"读取推送记录失败: {e}")
+            print(f"푸시 기록 읽기 실패: {e}")
             return False
 
     def record_push(self, report_type: str):
-        """记录推送"""
+        """푸시 기록"""
         record_file = self.get_today_record_file()
         now = get_beijing_time()
 
@@ -391,48 +391,48 @@ class PushRecordManager:
         try:
             with open(record_file, "w", encoding="utf-8") as f:
                 json.dump(record, f, ensure_ascii=False, indent=2)
-            print(f"推送记录已保存: {report_type} at {now.strftime('%H:%M:%S')}")
+            print(f"푸시 기록 저장됨: {report_type} at {now.strftime('%H:%M:%S')}")
         except Exception as e:
-            print(f"保存推送记录失败: {e}")
+            print(f"푸시 기록 저장 실패: {e}")
 
     def is_in_time_range(self, start_time: str, end_time: str) -> bool:
-        """检查当前时间是否在指定时间范围内"""
+        """현재 시간이 지정된 시간 범위 내에 있는지 확인"""
         now = get_beijing_time()
         current_time = now.strftime("%H:%M")
-    
+
         def normalize_time(time_str: str) -> str:
-            """将时间字符串标准化为 HH:MM 格式"""
+            """시간 문자열을 HH:MM 형식으로 정규화"""
             try:
                 parts = time_str.strip().split(":")
                 if len(parts) != 2:
-                    raise ValueError(f"时间格式错误: {time_str}")
-            
+                    raise ValueError(f"시간 형식 오류: {time_str}")
+
                 hour = int(parts[0])
                 minute = int(parts[1])
-            
+
                 if not (0 <= hour <= 23 and 0 <= minute <= 59):
-                    raise ValueError(f"时间范围错误: {time_str}")
-            
+                    raise ValueError(f"시간 범위 오류: {time_str}")
+
                 return f"{hour:02d}:{minute:02d}"
             except Exception as e:
-                print(f"时间格式化错误 '{time_str}': {e}")
+                print(f"시간 형식화 오류 '{time_str}': {e}")
                 return time_str
-    
+
         normalized_start = normalize_time(start_time)
         normalized_end = normalize_time(end_time)
         normalized_current = normalize_time(current_time)
-    
+
         result = normalized_start <= normalized_current <= normalized_end
-    
+
         if not result:
-            print(f"时间窗口判断：当前 {normalized_current}，窗口 {normalized_start}-{normalized_end}")
-    
+            print(f"시간 창 판단: 현재 {normalized_current}, 창 {normalized_start}-{normalized_end}")
+
         return result
 
 
-# === 数据获取 ===
+# === 데이터 획득 ===
 class DataFetcher:
-    """数据获取器"""
+    """데이터 가져오기"""
 
     def __init__(self, proxy_url: Optional[str] = None):
         self.proxy_url = proxy_url
@@ -444,7 +444,7 @@ class DataFetcher:
         min_retry_wait: int = 3,
         max_retry_wait: int = 5,
     ) -> Tuple[Optional[str], str, str]:
-        """获取指定ID数据，支持重试"""
+        """지정된 ID 데이터 가져오기, 재시도 지원"""
         if isinstance(id_info, tuple):
             id_value, alias = id_info
         else:
@@ -476,12 +476,12 @@ class DataFetcher:
                 data_text = response.text
                 data_json = json.loads(data_text)
 
-                status = data_json.get("status", "未知")
+                status = data_json.get("status", "알 수 없음")
                 if status not in ["success", "cache"]:
-                    raise ValueError(f"响应状态异常: {status}")
+                    raise ValueError(f"응답 상태 이상: {status}")
 
-                status_info = "最新数据" if status == "success" else "缓存数据"
-                print(f"获取 {id_value} 成功（{status_info}）")
+                status_info = "최신 데이터" if status == "success" else "캐시 데이터"
+                print(f"{id_value} 가져오기 성공 ({status_info})")
                 return data_text, id_value, alias
 
             except Exception as e:
@@ -490,10 +490,10 @@ class DataFetcher:
                     base_wait = random.uniform(min_retry_wait, max_retry_wait)
                     additional_wait = (retries - 1) * random.uniform(1, 2)
                     wait_time = base_wait + additional_wait
-                    print(f"请求 {id_value} 失败: {e}. {wait_time:.2f}秒后重试...")
+                    print(f"{id_value} 요청 실패: {e}. {wait_time:.2f}초 후 재시도...")
                     time.sleep(wait_time)
                 else:
-                    print(f"请求 {id_value} 失败: {e}")
+                    print(f"{id_value} 요청 실패: {e}")
                     return None, id_value, alias
         return None, id_value, alias
 
@@ -502,7 +502,7 @@ class DataFetcher:
         ids_list: List[Union[str, Tuple[str, str]]],
         request_interval: int = CONFIG["REQUEST_INTERVAL"],
     ) -> Tuple[Dict, Dict, List]:
-        """爬取多个网站数据"""
+        """여러 웹사이트 데이터 크롤링"""
         results = {}
         id_to_name = {}
         failed_ids = []
@@ -535,10 +535,10 @@ class DataFetcher:
                                 "mobileUrl": mobile_url,
                             }
                 except json.JSONDecodeError:
-                    print(f"解析 {id_value} 响应失败")
+                    print(f"{id_value} 응답 파싱 실패")
                     failed_ids.append(id_value)
                 except Exception as e:
-                    print(f"处理 {id_value} 数据出错: {e}")
+                    print(f"{id_value} 데이터 처리 오류: {e}")
                     failed_ids.append(id_value)
             else:
                 failed_ids.append(id_value)
@@ -548,25 +548,25 @@ class DataFetcher:
                 actual_interval = max(50, actual_interval)
                 time.sleep(actual_interval / 1000)
 
-        print(f"成功: {list(results.keys())}, 失败: {failed_ids}")
+        print(f"성공: {list(results.keys())}, 실패: {failed_ids}")
         return results, id_to_name, failed_ids
 
 
-# === 数据处理 ===
+# === 데이터 처리 ===
 def save_titles_to_file(results: Dict, id_to_name: Dict, failed_ids: List) -> str:
-    """保存标题到文件"""
+    """제목을 파일에 저장"""
     file_path = get_output_path("txt", f"{format_time_filename()}.txt")
 
     with open(file_path, "w", encoding="utf-8") as f:
         for id_value, title_data in results.items():
-            # id | name 或 id
+            # id | name 또는 id
             name = id_to_name.get(id_value)
             if name and name != id_value:
                 f.write(f"{id_value} | {name}\n")
             else:
                 f.write(f"{id_value}\n")
 
-            # 按排名排序标题
+            # 순위별로 제목 정렬
             sorted_titles = []
             for title, info in title_data.items():
                 cleaned_title = clean_title(title)
@@ -596,7 +596,7 @@ def save_titles_to_file(results: Dict, id_to_name: Dict, failed_ids: List) -> st
             f.write("\n")
 
         if failed_ids:
-            f.write("==== 以下ID请求失败 ====\n")
+            f.write("==== 다음 ID 요청 실패 ====\n")
             for id_value in failed_ids:
                 f.write(f"{id_value}\n")
 
@@ -606,7 +606,7 @@ def save_titles_to_file(results: Dict, id_to_name: Dict, failed_ids: List) -> st
 def load_frequency_words(
     frequency_file: Optional[str] = None,
 ) -> Tuple[List[Dict], List[str]]:
-    """加载频率词配置"""
+    """빈도 단어 설정 로드"""
     if frequency_file is None:
         frequency_file = os.environ.get(
             "FREQUENCY_WORDS_PATH", "config/frequency_words.txt"
@@ -614,7 +614,7 @@ def load_frequency_words(
 
     frequency_path = Path(frequency_file)
     if not frequency_path.exists():
-        raise FileNotFoundError(f"频率词文件 {frequency_file} 不存在")
+        raise FileNotFoundError(f"빈도 단어 파일 {frequency_file}이(가) 존재하지 않습니다")
 
     with open(frequency_path, "r", encoding="utf-8") as f:
         content = f.read()
@@ -658,7 +658,7 @@ def load_frequency_words(
 
 
 def parse_file_titles(file_path: Path) -> Tuple[Dict, Dict]:
-    """解析单个txt文件的标题数据，返回(titles_by_id, id_to_name)"""
+    """단일 txt 파일의 제목 데이터 파싱, (titles_by_id, id_to_name) 반환"""
     titles_by_id = {}
     id_to_name = {}
 
@@ -667,14 +667,14 @@ def parse_file_titles(file_path: Path) -> Tuple[Dict, Dict]:
         sections = content.split("\n\n")
 
         for section in sections:
-            if not section.strip() or "==== 以下ID请求失败 ====" in section:
+            if not section.strip() or "==== 다음 ID 요청 실패 ====" in section:
                 continue
 
             lines = section.strip().split("\n")
             if len(lines) < 2:
                 continue
 
-            # id | name 或 id
+            # id | name 또는 id
             header_line = lines[0].strip()
             if " | " in header_line:
                 parts = header_line.split(" | ", 1)
@@ -693,19 +693,19 @@ def parse_file_titles(file_path: Path) -> Tuple[Dict, Dict]:
                         title_part = line.strip()
                         rank = None
 
-                        # 提取排名
+                        # 순위 추출
                         if ". " in title_part and title_part.split(". ")[0].isdigit():
                             rank_str, title_part = title_part.split(". ", 1)
                             rank = int(rank_str)
 
-                        # 提取 MOBILE URL
+                        # MOBILE URL 추출
                         mobile_url = ""
                         if " [MOBILE:" in title_part:
                             title_part, mobile_part = title_part.rsplit(" [MOBILE:", 1)
                             if mobile_part.endswith("]"):
                                 mobile_url = mobile_part[:-1]
 
-                        # 提取 URL
+                        # URL 추출
                         url = ""
                         if " [URL:" in title_part:
                             title_part, url_part = title_part.rsplit(" [URL:", 1)
@@ -722,7 +722,7 @@ def parse_file_titles(file_path: Path) -> Tuple[Dict, Dict]:
                         }
 
                     except Exception as e:
-                        print(f"解析标题行出错: {line}, 错误: {e}")
+                        print(f"제목 줄 파싱 오류: {line}, 오류: {e}")
 
     return titles_by_id, id_to_name
 
@@ -730,7 +730,7 @@ def parse_file_titles(file_path: Path) -> Tuple[Dict, Dict]:
 def read_all_today_titles(
     current_platform_ids: Optional[List[str]] = None,
 ) -> Tuple[Dict, Dict, Dict]:
-    """读取当天所有标题文件，支持按当前监控平台过滤"""
+    """당일 모든 제목 파일 읽기, 현재 모니터링 플랫폼별 필터링 지원"""
     date_folder = format_date_folder()
     txt_dir = Path("output") / date_folder / "txt"
 
@@ -778,7 +778,7 @@ def process_source_data(
     all_results: Dict,
     title_info: Dict,
 ) -> None:
-    """处理来源数据，合并重复标题"""
+    """소스 데이터 처리, 중복 제목 병합"""
     if source_id not in all_results:
         all_results[source_id] = title_data
 
@@ -845,7 +845,7 @@ def process_source_data(
 
 
 def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -> Dict:
-    """检测当日最新批次的新增标题，支持按当前监控平台过滤"""
+    """당일 최신 배치의 새 제목 감지, 현재 모니터링 플랫폼별 필터링 지원"""
     date_folder = format_date_folder()
     txt_dir = Path("output") / date_folder / "txt"
 
@@ -856,11 +856,11 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
     if len(files) < 2:
         return {}
 
-    # 解析最新文件
+    # 최신 파일 파싱
     latest_file = files[-1]
     latest_titles, _ = parse_file_titles(latest_file)
 
-    # 如果指定了当前平台列表，过滤最新文件数据
+    # 현재 플랫폼 목록이 지정된 경우, 최신 파일 데이터 필터링
     if current_platform_ids is not None:
         filtered_latest_titles = {}
         for source_id, title_data in latest_titles.items():
@@ -868,12 +868,12 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
                 filtered_latest_titles[source_id] = title_data
         latest_titles = filtered_latest_titles
 
-    # 汇总历史标题（按平台过滤）
+    # 이전 제목 집계 (플랫폼별 필터링)
     historical_titles = {}
     for file_path in files[:-1]:
         historical_data, _ = parse_file_titles(file_path)
 
-        # 过滤历史数据
+        # 이전 데이터 필터링
         if current_platform_ids is not None:
             filtered_historical_data = {}
             for source_id, title_data in historical_data.items():
@@ -887,7 +887,7 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
             for title in titles_data.keys():
                 historical_titles[source_id].add(title)
 
-    # 找出新增标题
+    # 새 제목 찾기
     new_titles = {}
     for source_id, latest_source_titles in latest_titles.items():
         historical_set = historical_titles.get(source_id, set())
@@ -903,11 +903,11 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
     return new_titles
 
 
-# === 统计和分析 ===
+# === 통계 및 분석 ===
 def calculate_news_weight(
     title_data: Dict, rank_threshold: int = CONFIG["RANK_THRESHOLD"]
 ) -> float:
-    """计算新闻权重，用于排序"""
+    """뉴스 가중치 계산, 정렬에 사용"""
     ranks = title_data.get("ranks", [])
     if not ranks:
         return 0.0
@@ -915,7 +915,7 @@ def calculate_news_weight(
     count = title_data.get("count", len(ranks))
     weight_config = CONFIG["WEIGHT_CONFIG"]
 
-    # 排名权重：Σ(11 - min(rank, 10)) / 出现次数
+    # 순위 가중치: Σ(11 - min(rank, 10)) / 출현 횟수
     rank_scores = []
     for rank in ranks:
         score = 11 - min(rank, 10)
@@ -923,10 +923,10 @@ def calculate_news_weight(
 
     rank_weight = sum(rank_scores) / len(ranks) if ranks else 0
 
-    # 频次权重：min(出现次数, 10) × 10
+    # 빈도 가중치: min(출현 횟수, 10) × 10
     frequency_weight = min(count, 10) * 10
 
-    # 热度加成：高排名次数 / 总出现次数 × 100
+    # 인기도 가산: 높은 순위 횟수 / 총 출현 횟수 × 100
     high_rank_count = sum(1 for rank in ranks if rank <= rank_threshold)
     hotness_ratio = high_rank_count / len(ranks) if ranks else 0
     hotness_weight = hotness_ratio * 100
@@ -943,23 +943,23 @@ def calculate_news_weight(
 def matches_word_groups(
     title: str, word_groups: List[Dict], filter_words: List[str]
 ) -> bool:
-    """检查标题是否匹配词组规则"""
-    # 如果没有配置词组，则匹配所有标题（支持显示全部新闻）
+    """제목이 단어 그룹 규칙과 일치하는지 확인"""
+    # 설정된 단어 그룹이 없으면, 모든 제목과 일치 (모든 뉴스 표시 지원)
     if not word_groups:
         return True
 
     title_lower = title.lower()
 
-    # 过滤词检查
+    # 필터 단어 확인
     if any(filter_word.lower() in title_lower for filter_word in filter_words):
         return False
 
-    # 词组匹配检查
+    # 단어 그룹 일치 확인
     for group in word_groups:
         required_words = group["required"]
         normal_words = group["normal"]
 
-        # 必须词检查
+        # 필수 단어 확인
         if required_words:
             all_required_present = all(
                 req_word.lower() in title_lower for req_word in required_words
@@ -967,7 +967,7 @@ def matches_word_groups(
             if not all_required_present:
                 continue
 
-        # 普通词检查
+        # 일반 단어 확인
         if normal_words:
             any_normal_present = any(
                 normal_word.lower() in title_lower for normal_word in normal_words
@@ -981,7 +981,7 @@ def matches_word_groups(
 
 
 def format_time_display(first_time: str, last_time: str) -> str:
-    """格式化时间显示"""
+    """시간 표시 형식 지정"""
     if not first_time:
         return ""
     if first_time == last_time or not last_time:
@@ -991,7 +991,7 @@ def format_time_display(first_time: str, last_time: str) -> str:
 
 
 def format_rank_display(ranks: List[int], rank_threshold: int, format_type: str) -> str:
-    """统一的排名格式化方法"""
+    """통일된 순위 형식 지정 메서드"""
     if not ranks:
         return ""
 
@@ -1040,28 +1040,28 @@ def count_word_frequency(
     new_titles: Optional[Dict] = None,
     mode: str = "daily",
 ) -> Tuple[List[Dict], int]:
-    """统计词频，支持必须词、频率词、过滤词，并标记新增标题"""
+    """단어 빈도 통계, 필수 단어, 빈도 단어, 필터 단어 지원 및 새 제목 표시"""
 
-    # 如果没有配置词组，创建一个包含所有新闻的虚拟词组
+    # 설정된 단어 그룹이 없으면, 모든 뉴스를 포함하는 가상 단어 그룹 생성
     if not word_groups:
-        print("频率词配置为空，将显示所有新闻")
-        word_groups = [{"required": [], "normal": [], "group_key": "全部新闻"}]
-        filter_words = []  # 清空过滤词，显示所有新闻
+        print("빈도 단어 설정이 비어있어 모든 뉴스를 표시합니다")
+        word_groups = [{"required": [], "normal": [], "group_key": "전체 뉴스"}]
+        filter_words = []  # 필터 단어 비우기, 모든 뉴스 표시
 
     is_first_today = is_first_crawl_today()
 
-    # 确定处理的数据源和新增标记逻辑
+    # 처리할 데이터 소스와 새 항목 표시 로직 결정
     if mode == "incremental":
         if is_first_today:
-            # 增量模式 + 当天第一次：处理所有新闻，都标记为新增
+            # 증분 모드 + 당일 첫 번째: 모든 뉴스 처리, 모두 새 항목으로 표시
             results_to_process = results
             all_news_are_new = True
         else:
-            # 增量模式 + 当天非第一次：只处理新增的新闻
+            # 증분 모드 + 당일 첫 번째 아님: 새 뉴스만 처리
             results_to_process = new_titles if new_titles else {}
             all_news_are_new = True
     elif mode == "current":
-        # current 模式：只处理当前时间批次的新闻，但统计信息来自全部历史
+        # current 모드: 현재 시간 배치의 뉴스만 처리하지만, 통계 정보는 전체 이력에서 가져옴
         if title_info:
             latest_time = None
             for source_titles in title_info.values():
@@ -1071,7 +1071,7 @@ def count_word_frequency(
                         if latest_time is None or last_time > latest_time:
                             latest_time = last_time
 
-            # 只处理 last_time 等于最新时间的新闻
+            # last_time이 최신 시간과 동일한 뉴스만 처리
             if latest_time:
                 results_to_process = {}
                 for source_id, source_titles in results.items():
@@ -1086,7 +1086,7 @@ def count_word_frequency(
                             results_to_process[source_id] = filtered_titles
 
                 print(
-                    f"当前榜单模式：最新时间 {latest_time}，筛选出 {sum(len(titles) for titles in results_to_process.values())} 条当前榜单新闻"
+                    f"현재 순위 모드: 최신 시간 {latest_time}, {sum(len(titles) for titles in results_to_process.values())}개 현재 순위 뉴스 필터링됨"
                 )
             else:
                 results_to_process = results
@@ -1094,16 +1094,16 @@ def count_word_frequency(
             results_to_process = results
         all_news_are_new = False
     else:
-        # 当日汇总模式：处理所有新闻
+        # 당일 요약 모드: 모든 뉴스 처리
         results_to_process = results
         all_news_are_new = False
         total_input_news = sum(len(titles) for titles in results.values())
         filter_status = (
-            "全部显示"
-            if len(word_groups) == 1 and word_groups[0]["group_key"] == "全部新闻"
-            else "频率词过滤"
+            "전체 표시"
+            if len(word_groups) == 1 and word_groups[0]["group_key"] == "전체 뉴스"
+            else "빈도 단어 필터"
         )
-        print(f"当日汇总模式：处理 {total_input_news} 条新闻，模式：{filter_status}")
+        print(f"당일 요약 모드: {total_input_news}개 뉴스 처리, 모드: {filter_status}")
 
     word_stats = {}
     total_titles = 0
@@ -1129,7 +1129,7 @@ def count_word_frequency(
             if title in processed_titles.get(source_id, {}):
                 continue
 
-            # 使用统一的匹配逻辑
+            # 통일된 일치 로직 사용
             matches_frequency_words = matches_word_groups(
                 title, word_groups, filter_words
             )
@@ -1137,7 +1137,7 @@ def count_word_frequency(
             if not matches_frequency_words:
                 continue
 
-            # 如果是增量模式或 current 模式第一次，统计匹配的新增新闻数量
+            # 증분 모드이거나 current 모드의 첫 번째인 경우, 일치하는 새 뉴스 수 집계
             if (mode == "incremental" and all_news_are_new) or (
                 mode == "current" and is_first_today
             ):
@@ -1147,20 +1147,20 @@ def count_word_frequency(
             source_url = title_data.get("url", "")
             source_mobile_url = title_data.get("mobileUrl", "")
 
-            # 找到匹配的词组
+            # 일치하는 단어 그룹 찾기
             title_lower = title.lower()
             for group in word_groups:
                 required_words = group["required"]
                 normal_words = group["normal"]
 
-                # 如果是"全部新闻"模式，所有标题都匹配第一个（唯一的）词组
-                if len(word_groups) == 1 and word_groups[0]["group_key"] == "全部新闻":
+                # "전체 뉴스" 모드인 경우, 모든 제목이 첫 번째(유일한) 단어 그룹과 일치
+                if len(word_groups) == 1 and word_groups[0]["group_key"] == "전체 뉴스":
                     group_key = group["group_key"]
                     word_stats[group_key]["count"] += 1
                     if source_id not in word_stats[group_key]["titles"]:
                         word_stats[group_key]["titles"][source_id] = []
                 else:
-                    # 原有的匹配逻辑
+                    # 기존 일치 로직
                     if required_words:
                         all_required_present = all(
                             req_word.lower() in title_lower
@@ -1189,7 +1189,7 @@ def count_word_frequency(
                 url = source_url
                 mobile_url = source_mobile_url
 
-                # 对于 current 模式，从历史统计信息中获取完整数据
+                # current 모드의 경우, 이력 통계 정보에서 전체 데이터 가져오기
                 if (
                     mode == "current"
                     and title_info
@@ -1225,13 +1225,13 @@ def count_word_frequency(
 
                 source_name = id_to_name.get(source_id, source_id)
 
-                # 判断是否为新增
+                # 새 항목인지 판단
                 is_new = False
                 if all_news_are_new:
-                    # 增量模式下所有处理的新闻都是新增，或者当天第一次的所有新闻都是新增
+                    # 증분 모드에서 처리된 모든 뉴스가 새 항목이거나, 당일 첫 번째의 모든 뉴스가 새 항목
                     is_new = True
                 elif new_titles and source_id in new_titles:
-                    # 检查是否在新增列表中
+                    # 새 항목 목록에 있는지 확인
                     new_titles_for_source = new_titles[source_id]
                     is_new = title in new_titles_for_source
 
@@ -1257,54 +1257,54 @@ def count_word_frequency(
 
                 break
 
-    # 最后统一打印汇总信息
+    # 마지막으로 요약 정보 통합 출력
     if mode == "incremental":
         if is_first_today:
             total_input_news = sum(len(titles) for titles in results.values())
             filter_status = (
-                "全部显示"
-                if len(word_groups) == 1 and word_groups[0]["group_key"] == "全部新闻"
-                else "频率词匹配"
+                "전체 표시"
+                if len(word_groups) == 1 and word_groups[0]["group_key"] == "전체 뉴스"
+                else "빈도 단어 일치"
             )
             print(
-                f"增量模式：当天第一次爬取，{total_input_news} 条新闻中有 {matched_new_count} 条{filter_status}"
+                f"증분 모드: 당일 첫 번째 크롤링, {total_input_news}개 뉴스 중 {matched_new_count}개 {filter_status}"
             )
         else:
             if new_titles:
                 total_new_count = sum(len(titles) for titles in new_titles.values())
                 filter_status = (
-                    "全部显示"
+                    "전체 표시"
                     if len(word_groups) == 1
-                    and word_groups[0]["group_key"] == "全部新闻"
-                    else "匹配频率词"
+                    and word_groups[0]["group_key"] == "전체 뉴스"
+                    else "빈도 단어 일치"
                 )
                 print(
-                    f"增量模式：{total_new_count} 条新增新闻中，有 {matched_new_count} 条{filter_status}"
+                    f"증분 모드: {total_new_count}개 새 뉴스 중 {matched_new_count}개 {filter_status}"
                 )
                 if matched_new_count == 0 and len(word_groups) > 1:
-                    print("增量模式：没有新增新闻匹配频率词，将不会发送通知")
+                    print("증분 모드: 빈도 단어와 일치하는 새 뉴스가 없어 알림을 보내지 않습니다")
             else:
-                print("增量模式：未检测到新增新闻")
+                print("증분 모드: 새 뉴스가 감지되지 않았습니다")
     elif mode == "current":
         total_input_news = sum(len(titles) for titles in results_to_process.values())
         if is_first_today:
             filter_status = (
-                "全部显示"
-                if len(word_groups) == 1 and word_groups[0]["group_key"] == "全部新闻"
-                else "频率词匹配"
+                "전체 표시"
+                if len(word_groups) == 1 and word_groups[0]["group_key"] == "전체 뉴스"
+                else "빈도 단어 일치"
             )
             print(
-                f"当前榜单模式：当天第一次爬取，{total_input_news} 条当前榜单新闻中有 {matched_new_count} 条{filter_status}"
+                f"현재 순위 모드: 당일 첫 번째 크롤링, {total_input_news}개 현재 순위 뉴스 중 {matched_new_count}개 {filter_status}"
             )
         else:
             matched_count = sum(stat["count"] for stat in word_stats.values())
             filter_status = (
-                "全部显示"
-                if len(word_groups) == 1 and word_groups[0]["group_key"] == "全部新闻"
-                else "频率词匹配"
+                "전체 표시"
+                if len(word_groups) == 1 and word_groups[0]["group_key"] == "전체 뉴스"
+                else "빈도 단어 일치"
             )
             print(
-                f"当前榜单模式：{total_input_news} 条当前榜单新闻中有 {matched_count} 条{filter_status}"
+                f"현재 순위 모드: {total_input_news}개 현재 순위 뉴스 중 {matched_count}개 {filter_status}"
             )
 
     stats = []
@@ -1313,7 +1313,7 @@ def count_word_frequency(
         for source_id, title_list in data["titles"].items():
             all_titles.extend(title_list)
 
-        # 按权重排序
+        # 가중치별 정렬
         sorted_titles = sorted(
             all_titles,
             key=lambda x: (
@@ -1340,7 +1340,7 @@ def count_word_frequency(
     return stats, total_titles
 
 
-# === 报告生成 ===
+# === 보고서 생성 ===
 def prepare_report_data(
     stats: List[Dict],
     failed_ids: Optional[List] = None,
@@ -1348,13 +1348,13 @@ def prepare_report_data(
     id_to_name: Optional[Dict] = None,
     mode: str = "daily",
 ) -> Dict:
-    """准备报告数据"""
+    """보고서 데이터 준비"""
     processed_new_titles = []
 
-    # 在增量模式下隐藏新增新闻区域
+    # 증분 모드에서 새 뉴스 영역 숨기기
     hide_new_section = mode == "incremental"
 
-    # 只有在非隐藏模式下才处理新增新闻部分
+    # 숨김 모드가 아닐 때만 새 뉴스 부분 처리
     if not hide_new_section:
         filtered_new_titles = {}
         if new_titles and id_to_name:
@@ -1441,7 +1441,7 @@ def prepare_report_data(
 def format_title_for_platform(
     platform: str, title_data: Dict, show_source: bool = True
 ) -> str:
-    """统一的标题格式化方法"""
+    """통일된 제목 형식 지정 메서드"""
     rank_display = format_rank_display(
         title_data["ranks"], title_data["rank_threshold"], platform
     )
@@ -1605,14 +1605,14 @@ def generate_html_report(
     is_daily_summary: bool = False,
     update_info: Optional[Dict] = None,
 ) -> str:
-    """生成HTML报告"""
+    """HTML 보고서 생성"""
     if is_daily_summary:
         if mode == "current":
-            filename = "当前榜单汇总.html"
+            filename = "현재순위요약.html"
         elif mode == "incremental":
-            filename = "当日增量.html"
+            filename = "당일증분.html"
         else:
-            filename = "当日汇总.html"
+            filename = "당일요약.html"
     else:
         filename = f"{format_time_filename()}.html"
 
@@ -1642,7 +1642,7 @@ def render_html_content(
     mode: str = "daily",
     update_info: Optional[Dict] = None,
 ) -> str:
-    """渲染HTML内容"""
+    """HTML 콘텐츠 렌더링"""
     html = """
     <!DOCTYPE html>
     <html>
@@ -2647,7 +2647,7 @@ def render_html_content(
 def render_feishu_content(
     report_data: Dict, update_info: Optional[Dict] = None, mode: str = "daily"
 ) -> str:
-    """渲染飞书内容"""
+    """Feishu 콘텐츠 렌더링"""
     text_content = ""
 
     if report_data["stats"]:
@@ -2734,7 +2734,7 @@ def render_feishu_content(
 def render_dingtalk_content(
     report_data: Dict, update_info: Optional[Dict] = None, mode: str = "daily"
 ) -> str:
-    """渲染钉钉内容"""
+    """DingTalk 콘텐츠 렌더링"""
     text_content = ""
 
     total_titles = sum(
@@ -2831,7 +2831,7 @@ def split_content_into_batches(
     max_bytes: int = None,
     mode: str = "daily",
 ) -> List[str]:
-    """分批处理消息内容，确保词组标题+至少第一条新闻的完整性"""
+    """메시지 콘텐츠 일괄 처리, 단어 그룹 제목 + 최소 첫 번째 뉴스 무결성 보장"""
     if max_bytes is None:
         if format_type == "dingtalk":
             max_bytes = CONFIG.get("DINGTALK_BATCH_SIZE", 20000)
@@ -3420,13 +3420,13 @@ def send_to_feishu(
     proxy_url: Optional[str] = None,
     mode: str = "daily",
 ) -> bool:
-    """发送到飞书（支持分批发送）"""
+    """Feishu로 전송 (일괄 전송 지원)"""
     headers = {"Content-Type": "application/json"}
     proxies = None
     if proxy_url:
         proxies = {"http": proxy_url, "https": proxy_url}
 
-    # 获取分批内容，使用飞书专用的批次大小
+    # 일괄 콘텐츠 가져오기, Feishu 전용 배치 크기 사용
     batches = split_content_into_batches(
         report_data,
         "feishu",
@@ -3435,25 +3435,25 @@ def send_to_feishu(
         mode=mode,
     )
 
-    print(f"飞书消息分为 {len(batches)} 批次发送 [{report_type}]")
+    print(f"Feishu 메시지를 {len(batches)}개 배치로 전송 [{report_type}]")
 
-    # 逐批发送
+    # 배치별로 전송
     for i, batch_content in enumerate(batches, 1):
         batch_size = len(batch_content.encode("utf-8"))
         print(
-            f"发送飞书第 {i}/{len(batches)} 批次，大小：{batch_size} 字节 [{report_type}]"
+            f"Feishu 제{i}/{len(batches)} 배치 전송, 크기: {batch_size} 바이트 [{report_type}]"
         )
 
-        # 添加批次标识
+        # 배치 식별자 추가
         if len(batches) > 1:
-            batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
-            # 将批次标识插入到适当位置（在统计标题之后）
+            batch_header = f"**[제 {i}/{len(batches)} 배치]**\n\n"
+            # 적절한 위치에 배치 식별자 삽입 (통계 제목 뒤)
             if "📊 **热点词汇统计**" in batch_content:
                 batch_content = batch_content.replace(
                     "📊 **热点词汇统计**\n\n", f"📊 **热点词汇统计** {batch_header}"
                 )
             else:
-                # 如果没有统计标题，直接在开头添加
+                # 통계 제목이 없으면 시작 부분에 직접 추가
                 batch_content = batch_header + batch_content
 
         total_titles = sum(
@@ -3510,13 +3510,13 @@ def send_to_dingtalk(
     proxy_url: Optional[str] = None,
     mode: str = "daily",
 ) -> bool:
-    """发送到钉钉（支持分批发送）"""
+    """DingTalk으로 전송 (일괄 전송 지원)"""
     headers = {"Content-Type": "application/json"}
     proxies = None
     if proxy_url:
         proxies = {"http": proxy_url, "https": proxy_url}
 
-    # 获取分批内容，使用钉钉专用的批次大小
+    # 일괄 콘텐츠 가져오기, DingTalk 전용 배치 크기 사용
     batches = split_content_into_batches(
         report_data,
         "dingtalk",
@@ -3525,31 +3525,31 @@ def send_to_dingtalk(
         mode=mode,
     )
 
-    print(f"钉钉消息分为 {len(batches)} 批次发送 [{report_type}]")
+    print(f"DingTalk 메시지를 {len(batches)}개 배치로 전송 [{report_type}]")
 
-    # 逐批发送
+    # 배치별로 전송
     for i, batch_content in enumerate(batches, 1):
         batch_size = len(batch_content.encode("utf-8"))
         print(
-            f"发送钉钉第 {i}/{len(batches)} 批次，大小：{batch_size} 字节 [{report_type}]"
+            f"DingTalk 제{i}/{len(batches)} 배치 전송, 크기: {batch_size} 바이트 [{report_type}]"
         )
 
-        # 添加批次标识
+        # 배치 식별자 추가
         if len(batches) > 1:
-            batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
-            # 将批次标识插入到适当位置（在标题之后）
+            batch_header = f"**[제 {i}/{len(batches)} 배치]**\n\n"
+            # 적절한 위치에 배치 식별자 삽입 (제목 뒤)
             if "📊 **热点词汇统计**" in batch_content:
                 batch_content = batch_content.replace(
                     "📊 **热点词汇统计**\n\n", f"📊 **热点词汇统计** {batch_header}\n\n"
                 )
             else:
-                # 如果没有统计标题，直接在开头添加
+                # 통계 제목이 없으면 시작 부분에 직접 추가
                 batch_content = batch_header + batch_content
 
         payload = {
             "msgtype": "markdown",
             "markdown": {
-                "title": f"TrendRadar 热点分析报告 - {report_type}",
+                "title": f"TrendRadar 핫 이슈 분석 보고서 - {report_type}",
                 "text": batch_content,
             },
         }
@@ -3591,7 +3591,7 @@ def send_to_wework(
     proxy_url: Optional[str] = None,
     mode: str = "daily",
 ) -> bool:
-    """发送到企业微信（支持分批发送）"""
+    """기업 WeChat으로 전송 (일괄 전송 지원)"""
     headers = {"Content-Type": "application/json"}
     proxies = None
     if proxy_url:
@@ -3654,7 +3654,7 @@ def send_to_telegram(
     proxy_url: Optional[str] = None,
     mode: str = "daily",
 ) -> bool:
-    """发送到Telegram（支持分批发送）"""
+    """Telegram으로 전송 (일괄 전송 지원)"""
     headers = {"Content-Type": "application/json"}
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 

@@ -4,7 +4,7 @@
   <img src="/_image/banner.jpg" alt="TrendRadar Banner" width="50%">
 </a>
 
-🚀 最快<strong>30秒</strong>部署的热点助手 —— 告别无效刷屏，只看真正关心的新闻资讯
+🚀 가장 빠른 <strong>30초</strong> 배포 핫이슈 도우미 —— 무의미한 스크롤 탈출, 진짜 관심 있는 뉴스만 보기
 
 <a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
@@ -14,59 +14,59 @@
 [![Version](https://img.shields.io/badge/version-v3.0.5-blue.svg)](https://github.com/sansan0/TrendRadar)
 [![MCP](https://img.shields.io/badge/MCP-v1.0.1-green.svg)](https://github.com/sansan0/TrendRadar)
 
-[![企业微信通知](https://img.shields.io/badge/企业微信-通知-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
-[![Telegram通知](https://img.shields.io/badge/Telegram-通知-00D4AA?style=flat-square)](https://telegram.org/)
-[![dingtalk通知](https://img.shields.io/badge/钉钉-通知-00D4AA?style=flat-square)](#)
-[![飞书通知](https://img.shields.io/badge/飞书-通知-00D4AA?style=flat-square)](https://www.feishu.cn/)
-[![邮件通知](https://img.shields.io/badge/Email-通知-00D4AA?style=flat-square)](#) 
-[![ntfy通知](https://img.shields.io/badge/ntfy-通知-00D4AA?style=flat-square)](https://github.com/binwiederhier/ntfy)
+[![기업 위챗 알림](https://img.shields.io/badge/기업위챗-알림-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
+[![Telegram 알림](https://img.shields.io/badge/Telegram-알림-00D4AA?style=flat-square)](https://telegram.org/)
+[![딩톡 알림](https://img.shields.io/badge/딩톡-알림-00D4AA?style=flat-square)](#)
+[![Feishu 알림](https://img.shields.io/badge/Feishu-알림-00D4AA?style=flat-square)](https://www.feishu.cn/)
+[![이메일 알림](https://img.shields.io/badge/Email-알림-00D4AA?style=flat-square)](#)
+[![ntfy 알림](https://img.shields.io/badge/ntfy-알림-00D4AA?style=flat-square)](https://github.com/binwiederhier/ntfy)
 
 
-[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-自动化-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/sansan0/TrendRadar)
-[![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-部署-4285F4?style=flat-square&logo=github&logoColor=white)](https://sansan0.github.io/TrendRadar)
-[![Docker](https://img.shields.io/badge/Docker-部署-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/wantcat/trendradar)
-[![MCP Support](https://img.shields.io/badge/MCP-AI分析支持-FF6B6B?style=flat-square&logo=ai&logoColor=white)](https://modelcontextprotocol.io/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-자동화-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/sansan0/TrendRadar)
+[![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-배포-4285F4?style=flat-square&logo=github&logoColor=white)](https://sansan0.github.io/TrendRadar)
+[![Docker](https://img.shields.io/badge/Docker-배포-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/wantcat/trendradar)
+[![MCP Support](https://img.shields.io/badge/MCP-AI분석지원-FF6B6B?style=flat-square&logo=ai&logoColor=white)](https://modelcontextprotocol.io/)
 
 </div>
 
 
-> 本项目以轻量，易部署为目标
+> 본 프로젝트는 경량화와 쉬운 배포를 목표로 합니다
 
-## 📑 快速导航
+## 📑 빠른 네비게이션
 
 <div align="center">
 
-| [🎯 核心功能](#-核心功能) | [🚀 快速开始](#-快速开始) | [🐳 Docker部署](#-docker-部署) | [🤖 AI分析专区](#-ai-智能分析部署) |
+| [🎯 핵심 기능](#-핵심-기능) | [🚀 빠른 시작](#-빠른-시작) | [🐳 Docker 배포](#-docker-배포) | [🤖 AI 분석 전용](#-ai-지능-분석-배포) |
 |:---:|:---:|:---:|:---:|
-| [📝 更新日志](#-更新日志) | [🔌 MCP客户端](#-mcp-客户端) | [❓ 答疑与常见问题](#问题答疑与1元点赞) | [⭐ 项目相关](#项目相关) |
-| [🔧 自定义监控平台](#自定义监控平台) | [📝 frequency_words.txt 配置](#frequencywordstxt-配置教程) | | |
+| [📝 업데이트 로그](#-업데이트-로그) | [🔌 MCP 클라이언트](#-mcp-클라이언트) | [❓ Q&A 및 FAQ](#문제-답변-및-1원-후원) | [⭐ 프로젝트 관련](#프로젝트-관련) |
+| [🔧 커스텀 모니터링 플랫폼](#커스텀-모니터링-플랫폼) | [📝 frequency_words.txt 설정](#frequencywordstxt-설정-가이드) | | |
 
 </div>
 
-- 感谢**耐心反馈 bug** 的贡献者，你们的每一条反馈让项目更加完善😉;  
-- 感谢**为项目点 star** 的观众们，**fork** 你所欲也，**star** 我所欲也，两者得兼😍是对开源精神最好的支持;  
-- 感谢**关注[公众号](#问题答疑与1元点赞)** 的读者们，你们的留言、点赞、分享和推荐等积极互动让内容更有温度😎。  
+- **버그를 끈기있게 피드백**해주신 기여자분들께 감사드립니다. 여러분의 모든 피드백이 프로젝트를 더욱 완벽하게 만들어줍니다😉;
+- **프로젝트에 star를 주신** 여러분께 감사드립니다. **fork**도 좋고, **star**도 좋고, 둘 다 해주시면😍 오픈소스 정신에 대한 최고의 지지입니다;
+- **[공식 계정](#문제-답변-및-1원-후원)을 팔로우**해주신 독자분들께 감사드립니다. 여러분의 댓글, 좋아요, 공유, 추천 등 적극적인 상호작용이 콘텐츠를 더욱 따뜻하게 만들어줍니다😎。  
 
 <details>
-<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥66🔥</strong> 位)</summary>
+<summary>👉 클릭하여 <strong>감사 명단</strong> 보기 (현재 <strong>🔥66🔥</strong> 명)</summary>
 
-### 数据支持
+### 데이터 지원
 
-本项目使用了 [newsnow](https://github.com/ourongxing/newsnow) 项目提供的 API 接口获取多平台数据
+본 프로젝트는 [newsnow](https://github.com/ourongxing/newsnow) 프로젝트에서 제공하는 API 인터페이스를 사용하여 다중 플랫폼 데이터를 가져옵니다
 
-### 推广助力
+### 홍보 지원
 
-> 感谢以下平台和个人的推荐(按时间排列)
+> 다음 플랫폼과 개인의 추천에 감사드립니다 (시간순)
 
-- [小众软件](https://mp.weixin.qq.com/s/fvutkJ_NPUelSW9OGK39aA) - 开源软件推荐平台
-- [LinuxDo 社区](https://linux.do/) - 技术爱好者的聚集地
-- [阮一峰周刊](https://github.com/ruanyf/weekly) - 技术圈有影响力的周刊
+- [小众软件](https://mp.weixin.qq.com/s/fvutkJ_NPUelSW9OGK39aA) - 오픈소스 소프트웨어 추천 플랫폼
+- [LinuxDo 커뮤니티](https://linux.do/) - 기술 애호가들의 모임
+- [루이펑 주간](https://github.com/ruanyf/weekly) - 기술계의 영향력 있는 주간지
 
-### 观众支持
+### 커뮤니티 지원
 
-> 感谢**给予资金支持** 的朋友们,你们的慷慨已化身为键盘旁的零食饮料,陪伴着项目的每一次迭代
+> **재정적 지원**을 해주신 분들께 감사드립니다. 여러분의 관대함은 키보드 옆의 간식과 음료로 변신하여 프로젝트의 모든 반복 작업을 함께하고 있습니다
 
-|           点赞人            |  金额  |  日期  |             备注             |
+|           후원자            |  금액  |  날짜  |             비고             |
 | :-------------------------: | :----: | :----: | :-----------------------: |
 |           *海          |  1  | 2025.11.15  |    | 
 |           *德          |  1.99  | 2025.11.15  |    | 
@@ -136,124 +136,124 @@
 </details>
 
 
-## ✨ 核心功能
+## ✨ 핵심 기능
 
-### **全网热点聚合**
+### **전체 네트워크 핫이슈 집계**
 
-- 知乎
-- 抖音
-- bilibili 热搜
-- 华尔街见闻
-- 贴吧
-- 百度热搜
-- 财联社热门
-- 澎湃新闻
-- 凤凰网
-- 今日头条
-- 微博
+- 知乎 (Zhihu)
+- 抖音 (Douyin)
+- bilibili 핫 검색
+- 华尔街见闻 (Wall Street Journal CN)
+- 贴吧 (Tieba)
+- 百度热搜 (Baidu Hot Search)
+- 财联社热门 (Cailian Hot)
+- 澎湃新闻 (The Paper)
+- 凤凰网 (iFeng)
+- 今日头条 (Toutiao)
+- 微博 (Weibo)
 
-默认监控 11 个主流平台，也可自行增加额外的平台
+기본적으로 11개의 주요 플랫폼을 모니터링하며, 추가 플랫폼도 직접 추가할 수 있습니다
 
-<details id="自定义监控平台">
-<summary><strong>👉 点击展开：自定义监控平台</strong></summary>
+<details id="커스텀-모니터링-플랫폼">
+<summary><strong>👉 클릭하여 펼치기: 커스텀 모니터링 플랫폼</strong></summary>
 <br>
 
-本项目的资讯数据来源于 [newsnow](https://github.com/ourongxing/newsnow) ，你可以点击[网站](https://newsnow.busiyi.world/)，点击[更多]，查看是否有你想要的平台。 
+본 프로젝트의 뉴스 데이터는 [newsnow](https://github.com/ourongxing/newsnow) 프로젝트에서 제공하는 데이터를 사용합니다. [웹사이트](https://newsnow.busiyi.world/)를 클릭하고 [더보기]를 클릭하여 원하는 플랫폼이 있는지 확인할 수 있습니다.
 
-具体添加可访问 [项目源代码](https://github.com/ourongxing/newsnow/tree/main/server/sources)，根据里面的文件名，在 `config/config.yaml` 文件中修改 `platforms` 配置：
+구체적인 추가 방법은 [프로젝트 소스 코드](https://github.com/ourongxing/newsnow/tree/main/server/sources)를 방문하여 파일명을 확인한 후, `config/config.yaml` 파일에서 `platforms` 설정을 수정하세요:
 
 ```yaml
 platforms:
   - id: "toutiao"
     name: "今日头条"
-  - id: "baidu"  
+  - id: "baidu"
     name: "百度热搜"
   - id: "wallstreetcn-hot"
     name: "华尔街见闻"
-  # 添加更多平台...
+  # 더 많은 플랫폼 추가...
 ```
-如果不会看的话，就直接复制他人整理好的部分[平台配置](https://github.com/sansan0/TrendRadar/issues/95)
+잘 모르겠다면 다른 사용자가 정리한 [플랫폼 설정](https://github.com/sansan0/TrendRadar/issues/95)을 직접 복사하세요
 
 </details>
 
-### **智能推送策略**
+### **스마트 푸시 전략**
 
-**三种推送模式**：
+**세 가지 푸시 모드**:
 
-| 模式 | 适用人群 | 推送时机 | 显示内容 | 适用场景 |
+| 모드 | 적용 대상 | 푸시 시기 | 표시 내용 | 적용 시나리오 |
 |------|----------|----------|----------|----------|
-| **当日汇总**<br/>`daily` | 📋 企业管理者/普通用户 | 按时推送(默认每小时推送一次) | 当日所有匹配新闻<br/>+ 新增新闻区域 | 日报总结<br/>全面了解当日热点趋势 |
-| **当前榜单**<br/>`current` | 📰 自媒体人/内容创作者 | 按时推送(默认每小时推送一次) | 当前榜单匹配新闻<br/>+ 新增新闻区域 | 实时热点追踪<br/>了解当前最火的内容 |
-| **增量监控**<br/>`incremental` | 📈 投资者/交易员 | 有新增才推送 | 新出现的匹配频率词新闻 | 避免重复信息干扰<br/>高频监控场景 |
+| **당일 요약**<br/>`daily` | 📋 기업 관리자/일반 사용자 | 정시 푸시(기본 1시간마다) | 당일 모든 매칭 뉴스<br/>+ 신규 뉴스 영역 | 일일 요약<br/>당일 핫이슈 트렌드 전체 파악 |
+| **현재 랭킹**<br/>`current` | 📰 미디어인/콘텐츠 크리에이터 | 정시 푸시(기본 1시간마다) | 현재 랭킹 매칭 뉴스<br/>+ 신규 뉴스 영역 | 실시간 핫이슈 추적<br/>현재 가장 인기있는 콘텐츠 파악 |
+| **증분 모니터링**<br/>`incremental` | 📈 투자자/트레이더 | 신규 항목만 푸시 | 새로 등장한 매칭 키워드 뉴스 | 중복 정보 간섭 방지<br/>고빈도 모니터링 시나리오 |
 
-**附加功能 - 推送时间窗口控制**（可选）：
+**추가 기능 - 푸시 시간 윈도우 제어** (선택사항):
 
-此功能独立于上述三种推送模式,可与任意模式搭配使用:
+이 기능은 위의 세 가지 푸시 모드와 독립적이며, 모든 모드와 함께 사용할 수 있습니다:
 
-- **时间窗口限制**: 设定推送时间范围（如 09:00-18:00 或 20:00-22:00）,只在指定时间内推送
-- **推送频率控制**:
-  - 窗口内多次推送: 时间窗口内每次执行都推送
-  - 每天仅推送一次: 时间窗口内只推送一次（适合当日汇总或当前榜单模式）
-- **典型场景**:
-  - 工作时间推送: 只在工作日 09:00-18:00 接收消息
-  - 晚间汇总推送: 希望在晚上固定时间（如 20:00-22:00）收到汇总
-  - 避免打扰: 防止非工作时间收到推送通知
+- **시간 윈도우 제한**: 푸시 시간 범위 설정 (예: 09:00-18:00 또는 20:00-22:00), 지정된 시간에만 푸시
+- **푸시 빈도 제어**:
+  - 윈도우 내 다중 푸시: 시간 윈도우 내에서 매번 실행 시 푸시
+  - 하루 한 번만 푸시: 시간 윈도우 내에서 한 번만 푸시 (당일 요약 또는 현재 랭킹 모드에 적합)
+- **일반적인 시나리오**:
+  - 근무 시간 푸시: 평일 09:00-18:00에만 메시지 수신
+  - 저녁 요약 푸시: 저녁 고정 시간 (예: 20:00-22:00)에 요약 수신
+  - 방해 방지: 비근무 시간에 푸시 알림 수신 방지
 
-> 提示: 此功能默认关闭,需在 `config/config.yaml` 中手动启用 `push_window.enabled`
+> 팁: 이 기능은 기본적으로 비활성화되어 있으며, `config/config.yaml`에서 수동으로 `push_window.enabled`를 활성화해야 합니다
 
-### **精准内容筛选**
+### **정밀 콘텐츠 필터링**
 
-设置个人关键词（如：AI、比亚迪、教育政策），只推送相关热点，过滤无关信息
+개인 키워드 설정 (예: AI, BYD, 교육 정책), 관련 핫이슈만 푸시하고 무관한 정보 필터링
 
-- 支持普通词、必须词(+)、过滤词(!)三种语法，见【frequency_words.txt 配置教程】
-- 词组化管理，独立统计不同主题热点
+- 일반 단어, 필수 단어(+), 필터 단어(!) 세 가지 구문 지원, 【frequency_words.txt 설정 가이드】 참조
+- 그룹화 관리, 다양한 주제 핫이슈 독립 통계
 
-> 也可以不做筛选，完整的推送所有热点，具体见【历史更新】中的 v2.0.1
+> 필터링하지 않고 모든 핫이슈를 완전히 푸시할 수도 있습니다. 자세한 내용은 【업데이트 기록】의 v2.0.1 참조
 
-<details id="frequencywordstxt-配置教程">
-<summary><strong>👉 点击展开：frequency_words.txt 配置教程</strong></summary>
+<details id="frequencywordstxt-설정-가이드">
+<summary><strong>👉 클릭하여 펼치기: frequency_words.txt 설정 가이드</strong></summary>
 <br>
 
-在 `frequency_words.txt` 文件中配置监控的关键词，支持三种语法和词组功能。
+`frequency_words.txt` 파일에서 모니터링할 키워드를 설정하며, 세 가지 구문과 그룹 기능을 지원합니다.
 
-关键词越靠前，新闻的优先级越高，你可以根据自己的关注度调整关键词顺序
+키워드가 앞에 있을수록 뉴스의 우선순위가 높아지므로, 관심도에 따라 키워드 순서를 조정할 수 있습니다
 
-| 语法类型 | 符号 | 作用 | 示例 | 匹配逻辑 |
+| 구문 유형 | 기호 | 역할 | 예시 | 매칭 로직 |
 |---------|------|------|------|---------|
-| **普通词** | 无 | 基础匹配 | `华为` | 包含任意一个即可 |
-| **必须词** | `+` | 限定范围 | `+手机` | 必须同时包含 |
-| **过滤词** | `!` | 排除干扰 | `!广告` | 包含则直接排除 |
+| **일반 단어** | 없음 | 기본 매칭 | `화웨이` | 하나라도 포함하면 됨 |
+| **필수 단어** | `+` | 범위 제한 | `+스마트폰` | 동시에 포함해야 함 |
+| **필터 단어** | `!` | 간섭 배제 | `!광고` | 포함시 직접 제외 |
 
-### 📋 基础语法说明
+### 📋 기본 구문 설명
 
-#### 1. **普通关键词** - 基础匹配
+#### 1. **일반 키워드** - 기본 매칭
 ```txt
-华为
+화웨이
 OPPO
-苹果
+애플
 ```
-**作用：** 新闻标题包含其中**任意一个词**就会被捕获
+**역할:** 뉴스 제목에 **하나라도 포함**되면 캡처됨
 
-#### 2. **必须词** `+词汇` - 限定范围  
+#### 2. **필수 단어** `+단어` - 범위 제한
 ```txt
-华为
+화웨이
 OPPO
-+手机
++스마트폰
 ```
-**作用：** 必须同时包含普通词**和**必须词才会被捕获
+**역할:** 일반 단어**와** 필수 단어를 **동시에 포함**해야 캡처됨
 
-#### 3. **过滤词** `!词汇` - 排除干扰
+#### 3. **필터 단어** `!단어` - 간섭 배제
 ```txt
-苹果
-华为
-!水果
-!价格
+애플
+화웨이
+!과일
+!가격
 ```
-**作用：** 包含过滤词的新闻会被**直接排除**，即使包含关键词
+**역할:** 필터 단어가 포함된 뉴스는 키워드가 포함되어 있어도 **직접 제외**됨
 
-### 🔗 词组功能 - 空行分隔的重要作用
+### 🔗 그룹 기능 - 빈 줄 구분의 중요성
 
-**核心规则：** 用**空行**分隔不同的词组，每个词组独立统计
+**핵심 규칙:** **빈 줄**로 다른 그룹을 구분하며, 각 그룹은 독립적으로 통계 처리됩니다
 
 #### 示例配置：
 ```txt
@@ -369,17 +369,17 @@ OPPO
 </details>
 
 
-### **热点趋势分析**
+### **핫이슈 트렌드 분석**
 
-实时追踪新闻热度变化，让你不仅知道"什么在热搜"，更了解"热点如何演变"
+뉴스 인기도 변화를 실시간으로 추적하여, "무엇이 핫 검색인지"뿐만 아니라 "핫이슈가 어떻게 진화하는지"도 파악할 수 있습니다
 
-- **时间轴追踪**：记录每条新闻从首次出现到最后出现的完整时间跨度
-- **热度变化**：统计新闻在不同时间段的排名变化和出现频次  
-- **新增检测**：实时识别新出现的热点话题，用🆕标记第一时间提醒
-- **持续性分析**：区分一次性热点话题和持续发酵的深度新闻
-- **跨平台对比**：同一新闻在不同平台的排名表现，看出媒体关注度差异
+- **타임라인 추적**: 각 뉴스가 처음 등장한 시점부터 마지막 등장까지의 완전한 시간 범위 기록
+- **인기도 변화**: 다양한 시간대의 순위 변화와 등장 빈도 통계
+- **신규 감지**: 새로 등장한 핫이슈 토픽을 실시간으로 식별하여 🆕 마크로 즉시 알림
+- **지속성 분석**: 일회성 핫이슈 토픽과 지속적으로 발효되는 심층 뉴스 구분
+- **크로스 플랫폼 비교**: 동일한 뉴스의 다양한 플랫폼에서의 순위 성능을 통해 미디어 관심도 차이 파악
 
-> 不再错过重要新闻的完整发展过程，从话题萌芽到高峰热议，全程掌握
+> 중요한 뉴스의 완전한 발전 과정을 더 이상 놓치지 마세요. 토픽의 초기 단계부터 정점까지 전체를 파악하세요
 
 <details>
 <summary><strong>👉 点击展开：推送格式说明</strong></summary>
@@ -438,15 +438,15 @@ OPPO
 </details>
 
 
-### **个性化热点算法**
+### **개인화 핫이슈 알고리즘**
 
-不再被各个平台的算法牵着走，TrendRadar 会重新整理全网热搜：
+더 이상 각 플랫폼의 알고리즘에 끌려다니지 마세요. TrendRadar는 전체 네트워크의 핫 검색을 재정리합니다:
 
-- **看重排名高的新闻**（占60%）：各平台前几名的新闻优先显示
-- **关注持续出现的话题**（占30%）：反复出现的新闻更重要  
-- **考虑排名质量**（占10%）：不仅多次出现，还经常排在前列
+- **높은 순위의 뉴스 중시** (60%): 각 플랫폼의 상위 뉴스를 우선 표시
+- **지속적으로 등장하는 토픽 주목** (30%): 반복적으로 등장하는 뉴스가 더 중요
+- **순위 품질 고려** (10%): 여러 번 등장할 뿐만 아니라 자주 상위권에 랭크
 
-> 把分散在各个平台的热搜合并起来，按照你关心的热度重新排序，这三个比例可以选择适合自己的场景进行调整
+> 다양한 플랫폼에 분산된 핫 검색을 병합하여 관심도에 따라 재정렬합니다. 이 세 가지 비율은 자신의 시나리오에 맞게 조정할 수 있습니다
 
 <details>
 <summary><strong>👉 点击展开：热点权重调整</strong></summary>
@@ -531,12 +531,12 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 | ![Github Pages效果](_image/github-pages.png) | ![飞书推送效果](_image/feishu.jpg) |
 
 
-## 📝 更新日志
+## 📝 업데이트 로그
 
->**升级说明**：
-- **提示**：不要通过 **Sync fork** 更新本项目, 建议查看【历史更新】，明确具体的【升级方式】和【功能内容】
-- **小版本更新**：从 v2.x 升级到 v2.y, 用本项目的 `main.py` 代码替换你 fork 仓库中的对应文件
-- **大版本升级**：从 v1.x 升级到 v2.y, 建议删除现有 fork 后重新 fork，这样更省力且避免配置冲突
+>**업그레이드 설명**:
+- **팁**: **Sync fork**를 통해 본 프로젝트를 업데이트하지 마세요. 【업데이트 기록】을 확인하여 구체적인 【업그레이드 방법】과 【기능 내용】을 명확히 하세요
+- **마이너 버전 업데이트**: v2.x에서 v2.y로 업그레이드 시, 본 프로젝트의 `main.py` 코드로 fork 리포지토리의 해당 파일을 교체하세요
+- **메이저 버전 업그레이드**: v1.x에서 v2.y로 업그레이드 시, 기존 fork를 삭제한 후 다시 fork하는 것을 권장합니다. 이렇게 하면 더 간편하고 설정 충돌을 피할 수 있습니다
 
 
 ### 2025/11/12 - v3.0.5
@@ -820,9 +820,9 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 </details>
 
 
-## 🚀 快速开始
+## 🚀 빠른 시작
 
-> 配置完成后，新闻数据一小时后才会更新，如想加快，可参照【第4步】手动测试配置效果
+> 설정 완료 후 뉴스 데이터는 1시간 후에 업데이트됩니다. 빠르게 진행하고 싶다면 【4단계】를 참조하여 설정 효과를 수동으로 테스트하세요
 
 1. **Fork 本项目**到你的 GitHub 账户
 
@@ -1218,7 +1218,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
     3. 点击 "Run workflow" 按钮运行，等待 1 分钟左右数据到你手机上
 
 
-## 🐳 Docker 部署
+## 🐳 Docker 배포
 
 #### 方式一：快速体验（一行命令）
 
@@ -1419,7 +1419,7 @@ docker exec -it trend-radar ls -la /app/config/
 ```
 
 
-## 🤖 AI 智能分析部署
+## 🤖 AI 스마트 분석 배포
 
 TrendRadar v3.0.0 新增了基于 **MCP (Model Context Protocol)** 的 AI 分析功能，让你可以通过自然语言与新闻数据对话，进行深度分析。使用 **AI 功能** 的最佳前提是已使用本项目至少运行一天(积累新闻数据)
 
@@ -1442,7 +1442,7 @@ Cherry Studio 提供 GUI 配置界面， 5 分钟快速部署， 复杂的部分
 <img src="/_image/ai2.png" alt="mcp 使用效果图2" width="600">
 
 
-## 🔌 MCP 客户端
+## 🔌 MCP 클라이언트
 
 TrendRadar MCP 服务支持标准的 Model Context Protocol (MCP) 协议，可以接入各种支持 MCP 的 AI 客户端进行智能分析。
 
@@ -1735,12 +1735,12 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 </details>
 
 
-## ☕问题答疑与1元点赞
+## ☕ 문제 답변 및 1원 후원
 
-> 心意到就行，收到的**点赞**用于提高开发者开源的积极性。**点赞**已收录于**致谢名单**  
+> 마음만 받겠습니다. 받은 **후원**은 개발자의 오픈소스 적극성을 높이는데 사용됩니다. **후원**은 **감사 명단**에 수록됩니다
 
-- **GitHub Issues**：适合针对性强的解答。提问时请提供完整信息（截图、错误日志、系统环境等）。
-- **公众号交流**：适合快速咨询。建议优先在相关文章下的公共留言区交流，如私信，请文明礼貌用语😉
+- **GitHub Issues**: 구체적인 답변에 적합합니다. 질문 시 완전한 정보를 제공해주세요 (스크린샷, 오류 로그, 시스템 환경 등)
+- **공식 계정 교류**: 빠른 상담에 적합합니다. 관련 글의 공개 댓글 영역에서 교류하는 것을 권장하며, 개인 메시지를 보낼 경우 예의바른 언어를 사용해주세요😉
 
 
 |公众号关注 |微信点赞 | 支付宝点赞 |
@@ -1922,7 +1922,7 @@ flowchart TD
 [![Star History Chart](https://api.star-history.com/svg?repos=sansan0/TrendRadar&type=Date)](https://www.star-history.com/#sansan0/TrendRadar&Date)
 
 
-## 📄 许可证
+## 📄 라이선스
 
 GPL-3.0 License
 

@@ -1,144 +1,144 @@
-# TrendRadar × Cherry Studio 部署指南 🍒
+# TrendRadar × Cherry Studio 배포 가이드 🍒
 
-> **适合人群**：零编程基础的用户
-> **客户端**：Cherry Studio（免费开源 GUI 客户端）
-
----
-
-## 📥 第一步：下载 Cherry Studio
-
-### Windows 用户
-
-访问官网下载：https://cherry-ai.com/
-或直接下载：[Cherry-Studio-Windows.exe](https://github.com/kangfenmao/cherry-studio/releases/latest)
-
-### Mac 用户
-
-访问官网下载：https://cherry-ai.com/
-或直接下载：[Cherry-Studio-Mac.dmg](https://github.com/kangfenmao/cherry-studio/releases/latest)
-
+> **적합한 대상**: 프로그래밍 기초가 없는 사용자
+> **클라이언트**: Cherry Studio(무료 오픈소스 GUI 클라이언트)
 
 ---
 
-## 📦 第二步：获取项目代码
+## 📥 첫 번째 단계: Cherry Studio 다운로드
 
-为什么需要获取项目代码？
+### Windows 사용자
 
-AI 分析功能需要读取项目中的新闻数据才能工作。无论你使用 GitHub Actions 还是 Docker 部署，爬虫生成的新闻数据都保存在项目的 output 目录中。因此，在配置 MCP 服务器之前，需要先获取完整的项目代码（包含数据文件）。
+공식 웹사이트에서 다운로드: https://cherry-ai.com/
+또는 직접 다운로드: [Cherry-Studio-Windows.exe](https://github.com/kangfenmao/cherry-studio/releases/latest)
 
-根据你的技术水平，可以选择以下任一方式获取：：
+### Mac 사용자
 
-### 方法一：Git Clone（推荐给技术用户）
+공식 웹사이트에서 다운로드: https://cherry-ai.com/
+또는 직접 다운로드: [Cherry-Studio-Mac.dmg](https://github.com/kangfenmao/cherry-studio/releases/latest)
 
-如果你熟悉 Git，可以使用以下命令克隆项目：
+
+---
+
+## 📦 두 번째 단계: 프로젝트 코드 얻기
+
+왜 프로젝트 코드를 얻어야 하나요?
+
+AI 분석 기능은 프로젝트의 뉴스 데이터를 읽어야 작동합니다. GitHub Actions 또는 Docker 배포를 사용하든 상관없이, 크롤러가 생성한 뉴스 데이터는 프로젝트의 output 디렉토리에 저장됩니다. 따라서 MCP 서버를 설정하기 전에 완전한 프로젝트 코드(데이터 파일 포함)를 먼저 얻어야 합니다.
+
+기술 수준에 따라 다음 방법 중 하나를 선택할 수 있습니다:
+
+### 방법 1: Git Clone(기술 사용자에게 권장)
+
+Git에 익숙하다면 다음 명령어를 사용하여 프로젝트를 복제할 수 있습니다:
 
 ```bash
-git clone https://github.com/你的用户名/你的项目名.git
-cd 你的项目名
+git clone https://github.com/당신의사용자이름/당신의프로젝트이름.git
+cd 당신의프로젝트이름
 ```
 
-**优点**：
+**장점**:
 
-- 可以随时拉取一个命令就可以更新最新数据到本地了（`git pull`）
+- 언제든지 한 명령어로 최신 데이터를 로컬로 갱신할 수 있습니다(`git pull`)
 
-### 方法二：直接下载 ZIP 压缩包（推荐给初学者）
-
-
-1. **访问 GitHub 项目页面**
-
-   - 项目链接：`https://github.com/你的用户名/你的项目名`
-
-2. **下载压缩包**
-
-   - 点击绿色的 "Code" 按钮
-   - 选择 "Download ZIP"
-   - 或直接访问：`https://github.com/你的用户名/你的项目名/archive/refs/heads/master.zip`
+### 방법 2: ZIP 압축 파일 직접 다운로드(초보자에게 권장)
 
 
-**注意事项**：
+1. **GitHub 프로젝트 페이지 방문**
 
-- 步骤稍微麻烦，后续更新数据需要重复上面步骤，然后覆盖本地数据(output 目录)
+   - 프로젝트 링크: `https://github.com/당신의사용자이름/당신의프로젝트이름`
+
+2. **압축 파일 다운로드**
+
+   - 초록색 "Code" 버튼 클릭
+   - "Download ZIP" 선택
+   - 또는 직접 방문: `https://github.com/당신의사용자이름/당신의프로젝트이름/archive/refs/heads/master.zip`
+
+
+**주의사항**:
+
+- 절차가 다소 번거로우며, 이후 데이터 업데이트 시 위의 절차를 반복한 후 로컬 데이터(output 디렉토리)를 덮어씌워야 합니다
 
 ---
 
-## 🚀 第三步：一键部署 MCP 服务器
+## 🚀 세 번째 단계: 원클릭 MCP 서버 배포
 
-### Windows 用户
+### Windows 사용자
 
-1. **双击运行**项目文件夹中的 `setup-windows.bat`
-2. **等待安装完成**
-3. **记录显示的配置信息**（命令路径和参数）
+1. **프로젝트 폴더의 `setup-windows.bat` 더블클릭 실행**
+2. **설치 완료 대기**
+3. **표시된 설정 정보 기록**(명령 경로 및 파라미터)
 
-### Mac 用户
+### Mac 사용자
 
-1. **打开终端**（在启动台搜索"终端"）
-2. **拖拽**项目文件夹中的 `setup-mac.sh` 到终端窗口
-3. **按回车键**
-4. **记录显示的配置信息**
-
----
-
-## 🔧 第四步：配置 Cherry Studio
-
-### 1. 打开设置
-
-启动 Cherry Studio，点击右上角 ⚙️ **设置** 按钮
-
-### 2. 添加 MCP 服务器
-
-在设置页面找到：**MCP** → 点击 **添加**
-
-### 3. 填写配置（重要！）
-
-根据刚才的安装脚本显示的信息填写
-
-### 4. 保存并启用
-
-- 点击 **保存** 按钮
-- 确保 MCP 服务器列表中的开关是 **开启** 状态 ✅
+1. **터미널 열기**(Launchpad에서 "Terminal" 검색)
+2. **프로젝트 폴더의 `setup-mac.sh`를 터미널 윈도우로 드래그**
+3. **Enter 키 누르기**
+4. **표시된 설정 정보 기록**
 
 ---
 
-## ✅ 第五步：验证是否成功
+## 🔧 네 번째 단계: Cherry Studio 설정
 
-### 1. 测试连接
+### 1. 설정 열기
 
-在 Cherry Studio 的对话框中输入：
+Cherry Studio를 실행하고, 오른쪽 상단의 ⚙️ **설정** 버튼 클릭
+
+### 2. MCP 서버 추가
+
+설정 페이지에서: **MCP** → **추가** 클릭
+
+### 3. 설정 입력(중요!)
+
+위의 설치 스크립트에서 표시된 정보에 따라 작성
+
+### 4. 저장 및 활성화
+
+- **저장** 버튼 클릭
+- MCP 서버 목록의 토글이 **활성화** 상태인지 확인 ✅
+
+---
+
+## ✅ 다섯 번째 단계: 성공 여부 확인
+
+### 1. 연결 테스트
+
+Cherry Studio의 대화 창에 입력:
 
 ```
-帮我爬取最新的新闻
+최신 뉴스를 크롤링해줘
 ```
 
-或者尝试其他测试命令：
+또는 다른 테스트 명령 시도:
 
 ```
-搜索最近3天关于"人工智能"的新闻
-查找2025年1月的"特斯拉"相关报道
-分析"iPhone"的热度趋势
+최근 3일간 "인공지능" 관련 뉴스 검색
+2025년 1월의 "테슬라" 관련 보도 찾기
+"iPhone" 열도 추세 분석
 ```
 
-**提示**：当你说"最近3天"时，AI会自动计算日期范围并搜索。
+**팁**: "최근 3일간"이라고 말하면 AI가 자동으로 날짜 범위를 계산하고 검색합니다.
 
-### 2. 成功标志
+### 2. 성공 표시
 
-如果配置成功，AI 会：
+설정이 성공하면 AI는:
 
-- ✅ 调用 TrendRadar 工具
-- ✅ 返回真实的新闻数据
-- ✅ 显示平台、标题、排名等信息
+- ✅ TrendRadar 도구 호출
+- ✅ 실제 뉴스 데이터 반환
+- ✅ 플랫폼, 제목, 순위 등 정보 표시
 
 
 ---
 
-## 🎯 进阶配置
+## 🎯 고급 설정
 
-### HTTP 模式（可选）
+### HTTP 모드(선택사항)
 
-如果需要远程访问或多客户端共享，可以使用 HTTP 模式：
+원격 접근 또는 다중 클라이언트 공유가 필요한 경우 HTTP 모드를 사용할 수 있습니다:
 
 #### Windows
 
-双击运行 `start-http.bat`
+`start-http.bat` 더블클릭 실행
 
 #### Mac
 
@@ -146,9 +146,9 @@ cd 你的项目名
 ./start-http.sh
 ```
 
-然后在 Cherry Studio 中配置：
+그 다음 Cherry Studio에서 설정:
 
 ```
-类型: streamableHttp
+유형: streamableHttp
 URL: http://localhost:3333/mcp
 ```

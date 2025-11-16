@@ -26,7 +26,7 @@ RUN set -ex && \
     ;; \
     esac && \
     echo "Downloading supercronic for ${TARGETARCH} from ${SUPERCRONIC_URL}" && \
-    # 添加重试机制和超时设置
+    # 재시도 메커니즘 및 타임아웃 설정 추가
     for i in 1 2 3 4 5; do \
     echo "Download attempt $i/5"; \
     if curl --fail --silent --show-error --location --retry 3 --retry-delay 2 --connect-timeout 30 --max-time 120 -o "$SUPERCRONIC" "$SUPERCRONIC_URL"; then \
@@ -45,7 +45,7 @@ RUN set -ex && \
     chmod +x "$SUPERCRONIC" && \
     mv "$SUPERCRONIC" "/usr/local/bin/${SUPERCRONIC}" && \
     ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic && \
-    # 验证安装
+    # 설치 확인
     supercronic -version && \
     apt-get remove -y curl && \
     apt-get clean && \
@@ -57,7 +57,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
 COPY docker/manage.py .
 
-# 复制 entrypoint.sh 并强制转换为 LF 格式
+# entrypoint.sh 복사 및 강제로 LF 형식으로 변환
 COPY docker/entrypoint.sh /entrypoint.sh.tmp
 RUN sed -i 's/\r$//' /entrypoint.sh.tmp && \
     mv /entrypoint.sh.tmp /entrypoint.sh && \

@@ -956,6 +956,8 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    **GitHub Secret 配置：**
    - 名称：`DINGTALK_WEBHOOK_URL`
    - 值：你的钉钉机器人 Webhook 地址
+   - 名称：`DINGTALK_SECRET`（可选，启用加签验证时需要）
+   - 值：你的钉钉机器人加签密钥
 
    <br>
 
@@ -970,6 +972,9 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
       - 设置机器人名称
       - **安全设置**：
         - **自定义关键词**：设置 "热点"
+        - **加签**（可选，更安全）：勾选加签选项，复制生成的 Secret 密钥（格式如：`SECxxx...`）
+          - 将 Secret 配置到 GitHub Secrets 中的 `DINGTALK_SECRET`
+          - 系统会自动计算签名并拼接到请求 URL 中
 
    3. **完成设置**：
       - 勾选服务条款协议 → 点击"完成"
@@ -1249,6 +1254,7 @@ docker run -d --name trend-radar \
   -v ./output:/app/output \
   -e FEISHU_WEBHOOK_URL="你的飞书webhook" \
   -e DINGTALK_WEBHOOK_URL="你的钉钉webhook" \
+  -e DINGTALK_SECRET="你的钉钉加签密钥" \
   -e WEWORK_WEBHOOK_URL="你的企业微信webhook" \
   -e TELEGRAM_BOT_TOKEN="你的telegram_bot_token" \
   -e TELEGRAM_CHAT_ID="你的telegram_chat_id" \
@@ -1307,6 +1313,8 @@ docker run -d --name trend-radar \
    | `PUSH_WINDOW_START` | `notification.push_window.time_range.start` | `08:00` | 推送开始时间 |
    | `PUSH_WINDOW_END` | `notification.push_window.time_range.end` | `22:00` | 推送结束时间 |
    | `FEISHU_WEBHOOK_URL` | `notification.webhooks.feishu_url` | `https://...` | 飞书 Webhook |
+   | `DINGTALK_WEBHOOK_URL` | `notification.webhooks.dingtalk_url` | `https://...` | 钉钉 Webhook |
+   | `DINGTALK_SECRET` | `notification.webhooks.dingtalk_secret` | `SECxxx...` | 钉钉加签密钥 |
 
    **配置优先级**：环境变量 > config.yaml
 

@@ -48,7 +48,7 @@
 - 感谢**关注[公众号](#问题答疑与1元点赞)** 的读者们，你们的留言、点赞、分享和推荐等积极互动让内容更有温度😎。  
 
 <details>
-<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥62🔥</strong> 位)</summary>
+<summary>👉 点击查看<strong>致谢名单</strong> (当前 <strong>🔥66🔥</strong> 位)</summary>
 
 ### 数据支持
 
@@ -68,6 +68,10 @@
 
 |           点赞人            |  金额  |  日期  |             备注             |
 | :-------------------------: | :----: | :----: | :-----------------------: |
+|           *海          |  1  | 2025.11.15  |    | 
+|           *德          |  1.99  | 2025.11.15  |    | 
+|           *疏          |  8.8  | 2025.11.14  |  感谢开源，项目很棒，支持一下   | 
+|           M*e          |  10  | 2025.11.14  |  开源不易，大佬辛苦了   | 
 |           **柯          |  1  | 2025.11.14  |     | 
 |           *云          |  88  | 2025.11.13  |    好项目，感谢开源  | 
 |           *W          |  6  | 2025.11.13  |      | 
@@ -151,7 +155,7 @@
 默认监控 11 个主流平台，也可自行增加额外的平台
 
 <details id="自定义监控平台">
-<summary><strong>👉 自定义监控平台</strong></summary>
+<summary><strong>👉 点击展开：自定义监控平台</strong></summary>
 <br>
 
 本项目的资讯数据来源于 [newsnow](https://github.com/ourongxing/newsnow) ，你可以点击[网站](https://newsnow.busiyi.world/)，点击[更多]，查看是否有你想要的平台。 
@@ -207,7 +211,7 @@ platforms:
 > 也可以不做筛选，完整的推送所有热点，具体见【历史更新】中的 v2.0.1
 
 <details id="frequencywordstxt-配置教程">
-<summary><strong>👉 frequency_words.txt 配置教程</strong></summary>
+<summary><strong>👉 点击展开：frequency_words.txt 配置教程</strong></summary>
 <br>
 
 在 `frequency_words.txt` 文件中配置监控的关键词，支持三种语法和词组功能。
@@ -378,7 +382,7 @@ OPPO
 > 不再错过重要新闻的完整发展过程，从话题萌芽到高峰热议，全程掌握
 
 <details>
-<summary><strong>👉 推送格式说明</strong></summary>
+<summary><strong>👉 点击展开：推送格式说明</strong></summary>
 <br>
 
 📊 热点词汇统计
@@ -445,7 +449,7 @@ OPPO
 > 把分散在各个平台的热搜合并起来，按照你关心的热度重新排序，这三个比例可以选择适合自己的场景进行调整
 
 <details>
-<summary><strong>👉 热点权重调整</strong></summary>
+<summary><strong>👉 点击展开：热点权重调整</strong></summary>
 <br>
 
 当前默认的配置是平衡性配置
@@ -551,7 +555,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 
 <details>
-<summary><strong>👉 历史更新</strong></summary>
+<summary><strong>👉 点击展开：历史更新</strong></summary>
 
 
 ### 2025/10/31 - v3.0.4
@@ -836,12 +840,14 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 
    <details>
-   <summary> <strong>👉 企业微信机器人</strong>（配置最简单最迅速）</summary>
+   <summary> <strong>👉 点击展开：企业微信机器人</strong>（配置最简单最迅速）</summary>
    <br>
 
    **GitHub Secret 配置：**
    - 名称：`WEWORK_WEBHOOK_URL`
    - 值：你的企业微信机器人 Webhook 地址
+
+   <br>
 
    **机器人设置步骤：**
 
@@ -855,7 +861,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    </details>
 
    <details>
-   <summary> <strong>👉 飞书机器人</strong>（消息显示最友好）</summary>
+   <summary> <strong>👉 点击展开：飞书机器人</strong>（消息显示最友好）</summary>
    <br>
 
    **GitHub Secret 配置：**
@@ -944,12 +950,14 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    </details>
 
    <details>
-   <summary> <strong>👉 钉钉机器人</strong></summary>
+   <summary> <strong>👉 点击展开：钉钉机器人</strong></summary>
    <br>
 
    **GitHub Secret 配置：**
    - 名称：`DINGTALK_WEBHOOK_URL`
    - 值：你的钉钉机器人 Webhook 地址
+
+   <br>
 
    **机器人设置步骤：**
 
@@ -972,12 +980,14 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    </details>
 
    <details>
-   <summary> <strong>👉 Telegram Bot</strong></summary>
+   <summary> <strong>👉 点击展开：Telegram Bot</strong></summary>
    <br>
 
    **GitHub Secret 配置：**
    - 名称：`TELEGRAM_BOT_TOKEN` - 你的 Telegram Bot Token
    - 名称：`TELEGRAM_CHAT_ID` - 你的 Telegram Chat ID
+
+   <br>
 
    **机器人设置步骤：**
 
@@ -1004,11 +1014,13 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    </details>
 
    <details>
-   <summary> <strong>👉 邮件推送</strong>（支持所有主流邮箱）</summary>
+   <summary> <strong>👉 点击展开：邮件推送</strong>（支持所有主流邮箱）</summary>
    <br>
 
-   - 注意事项：为防止邮件群发功能被**滥用**，当前的群发是所有收件人都能看到彼此的邮箱地址，适合熟人间交流资讯。
-   - 仅供参考：请根据实际情况调整，邮箱方面并没有一一验证，是按照 SMTP 的标准配置的 
+   - 注意事项：为防止邮件群发功能被**滥用**，当前的群发是所有收件人都能看到彼此的邮箱地址。
+   - 如果你没有过配置下面这种邮箱发送的经历，不建议尝试 
+
+   <br>
 
    **GitHub Secret 配置：**
    - 名称：`EMAIL_FROM` - 发件人邮箱地址
@@ -1016,6 +1028,28 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    - 名称：`EMAIL_TO` - 收件人邮箱地址（多个收件人用英文逗号分隔）也可以和 EMAIL_FROM 一样，自己发送给自己
    - 名称：`EMAIL_SMTP_SERVER` - SMTP服务器地址（可选，留空则自动识别）
    - 名称：`EMAIL_SMTP_PORT` - SMTP端口（可选，留空则自动识别）
+
+   <br>
+
+   **支持的邮箱服务商**（自动识别 SMTP 配置）：
+
+   | 邮箱服务商 | 域名 | SMTP 服务器 | 端口 | 加密方式 |
+   |-----------|------|------------|------|---------|
+   | **Gmail** | gmail.com | smtp.gmail.com | 587 | TLS |
+   | **QQ邮箱** | qq.com | smtp.qq.com | 465 | SSL |
+   | **Outlook** | outlook.com | smtp-mail.outlook.com | 587 | TLS |
+   | **Hotmail** | hotmail.com | smtp-mail.outlook.com | 587 | TLS |
+   | **Live** | live.com | smtp-mail.outlook.com | 587 | TLS |
+   | **163邮箱** | 163.com | smtp.163.com | 465 | SSL |
+   | **126邮箱** | 126.com | smtp.126.com | 465 | SSL |
+   | **新浪邮箱** | sina.com | smtp.sina.com | 465 | SSL |
+   | **搜狐邮箱** | sohu.com | smtp.sohu.com | 465 | SSL |
+
+   > **自动识别**：使用以上邮箱时，无需手动配置 `EMAIL_SMTP_SERVER` 和 `EMAIL_SMTP_PORT`，系统会自动识别。
+   >
+   > **反馈说明**：
+   > - 如果您使用**其他邮箱**测试成功，欢迎开 [Issues](https://github.com/sansan0/TrendRadar/issues) 告知，我会添加到支持列表
+   > - 如果上述邮箱配置有误或无法使用，也请开 [Issues](https://github.com/sansan0/TrendRadar/issues) 反馈，帮助改进项目
 
    **常见邮箱设置：**
 
@@ -1043,13 +1077,13 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    - `EMAIL_SMTP_PORT`：如 587（TLS）或 465（SSL）
    <br>
 
-   **多收件人设置**：
+   **如果有多个收件人(注意是英文逗号分隔)**：
    - EMAIL_TO="user1@example.com,user2@example.com,user3@example.com"
 
    </details>
 
    <details>
-   <summary> <strong>👉 ntfy 推送</strong>（开源免费，支持自托管）</summary>
+   <summary> <strong>👉 点击展开：ntfy 推送</strong>（开源免费，支持自托管）</summary>
    <br>
 
    **两种使用方式：**
@@ -1159,6 +1193,12 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    - [GitHub 仓库](https://github.com/binwiederhier/ntfy)
 
    </details>
+
+   > **💡 新手快速上手建议**：
+   >
+   > 第一次部署时，建议先完成 **GitHub Secrets** 配置（选择一个推送平台即可），然后直接跳到【第4步】测试推送是否成功。
+   >
+   > **暂时不要修改** `config/config.yaml` 和 `frequency_words.txt`，等推送测试成功后再根据需要调整这些配置。
 
 
 3. **配置说明：**:
@@ -1414,7 +1454,7 @@ TrendRadar MCP 服务支持标准的 Model Context Protocol (MCP) 协议，可�
 - 保存后记得重启
 
 <details>
-<summary><b>👉 Claude Desktop</b></summary>
+<summary><b>👉 点击展开：Claude Desktop</b></summary>
 
 #### 配置文件方式
 
@@ -1451,7 +1491,7 @@ TrendRadar MCP 服务支持标准的 Model Context Protocol (MCP) 协议，可�
 </details>
 
 <details>
-<summary><b>👉 Cursor</b></summary>
+<summary><b>👉 点击展开：Cursor</b></summary>
 
 #### 方式一：HTTP 模式
 
@@ -1511,7 +1551,7 @@ TrendRadar MCP 服务支持标准的 Model Context Protocol (MCP) 协议，可�
 </details>
 
 <details>
-<summary><b>👉 VSCode (Cline/Continue)</b></summary>
+<summary><b>👉 点击展开：VSCode (Cline/Continue)</b></summary>
 
 #### Cline 配置
 
@@ -1584,7 +1624,7 @@ TrendRadar MCP 服务支持标准的 Model Context Protocol (MCP) 协议，可�
 </details>
 
 <details>
-<summary><b>👉 Claude Code CLI</b></summary>
+<summary><b>👉 点击展开：Claude Code CLI</b></summary>
 
 #### HTTP 模式配置
 
@@ -1616,7 +1656,7 @@ claude "对比知乎和微博平台对'比特币'的关注度"
 </details>
 
 <details>
-<summary><b>👉 MCP Inspector</b>（调试工具）</summary>
+<summary><b>👉 点击展开：MCP Inspector</b>（调试工具）</summary>
 <br>
 
 MCP Inspector 是官方调试工具，用于测试 MCP 连接：
@@ -1649,7 +1689,7 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 </details>
 
 <details>
-<summary><b>👉 其他支持 MCP 的客户端</b></summary>
+<summary><b>👉 点击展开：其他支持 MCP 的客户端</b></summary>
 <br>
 
 任何支持 Model Context Protocol 的客户端都可以连接 TrendRadar：
@@ -1710,7 +1750,7 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 ### 常见问题
 
 <details>
-<summary><b>👉 Q1: HTTP 服务无法启动？</b></summary>
+<summary><b>👉 点击展开：Q1: HTTP 服务无法启动？</b></summary>
 <br>
 
 **检查步骤**：
@@ -1742,7 +1782,7 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 </details>
 
 <details>
-<summary><b>👉 Q2: 客户端无法连接到 MCP 服务？</b></summary>
+<summary><b>👉 点击展开：Q2: 客户端无法连接到 MCP 服务？</b></summary>
 <br>
 
 **解决方案**：
@@ -1765,7 +1805,7 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 </details>
 
 <details>
-<summary><b>👉 Q3: 工具调用失败或返回错误？</b></summary>
+<summary><b>👉 点击展开：Q3: 工具调用失败或返回错误？</b></summary>
 <br>
 
 **可能原因**：
@@ -1814,7 +1854,7 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 
 
 <details>
-<summary><strong>👉 微信推送通知方案</strong></summary>
+<summary><strong>👉 点击展开：微信推送通知方案</strong></summary>
 <br>
 
 > 由于该方案是基于企业微信的插件机制，推送样式也十分不同，所以相关实现我暂时不准备纳入当前项目

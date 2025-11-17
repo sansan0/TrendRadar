@@ -91,7 +91,7 @@ vim config/config.yaml
 # 或使用其他編輯器：nano、gedit、code 等
 ```
 
-**必須設定至少一個通知管道：**
+**重要設定項目：**
 
 ```yaml
 # 應用基礎設定
@@ -101,27 +101,108 @@ app:
 # 爬蟲設定
 crawler:
   enable_crawler: true        # 是否啟用爬蟲
+  source_type: "rss"          # 資料來源類型："rss" 或 "newsnow"
 
 # 通知設定
 notification:
   enable_notification: true   # 是否啟用通知
-  channels:
-    feishu:
-      webhook_url: ""         # 飛書 Webhook URL
-    dingtalk:
-      webhook_url: ""         # 釘釘 Webhook URL
-    wework:
-      webhook_url: ""         # 企業微信 Webhook URL
-    telegram:
-      bot_token: ""           # Telegram Bot Token
-      chat_id: ""             # Telegram Chat ID
-    email:
-      from: ""                # 寄件人信箱
-      password: ""            # 信箱密碼或授權碼
-      to: ""                  # 收件人信箱
+  webhooks:
+    feishu_url: ""            # 飛書 Webhook URL
+    dingtalk_url: ""          # 釘釘 Webhook URL
+    wework_url: ""            # 企業微信 Webhook URL
+    telegram_bot_token: ""    # Telegram Bot Token
+    telegram_chat_id: ""      # Telegram Chat ID
+    email_from: ""            # 寄件人信箱
+    email_password: ""        # 信箱密碼或授權碼
+    email_to: ""              # 收件人信箱
 ```
 
-#### 2. 設定關鍵字
+**⚠️ 必須設定至少一個通知管道才能接收熱點推送！**
+
+#### 2. 設定 RSS 資料來源（重要）
+
+這個 fork 版本預設使用 **RSS 作為消息來源**，而非原版的新聞聚合 API。
+
+在 `config/config.yaml` 中找到 `rss_feeds` 區塊：
+
+```yaml
+# RSS 資料來源（當 source_type 設為 "rss" 時啟用）
+rss_feeds:
+  - id: "markreadfintech"
+    name: "Mark 解讀金融科技"
+    url: "https://www.markreadfintech.com/feed"
+    enabled: true
+
+  - id: "blockworks"
+    name: "Blockworks"
+    url: "https://blockworks.co/feed"
+    enabled: true
+
+  - id: "theblock"
+    name: "The Block"
+    url: "https://www.theblock.co/rss.xml"
+    enabled: false  # 設為 false 則不會抓取
+```
+
+**欄位說明：**
+
+| 欄位 | 說明 | 範例 |
+|------|------|------|
+| `id` | 內部識別碼（唯一，不可重複） | `"technews"` |
+| `name` | 顯示名稱（會出現在報告中） | `"科技新報"` |
+| `url` | RSS feed 的完整網址 | `"https://technews.tw/feed/"` |
+| `enabled` | 是否啟用此來源 | `true` / `false` |
+
+**如何新增您自己的 RSS 來源：**
+
+```yaml
+rss_feeds:
+  # 保留原有的來源或刪除不需要的
+  - id: "markreadfintech"
+    name: "Mark 解讀金融科技"
+    url: "https://www.markreadfintech.com/feed"
+    enabled: true
+
+  # 新增您的 RSS 來源
+  - id: "technews"
+    name: "科技新報"
+    url: "https://technews.tw/feed/"
+    enabled: true
+
+  - id: "ithome"
+    name: "iThome"
+    url: "https://www.ithome.com.tw/rss"
+    enabled: true
+
+  - id: "inside"
+    name: "Inside 硬塞的網路趨勢觀察"
+    url: "https://www.inside.com.tw/feed"
+    enabled: true
+```
+
+**尋找 RSS Feed URL 的方法：**
+
+1. 大部分網站在網址後加 `/feed`、`/rss` 或 `/rss.xml`
+2. 在網站頁面中尋找 RSS 圖示 📡 或「訂閱」連結
+3. 使用瀏覽器擴充功能（如 RSS Feed Reader）自動偵測
+4. 查看網站的 `<head>` 標籤中的 `<link type="application/rss+xml">`
+
+**💡 實用技巧：**
+
+- **暫時停用某個來源**：將 `enabled` 改為 `false` 即可，不需要刪除
+- **測試新的 RSS**：修改後重啟容器即可生效
+- **檢查 RSS 是否有效**：在瀏覽器中直接開啟 RSS URL，應該會看到 XML 格式的內容
+
+**切換回原始資料來源（newsnow）：**
+
+如果您想使用原版的新聞聚合 API 而非 RSS：
+
+```yaml
+crawler:
+  source_type: "newsnow"  # 改回 "newsnow"
+```
+
+#### 3. 設定關鍵字
 
 ```bash
 # 編輯關鍵字檔案
@@ -141,7 +222,7 @@ vim config/frequency_words.txt
 
 **提示：** 如果此檔案為空，系統將推送所有熱點新聞（可能會因訊息大小限制而被截斷）。
 
-#### 3. 設定環境變數（可選）
+#### 4. 設定環境變數（可選）
 
 ```bash
 # 複製環境變數範本
@@ -771,6 +852,58 @@ docker system prune -a --volumes
 2. 在其他機器上複製您的 fork
 3. 重複本教學的建構步驟
 4. 或者將建構好的映像推送到 Docker Hub，在其他機器上拉取使用
+
+### Q9: 如何新增或修改 RSS 來源？
+
+**A:**
+
+**新增 RSS 來源：**
+
+1. 編輯 `config/config.yaml` 檔案
+2. 在 `rss_feeds` 區塊中新增項目：
+
+```yaml
+rss_feeds:
+  # 現有的來源...
+
+  # 新增您的 RSS
+  - id: "your-feed-id"        # 唯一識別碼
+    name: "您的網站名稱"      # 顯示名稱
+    url: "https://example.com/feed"  # RSS URL
+    enabled: true             # 是否啟用
+```
+
+3. 重啟容器使設定生效：
+```bash
+docker-compose restart
+```
+
+**尋找 RSS URL：**
+- 大部分網站：`網址/feed` 或 `網址/rss`
+- 範例：
+  - `https://technews.tw/feed/`
+  - `https://www.ithome.com.tw/rss`
+  - `https://blog.example.com/rss.xml`
+
+**測試 RSS 是否有效：**
+```bash
+# 在瀏覽器中開啟 RSS URL，應該會看到 XML 格式的內容
+# 或使用 curl 測試
+curl https://example.com/feed
+```
+
+**暫時停用某個來源：**
+```yaml
+- id: "some-feed"
+  name: "Some Feed"
+  url: "https://example.com/feed"
+  enabled: false  # 改為 false 即可停用
+```
+
+**常見問題：**
+- **RSS 抓取失敗**：檢查 RSS URL 是否正確，在瀏覽器中測試是否能開啟
+- **沒有新聞**：確認 `source_type: "rss"` 已設定，且至少有一個 `enabled: true` 的來源
+- **想用回原始資料來源**：將 `crawler.source_type` 改為 `"newsnow"`
 
 ---
 

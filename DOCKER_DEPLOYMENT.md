@@ -262,9 +262,12 @@ TZ=Asia/Taipei
 #EMAIL_TO=recipient@example.com
 
 # 定時任務設定
-CRON_SCHEDULE=*/30 * * * *    # 每30分鐘執行一次（推薦）
-RUN_MODE=cron                  # 執行模式：cron（定時）/ once（單次）
-IMMEDIATE_RUN=true             # 啟動時立即執行一次
+# 每30分鐘執行一次（推薦）
+CRON_SCHEDULE=*/30 * * * *
+# 執行模式：cron（定時）/ once（單次）
+RUN_MODE=cron
+# 啟動時立即執行一次
+IMMEDIATE_RUN=true
 ```
 
 **設定優先順序：** 環境變數 > config.yaml

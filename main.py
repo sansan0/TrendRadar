@@ -79,7 +79,7 @@ def get_active_platform_names(config: Dict) -> List[str]:
         return [
             feed.get("name", feed["id"])
             for feed in config.get("RSS_FEEDS", [])
-            if feed.get("enabled", True)
+            if feed.get("enabled", True) and feed.get("url")
         ]
 
     return [platform.get("name", platform["id"]) for platform in config.get("PLATFORMS", [])]
@@ -631,12 +631,12 @@ class RSSFetcher:
             feed_name = feed.get("name", feed_id)
             feed_url = (feed.get("url") or "").strip()
 
+            if not feed.get("enabled", True):
+                continue
+
             if not feed_url:
                 print(f"跳过 RSS 源 {feed_name}：未配置 URL")
                 failed_ids.append(feed_id)
-                continue
-
-            if not feed.get("enabled", True):
                 continue
 
             id_to_name[feed_id] = feed_name

@@ -3510,7 +3510,17 @@ def send_to_dingtalk(
     proxy_url: Optional[str] = None,
     mode: str = "daily",
 ) -> bool:
-    """发送到钉钉（支持分批发送）"""
+    """
+    发送到钉钉（支持分批发送）
+
+    钉钉机器人限制：每分钟最多发送 20 条消息，超限后限流 10 分钟
+    文档参考：https://open.dingtalk.com/document/robots/custom-robot-access
+    """
+    import hashlib
+    import hmac
+    import base64
+    import uuid
+
     headers = {"Content-Type": "application/json"}
     proxies = None
     if proxy_url:
@@ -3526,6 +3536,10 @@ def send_to_dingtalk(
     )
 
     print(f"钉钉消息分为 {len(batches)} 批次发送 [{report_type}]")
+
+    # 检查批次数量是否超过钉钉限制
+    if len(batches) > 15:
+        print(f"⚠️  警告：钉钉批次数量({len(batches)})较多，建议减少监控关键词或增加推送间隔")
 
     # 逐批发送
     for i, batch_content in enumerate(batches, 1):
@@ -3546,12 +3560,16 @@ def send_to_dingtalk(
                 # 如果没有统计标题，直接在开头添加
                 batch_content = batch_header + batch_content
 
+        # 生成唯一的消息ID用于幂等性保障
+        msg_uuid = str(uuid.uuid4())
+
         payload = {
             "msgtype": "markdown",
             "markdown": {
                 "title": f"TrendRadar 热点分析报告 - {report_type}",
                 "text": batch_content,
             },
+            "msgUuid": msg_uuid,  # 幂等性保障，避免重复发送
         }
 
         try:
@@ -3560,27 +3578,78 @@ def send_to_dingtalk(
             )
             if response.status_code == 200:
                 result = response.json()
-                if result.get("errcode") == 0:
-                    print(f"钉钉第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
-                    # 批次间间隔
+                errcode = result.get("errcode", -1)
+                errmsg = result.get("errmsg", "未知错误")
+
+                if errcode == 0:
+                    print(f"✅ 钉钉第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
+                    # 批次间间隔（遵守频率限制：每分钟最多20条）
+                    # 如果批次较多，增加间隔时间
                     if i < len(batches):
-                        time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
+                        interval = CONFIG["BATCH_SEND_INTERVAL"]
+                        # 如果批次超过15个，自动增加间隔以避免限流
+                        if len(batches) > 15:
+                            interval = max(interval, 4)
+                        time.sleep(interval)
                 else:
-                    print(
-                        f"钉钉第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{result.get('errmsg')}"
-                    )
+                    # 详细的错误处理
+                    error_msg = _format_dingtalk_error(errcode, errmsg)
+                    print(f"❌ 钉钉第 {i}/{len(batches)} 批次发送失败 [{report_type}]")
+                    print(f"   错误码：{errcode}，错误信息：{error_msg}")
+
+                    # 如果是限流错误，给出明确提示
+                    if errcode == 410100:
+                        print(f"   💡 建议：减少推送频率或整合消息内容，每分钟最多发送20条")
+
                     return False
             else:
                 print(
-                    f"钉钉第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
+                    f"❌ 钉钉第 {i}/{len(batches)} 批次发送失败 [{report_type}]，HTTP状态码：{response.status_code}"
                 )
+                if response.status_code == 400:
+                    print(f"   💡 可能原因：请求格式错误或参数缺失")
+                elif response.status_code == 403:
+                    print(f"   💡 可能原因：安全设置校验失败（关键词、签名、IP白名单）")
                 return False
+        except requests.exceptions.Timeout:
+            print(f"❌ 钉钉第 {i}/{len(batches)} 批次发送超时 [{report_type}]")
+            return False
+        except requests.exceptions.RequestException as e:
+            print(f"❌ 钉钉第 {i}/{len(batches)} 批次网络请求失败 [{report_type}]：{e}")
+            return False
         except Exception as e:
-            print(f"钉钉第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
+            print(f"❌ 钉钉第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
             return False
 
-    print(f"钉钉所有 {len(batches)} 批次发送完成 [{report_type}]")
+    print(f"✅ 钉钉所有 {len(batches)} 批次发送完成 [{report_type}]")
     return True
+
+
+def _format_dingtalk_error(errcode: int, errmsg: str) -> str:
+    """
+    格式化钉钉错误信息，提供更友好的提示
+
+    参考：https://open.dingtalk.com/document/robots/custom-robot-access
+    """
+    error_tips = {
+        -1: "系统繁忙，请稍后重试",
+        40035: "缺少参数 json，请检查消息格式",
+        43004: "无效的 Content-Type，请使用 application/json",
+        400013: "群已被解散，请选择其他群",
+        400101: "access_token 不存在或无效，请检查 Webhook URL",
+        400102: "机器人已停用，请联系管理员启用",
+        400105: "不支持的消息类型，仅支持 text/link/markdown/actionCard/feedCard",
+        400106: "机器人不存在，请确认机器人已添加到群中",
+        410100: "发送速度太快被限流，每分钟最多发送 20 条消息",
+        430101: "含有不安全的外链，请检查链接地址",
+        430102: "含有不合适的文本内容，请检查消息内容",
+        430103: "含有不合适的图片，请检查图片内容",
+        430104: "含有不合适的内容，请检查消息内容",
+        310000: "安全设置校验失败（关键词/签名/IP白名单），请检查机器人安全设置",
+    }
+
+    tip = error_tips.get(errcode, errmsg)
+    return f"{tip} (原始消息: {errmsg})" if tip != errmsg else errmsg
 
 
 def send_to_wework(

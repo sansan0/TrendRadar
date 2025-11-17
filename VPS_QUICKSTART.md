@@ -60,7 +60,7 @@ notification:
     telegram_chat_id: "123456789"
 ```
 
-#### 选项B：企业微信/飞书/钉钉
+#### 选项B：企业微信/飞书
 
 在群聊中创建机器人，获取 Webhook URL，填入配置：
 
@@ -71,11 +71,27 @@ notification:
     wework_url: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxx"
     # 或
     feishu_url: "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxx"
-    # 或
-    dingtalk_url: "https://oapi.dingtalk.com/robot/send?access_token=xxxxx"
 ```
 
-#### 选项C：邮件通知
+#### 选项C：钉钉（需要设置关键词）
+
+**步骤**：
+1. 钉钉群 → 右上角 `···` → 智能群助手 → 添加机器人 → 自定义
+2. 机器人名称：TrendRadar
+3. **安全设置**：勾选"自定义关键词"，输入 `热点` ⚠️ 必须设置
+4. 复制 Webhook URL
+5. 填入配置：
+
+```yaml
+notification:
+  enable_notification: true
+  webhooks:
+    dingtalk_url: "https://oapi.dingtalk.com/robot/send?access_token=你的token"
+```
+
+> 💡 详细配置说明：[钉钉配置完整指南](DINGTALK_GUIDE.md)
+
+#### 选项D：邮件通知
 
 ```yaml
 notification:

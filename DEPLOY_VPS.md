@@ -170,10 +170,22 @@ docker restart trend-radar
 
 ### 钉钉机器人
 
-1. 打开钉钉群聊
-2. 群设置 → 智能群助手 → 添加机器人
-3. 选择自定义机器人
-4. 复制 Webhook URL
+**快速配置**：
+1. 打开钉钉群聊 → 右上角 `···` → 智能群助手
+2. 添加机器人 → 选择 **自定义** → 添加
+3. 设置机器人名称（如 TrendRadar）
+4. **安全设置**：勾选"自定义关键词"，输入 `热点` 或 `TrendRadar`
+5. 复制 Webhook URL（完整 URL，包含 access_token）
+
+**配置示例**：
+```yaml
+dingtalk_url: "https://oapi.dingtalk.com/robot/send?access_token=你的token"
+```
+
+**重要提示**：
+- ⚠️ 必须设置安全关键词为 **"热点"** 或 **"TrendRadar"**，否则消息发送失败
+- 📝 频率限制：每分钟最多 20 条消息，超限后限流 10 分钟
+- 📖 详细配置指南：查看 [钉钉配置完整指南](DINGTALK_GUIDE.md)
 
 ### 邮件通知
 

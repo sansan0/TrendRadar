@@ -661,7 +661,16 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 1. **啟用 SSH 並連線到 NAS**
 2. **安裝 Docker 和 Git：**
    - 在套件中心安裝 Container Manager
-   - 使用 SSH 安裝 Git：`opkg install git`（如果不可用，使用 File Station 上傳專案）
+   - 使用 SSH 安裝 Git（根據您的 DSM 版本選擇一種方式）：
+     - **DSM 7.x**：可嘗試
+       ```bash
+       sudo apt-get update
+       sudo apt-get install git
+       ```
+     - **套件中心**：在「套件中心」搜尋並安裝「Git Server」或「Git」套件（如有提供）。
+     - **SynoCommunity**：若未在套件中心找到，可參考 [SynoCommunity](https://synocommunity.com/) 安裝 Git 套件。
+     - **進階用戶**：若已安裝 Entware，可使用 `opkg install git`。
+     - 若以上方法皆不可用，可使用 File Station 手動上傳專案。
 
 3. **部署步驟：**
    ```bash

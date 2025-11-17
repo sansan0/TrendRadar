@@ -18,6 +18,7 @@ from typing import Dict, List, Tuple, Optional, Union
 import pytz
 import requests
 import yaml
+import feedparser
 
 
 VERSION = "3.0.5"
@@ -51,6 +52,39 @@ SMTP_CONFIGS = {
 }
 
 
+def normalize_rss_feeds(feed_list: Optional[List[Dict]]) -> List[Dict]:
+    """标准化 RSS feed 配置"""
+    normalized = []
+
+    for idx, feed in enumerate(feed_list or []):
+        if not isinstance(feed, dict):
+            continue
+
+        feed_id = str(feed.get("id") or f"rss_{idx + 1}")
+        normalized.append(
+            {
+                "id": feed_id,
+                "name": feed.get("name", feed_id),
+                "url": (feed.get("url") or "").strip(),
+                "enabled": feed.get("enabled", True),
+            }
+        )
+
+    return normalized
+
+
+def get_active_platform_names(config: Dict) -> List[str]:
+    """根据配置获取启用的平台/数据源名称"""
+    if config.get("CRAWLER_SOURCE_TYPE") == "rss":
+        return [
+            feed.get("name", feed["id"])
+            for feed in config.get("RSS_FEEDS", [])
+            if feed.get("enabled", True)
+        ]
+
+    return [platform.get("name", platform["id"]) for platform in config.get("PLATFORMS", [])]
+
+
 # === 配置管理 ===
 def load_config():
     """加载配置文件"""
@@ -64,24 +98,30 @@ def load_config():
 
     print(f"配置文件加载成功: {config_path}")
 
+    crawler_config = config_data.get("crawler", {})
+    rss_feeds = normalize_rss_feeds(config_data.get("rss_feeds", []))
+    env_source_type = os.environ.get("CRAWLER_SOURCE_TYPE", "").strip()
+    source_type = env_source_type or crawler_config.get("source_type", "newsnow")
+
     # 构建配置
     config = {
         "VERSION_CHECK_URL": config_data["app"]["version_check_url"],
         "SHOW_VERSION_UPDATE": config_data["app"]["show_version_update"],
-        "REQUEST_INTERVAL": config_data["crawler"]["request_interval"],
+        "REQUEST_INTERVAL": crawler_config["request_interval"],
         "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
         or config_data["report"]["mode"],
         "RANK_THRESHOLD": config_data["report"]["rank_threshold"],
-        "USE_PROXY": config_data["crawler"]["use_proxy"],
-        "DEFAULT_PROXY": config_data["crawler"]["default_proxy"],
+        "USE_PROXY": crawler_config["use_proxy"],
+        "DEFAULT_PROXY": crawler_config["default_proxy"],
         "ENABLE_CRAWLER": os.environ.get("ENABLE_CRAWLER", "").strip().lower()
         in ("true", "1")
         if os.environ.get("ENABLE_CRAWLER", "").strip()
-        else config_data["crawler"]["enable_crawler"],
+        else crawler_config["enable_crawler"],
         "ENABLE_NOTIFICATION": os.environ.get("ENABLE_NOTIFICATION", "").strip().lower()
         in ("true", "1")
         if os.environ.get("ENABLE_NOTIFICATION", "").strip()
         else config_data["notification"]["enable_notification"],
+        "CRAWLER_SOURCE_TYPE": source_type.lower(),
         "MESSAGE_BATCH_SIZE": config_data["notification"]["message_batch_size"],
         "DINGTALK_BATCH_SIZE": config_data["notification"].get(
             "dingtalk_batch_size", 20000
@@ -129,6 +169,7 @@ def load_config():
             "HOTNESS_WEIGHT": config_data["weight"]["hotness_weight"],
         },
         "PLATFORMS": config_data["platforms"],
+        "RSS_FEEDS": rss_feeds,
     }
 
     # 通知渠道配置（环境变量优先）
@@ -215,7 +256,13 @@ def load_config():
 print("正在加载配置...")
 CONFIG = load_config()
 print(f"TrendRadar v{VERSION} 配置加载完成")
-print(f"监控平台数量: {len(CONFIG['PLATFORMS'])}")
+active_platform_names = get_active_platform_names(CONFIG)
+print(f"监控平台数量: {len(active_platform_names)}")
+if CONFIG.get("CRAWLER_SOURCE_TYPE") == "rss":
+    if active_platform_names:
+        print(f"RSS 数据源: {', '.join(active_platform_names)}")
+    else:
+        print("⚠️ RSS 模式已启用，但未配置任何启用的 RSS feed")
 
 
 # === 工具函数 ===
@@ -549,6 +596,103 @@ class DataFetcher:
                 time.sleep(actual_interval / 1000)
 
         print(f"成功: {list(results.keys())}, 失败: {failed_ids}")
+        return results, id_to_name, failed_ids
+
+
+class RSSFetcher:
+    """RSS 数据获取器"""
+
+    def __init__(
+        self,
+        feeds: List[Dict],
+        request_interval: int,
+        proxy_url: Optional[str] = None,
+    ) -> None:
+        self.feeds = feeds
+        self.request_interval = request_interval
+        self.proxy_url = proxy_url
+
+    def crawl_feeds(self) -> Tuple[Dict, Dict, List]:
+        """抓取 RSS feeds"""
+        results: Dict[str, Dict] = {}
+        id_to_name: Dict[str, str] = {}
+        failed_ids: List[str] = []
+
+        if not self.feeds:
+            print("未配置任何启用的 RSS feed，跳过抓取")
+            return results, id_to_name, failed_ids
+
+        proxies = None
+        if self.proxy_url:
+            proxies = {"http": self.proxy_url, "https": self.proxy_url}
+
+        for index, feed in enumerate(self.feeds):
+            feed_id = feed.get("id") or f"rss_{index + 1}"
+            feed_name = feed.get("name", feed_id)
+            feed_url = (feed.get("url") or "").strip()
+
+            if not feed_url:
+                print(f"跳过 RSS 源 {feed_name}：未配置 URL")
+                failed_ids.append(feed_id)
+                continue
+
+            if not feed.get("enabled", True):
+                continue
+
+            id_to_name[feed_id] = feed_name
+            print(f"抓取 RSS 源: {feed_name} ({feed_url})")
+
+            try:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+                    "Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+                }
+                response = requests.get(
+                    feed_url, timeout=15, proxies=proxies, headers=headers
+                )
+                response.raise_for_status()
+                parsed = feedparser.parse(response.content)
+
+                entries = parsed.entries or []
+                feed_results: Dict[str, Dict] = {}
+
+                for rank, entry in enumerate(entries, 1):
+                    title = clean_title(
+                        entry.get("title")
+                        or entry.get("summary")
+                        or entry.get("description")
+                        or ""
+                    )
+                    if not title:
+                        continue
+
+                    link = entry.get("link") or entry.get("id") or feed_url
+
+                    if title in feed_results:
+                        feed_results[title]["ranks"].append(rank)
+                    else:
+                        feed_results[title] = {
+                            "ranks": [rank],
+                            "url": link,
+                            "mobileUrl": link,
+                        }
+
+                if feed_results:
+                    results[feed_id] = feed_results
+                    print(f"RSS 源 {feed_name} 成功解析 {len(feed_results)} 条目")
+                else:
+                    print(f"RSS 源 {feed_name} 未解析到有效条目")
+
+            except Exception as exc:
+                print(f"请求 RSS 源 {feed_name} 失败: {exc}")
+                failed_ids.append(feed_id)
+
+            if index < len(self.feeds) - 1:
+                actual_interval = self.request_interval + random.randint(-10, 20)
+                actual_interval = max(50, actual_interval)
+                time.sleep(actual_interval / 1000)
+
         return results, id_to_name, failed_ids
 
 
@@ -4051,7 +4195,22 @@ class NewsAnalyzer:
         self.update_info = None
         self.proxy_url = None
         self._setup_proxy()
-        self.data_fetcher = DataFetcher(self.proxy_url)
+        self.source_type = CONFIG.get("CRAWLER_SOURCE_TYPE", "newsnow")
+        self.rss_feeds = [
+            feed
+            for feed in CONFIG.get("RSS_FEEDS", [])
+            if feed.get("enabled", True) and feed.get("url")
+        ]
+        self.platform_configs = self._load_platform_configs()
+
+        if self.source_type == "rss":
+            self.data_fetcher = RSSFetcher(
+                self.rss_feeds,
+                request_interval=self.request_interval,
+                proxy_url=self.proxy_url,
+            )
+        else:
+            self.data_fetcher = DataFetcher(self.proxy_url)
 
         if self.is_github_actions:
             self._check_version_update()
@@ -4072,6 +4231,16 @@ class NewsAnalyzer:
     def _should_open_browser(self) -> bool:
         """判断是否应该打开浏览器"""
         return not self.is_github_actions and not self.is_docker_container
+
+    def _load_platform_configs(self) -> List[Dict[str, str]]:
+        """根据数据源类型加载可用的平台配置"""
+        if self.source_type == "rss":
+            return [
+                {"id": feed["id"], "name": feed.get("name", feed["id"])}
+                for feed in self.rss_feeds
+            ]
+
+        return CONFIG.get("PLATFORMS", [])
 
     def _setup_proxy(self) -> None:
         """设置代理配置"""
@@ -4143,9 +4312,7 @@ class NewsAnalyzer:
         """统一的数据加载和预处理，使用当前监控平台列表过滤历史数据"""
         try:
             # 获取当前配置的监控平台ID列表
-            current_platform_ids = []
-            for platform in CONFIG["PLATFORMS"]:
-                current_platform_ids.append(platform["id"])
+            current_platform_ids = [platform["id"] for platform in self.platform_configs]
 
             print(f"当前监控平台: {current_platform_ids}")
 
@@ -4381,22 +4548,33 @@ class NewsAnalyzer:
 
     def _crawl_data(self) -> Tuple[Dict, Dict, List]:
         """执行数据爬取"""
-        ids = []
-        for platform in CONFIG["PLATFORMS"]:
-            if "name" in platform:
-                ids.append((platform["id"], platform["name"]))
-            else:
-                ids.append(platform["id"])
+        if not self.platform_configs:
+            print("⚠️ 未配置任何可用的数据源，跳过爬取")
+            return {}, {}, []
 
-        print(
-            f"配置的监控平台: {[p.get('name', p['id']) for p in CONFIG['PLATFORMS']]}"
-        )
-        print(f"开始爬取数据，请求间隔 {self.request_interval} 毫秒")
         ensure_directory_exists("output")
 
-        results, id_to_name, failed_ids = self.data_fetcher.crawl_websites(
-            ids, self.request_interval
-        )
+        if self.source_type == "rss":
+            print(
+                f"配置的 RSS 源: {[platform['name'] for platform in self.platform_configs]}"
+            )
+            print(f"开始拉取 RSS 数据，请求间隔 {self.request_interval} 毫秒")
+            results, id_to_name, failed_ids = self.data_fetcher.crawl_feeds()
+        else:
+            ids = []
+            for platform in self.platform_configs:
+                if "name" in platform:
+                    ids.append((platform["id"], platform["name"]))
+                else:
+                    ids.append(platform["id"])
+
+            print(
+                f"配置的监控平台: {[p.get('name', p['id']) for p in self.platform_configs]}"
+            )
+            print(f"开始爬取数据，请求间隔 {self.request_interval} 毫秒")
+            results, id_to_name, failed_ids = self.data_fetcher.crawl_websites(
+                ids, self.request_interval
+            )
 
         title_file = save_titles_to_file(results, id_to_name, failed_ids)
         print(f"标题已保存到: {title_file}")
@@ -4408,7 +4586,7 @@ class NewsAnalyzer:
     ) -> Optional[str]:
         """执行模式特定逻辑"""
         # 获取当前监控平台ID列表
-        current_platform_ids = [platform["id"] for platform in CONFIG["PLATFORMS"]]
+        current_platform_ids = [platform["id"] for platform in self.platform_configs]
 
         new_titles = detect_latest_new_titles(current_platform_ids)
         time_info = Path(save_titles_to_file(results, id_to_name, failed_ids)).stem

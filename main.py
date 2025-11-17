@@ -179,6 +179,13 @@ def load_config():
         "ntfy_token", ""
     )
 
+    # 企业微信微信兼容模式配置
+    config["WEWORK_WECHAT_COMPATIBLE"] = os.environ.get(
+        "WEWORK_WECHAT_COMPATIBLE", ""
+    ).strip().lower() in ("true", "1") if os.environ.get("WEWORK_WECHAT_COMPATIBLE", "").strip() else notification.get(
+        "wework_wechat_compatible", False
+    )
+
     # 输出配置来源信息
     notification_sources = []
     if config["FEISHU_WEBHOOK_URL"]:
@@ -1595,6 +1602,45 @@ def format_title_for_platform(
         return cleaned_title
 
 
+def format_title_for_wechat_compatible(title_data: Dict, show_source: bool = True) -> str:
+    """微信兼容格式（纯文本，去除 Markdown）"""
+    cleaned_title = clean_title(title_data["title"])
+
+    # 排名显示（纯文本，不使用粗体）
+    ranks = title_data.get("ranks", [])
+    rank_threshold = title_data.get("rank_threshold", CONFIG["RANK_THRESHOLD"])
+    rank_text = ""
+
+    if ranks:
+        min_rank = min(ranks)
+        max_rank = max(ranks)
+        if min_rank == max_rank:
+            rank_text = f"[{min_rank}]"
+        else:
+            rank_text = f"[{min_rank}-{max_rank}]"
+
+    title_prefix = "🆕 " if title_data.get("is_new") else ""
+
+    if show_source:
+        result = f"[{title_data['source_name']}] {title_prefix}{cleaned_title}"
+    else:
+        result = f"{title_prefix}{cleaned_title}"
+
+    if rank_text:
+        result += f" {rank_text}"
+    if title_data["time_display"]:
+        result += f" - {title_data['time_display']}"
+    if title_data["count"] > 1:
+        result += f" ({title_data['count']}次)"
+
+    # 如果有链接，单独一行显示，方便微信用户点击
+    link_url = title_data.get("mobile_url") or title_data.get("url", "")
+    if link_url:
+        result += f"\n🔗 {link_url}"
+
+    return result
+
+
 def generate_html_report(
     stats: List[Dict],
     total_titles: int,
@@ -2997,9 +3043,14 @@ def split_content_into_batches(
             if stat["titles"]:
                 first_title_data = stat["titles"][0]
                 if format_type == "wework":
-                    formatted_title = format_title_for_platform(
-                        "wework", first_title_data, show_source=True
-                    )
+                    if CONFIG.get("WEWORK_WECHAT_COMPATIBLE", False):
+                        formatted_title = format_title_for_wechat_compatible(
+                            first_title_data, show_source=True
+                        )
+                    else:
+                        formatted_title = format_title_for_platform(
+                            "wework", first_title_data, show_source=True
+                        )
                 elif format_type == "telegram":
                     formatted_title = format_title_for_platform(
                         "telegram", first_title_data, show_source=True
@@ -3046,9 +3097,14 @@ def split_content_into_batches(
             for j in range(start_index, len(stat["titles"])):
                 title_data = stat["titles"][j]
                 if format_type == "wework":
-                    formatted_title = format_title_for_platform(
-                        "wework", title_data, show_source=True
-                    )
+                    if CONFIG.get("WEWORK_WECHAT_COMPATIBLE", False):
+                        formatted_title = format_title_for_wechat_compatible(
+                            title_data, show_source=True
+                        )
+                    else:
+                        formatted_title = format_title_for_platform(
+                            "wework", title_data, show_source=True
+                        )
                 elif format_type == "telegram":
                     formatted_title = format_title_for_platform(
                         "telegram", title_data, show_source=True
@@ -3157,9 +3213,14 @@ def split_content_into_batches(
                 title_data_copy["is_new"] = False
 
                 if format_type == "wework":
-                    formatted_title = format_title_for_platform(
-                        "wework", title_data_copy, show_source=False
-                    )
+                    if CONFIG.get("WEWORK_WECHAT_COMPATIBLE", False):
+                        formatted_title = format_title_for_wechat_compatible(
+                            title_data_copy, show_source=False
+                        )
+                    else:
+                        formatted_title = format_title_for_platform(
+                            "wework", title_data_copy, show_source=False
+                        )
                 elif format_type == "telegram":
                     formatted_title = format_title_for_platform(
                         "telegram", title_data_copy, show_source=False
@@ -3202,9 +3263,14 @@ def split_content_into_batches(
                 title_data_copy["is_new"] = False
 
                 if format_type == "wework":
-                    formatted_title = format_title_for_platform(
-                        "wework", title_data_copy, show_source=False
-                    )
+                    if CONFIG.get("WEWORK_WECHAT_COMPATIBLE", False):
+                        formatted_title = format_title_for_wechat_compatible(
+                            title_data_copy, show_source=False
+                        )
+                    else:
+                        formatted_title = format_title_for_platform(
+                            "wework", title_data_copy, show_source=False
+                        )
                 elif format_type == "telegram":
                     formatted_title = format_title_for_platform(
                         "telegram", title_data_copy, show_source=False
@@ -3356,6 +3422,7 @@ def send_to_notifications(
 
     # 发送到企业微信
     if wework_url:
+        print("report_data", report_data)
         results["wework"] = send_to_wework(
             wework_url, report_data, report_type, update_info_to_send, proxy_url, mode
         )
@@ -3611,10 +3678,19 @@ def send_to_wework(
 
         # 添加批次标识
         if len(batches) > 1:
-            batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
+            if CONFIG.get("WEWORK_WECHAT_COMPATIBLE", False):
+                # 微信兼容模式：使用纯文本
+                batch_header = f"[第 {i}/{len(batches)} 批次]\n\n"
+            else:
+                # 正常模式：使用 Markdown 粗体
+                batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
             batch_content = batch_header + batch_content
 
-        payload = {"msgtype": "markdown", "markdown": {"content": batch_content}}
+        # 根据微信兼容模式选择消息类型
+        if CONFIG.get("WEWORK_WECHAT_COMPATIBLE", False):
+            payload = {"msgtype": "text", "text": {"content": batch_content}}
+        else:
+            payload = {"msgtype": "markdown", "markdown": {"content": batch_content}}
 
         try:
             response = requests.post(

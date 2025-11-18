@@ -173,9 +173,12 @@ async def analyze_topic_trend(
             - "viral": 异常热度检测（识别突然爆火的话题）
             - "predict": 话题预测（预测未来可能的热点）
         date_range: 日期范围（trend和lifecycle模式），可选
-                    - **格式**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
-                    - **示例**: {"start": "2025-10-18", "end": "2025-10-25"}
-                    - **说明**: AI需要根据用户的自然语言（如"最近7天"）自动计算日期范围
+                    - **格式**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}（必须是标准日期格式）
+                    - **说明**: AI必须根据当前日期自动计算并填入具体日期，不能使用"今天"等自然语言
+                    - **计算示例**:
+                      - 用户说"最近7天" → AI计算: {"start": "2025-11-11", "end": "2025-11-17"}（假设今天是11-17）
+                      - 用户说"上周" → AI计算: {"start": "2025-11-11", "end": "2025-11-17"}（上周一到上周日）
+                      - 用户说"本月" → AI计算: {"start": "2025-11-01", "end": "2025-11-17"}（11月1日到今天）
                     - **默认**: 不指定时默认分析最近7天
         granularity: 时间粒度（trend模式），默认"day"（仅支持 day，因为底层数据按天聚合）
         threshold: 热度突增倍数阈值（viral模式），默认3.0
@@ -188,11 +191,15 @@ async def analyze_topic_trend(
 
     **AI使用说明：**
     当用户使用相对时间表达时（如"最近7天"、"过去一周"、"上个月"），
-    AI需要自动计算对应的日期范围并传递给 date_range 参数。
+    AI必须根据当前日期（从环境 <env> 获取）计算出具体的 YYYY-MM-DD 格式日期。
 
-    Examples:
-        - analyze_topic_trend(topic="人工智能", analysis_type="trend", date_range={"start": "2025-10-18", "end": "2025-10-25"})
-        - analyze_topic_trend(topic="特斯拉", analysis_type="lifecycle", date_range={"start": "2025-10-18", "end": "2025-10-25"})
+    **重要**：date_range 不接受"今天"、"昨天"等自然语言，必须是 YYYY-MM-DD 格式！
+
+    Examples (假设今天是 2025-11-17):
+        - 用户："分析AI最近7天的趋势"
+          → analyze_topic_trend(topic="人工智能", analysis_type="trend", date_range={"start": "2025-11-11", "end": "2025-11-17"})
+        - 用户："看看特斯拉本月的热度"
+          → analyze_topic_trend(topic="特斯拉", analysis_type="lifecycle", date_range={"start": "2025-11-01", "end": "2025-11-17"})
         - analyze_topic_trend(topic="比特币", analysis_type="viral", threshold=3.0)
         - analyze_topic_trend(topic="ChatGPT", analysis_type="predict", lookahead_hours=6)
     """
@@ -415,14 +422,22 @@ async def search_news(
 
     **AI使用说明：**
     当用户使用相对时间表达时（如"最近7天"、"过去一周"、"最近半个月"），
-    AI需要自动计算对应的日期范围。计算规则：
-    - "最近7天" → {"start": "今天-6天", "end": "今天"}
-    - "过去一周" → {"start": "今天-6天", "end": "今天"}
-    - "最近30天" → {"start": "今天-29天", "end": "今天"}
+    AI必须根据当前日期（从环境 <env> 获取）计算出具体的 YYYY-MM-DD 格式日期。
 
-    Examples:
-        - 今天的新闻: search_news(query="人工智能")
-        - 最近7天: search_news(query="人工智能", date_range={"start": "2025-10-18", "end": "2025-10-25"})
+    **重要**：date_range 不接受"今天"、"昨天"等自然语言，必须是 YYYY-MM-DD 格式！
+
+    **计算规则**（假设从 <env> 获取今天是 2025-11-17）：
+    - "今天" → 不传 date_range（默认查今天）
+    - "最近7天" → {"start": "2025-11-11", "end": "2025-11-17"}
+    - "过去一周" → {"start": "2025-11-11", "end": "2025-11-17"}
+    - "上周" → 计算上周一到上周日，如 {"start": "2025-11-11", "end": "2025-11-17"}
+    - "本月" → {"start": "2025-11-01", "end": "2025-11-17"}
+    - "最近30天" → {"start": "2025-10-19", "end": "2025-11-17"}
+
+
+    Examples (假设今天是 2025-11-17):
+        - 用户："今天的AI新闻" → search_news(query="人工智能")
+        - 用户："最近7天的AI新闻" → search_news(query="人工智能", date_range={"start": "2025-11-11", "end": "2025-11-17"})
         - 精确日期: search_news(query="人工智能", date_range={"start": "2025-01-01", "end": "2025-01-07"})
         - 模糊搜索: search_news(query="特斯拉降价", search_mode="fuzzy", threshold=0.4)
     """
@@ -640,27 +655,12 @@ def run_server(
 
 
 if __name__ == '__main__':
-    import sys
     import argparse
 
     parser = argparse.ArgumentParser(
         description='TrendRadar MCP Server - 新闻热点聚合 MCP 工具服务器',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-使用示例:
-  # STDIO 模式（用于 Cherry Studio）
-  uv run python mcp_server/server.py
-
-  # HTTP 模式（适合远程访问）
-  uv run python mcp_server/server.py --transport http --port 3333
-
-Cherry Studio 配置示例:
-  设置 > MCP Servers > 添加服务器
-  - 名称: TrendRadar
-  - 类型: STDIO
-  - 命令: [UV的完整路径]
-  - 参数: --directory [项目路径] run python mcp_server/server.py
-
 详细配置教程请查看: README-Cherry-Studio.md
         """
     )

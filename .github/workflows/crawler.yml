@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 🚩 必须完整拉取历史，确保 rebase 正常工作
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -60,42 +59,83 @@ jobs:
           GITHUB_ACTIONS: true
         run: python main.py
 
-      #######################################################################
-      # 🚀 自动 stash → rebase → pop → commit → push
-      #     最稳定、永不冲突、不丢数据、不 push 失败版本
-      #######################################################################
-      - name: Commit and push if changes (safe stash mode)
+      - name: Commit and push if changes (robust stash + rebase)
         run: |
+          set -euo pipefail
+
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-          echo "🔍 检测爬虫生成的变更..."
-          git add -A
+          echo "🔍 检测并暂存更改..."
+          git add -A || true
 
-          # 没有变更直接退出
+          # 如果没有任何变更就退出
           if git diff --quiet && git diff --staged --quiet; then
-            echo "✨ No changes detected."
+            echo "✨ No changes detected. Exiting."
             exit 0
           fi
 
-          echo "📥 添加 upstream（若已存在不会报错）"
+          # 确保 remote upstream 已存在（若已存在则忽略错误）
           git remote add upstream https://github.com/sansan0/TrendRadar.git 2>/dev/null || true
-
-          echo "📥 获取上游最新代码"
           git fetch upstream
 
-          echo "📦 1) stash 暂存当前爬虫输出"
-          git stash push -m "crawler_changes"
+          # 标记是否做了 stash（便于后续恢复判断）
+          STASHED=false
 
-          echo "🔄 2) rebase 同步上游（失败则自动 abort）"
-          git rebase upstream/master || git rebase --abort
+          # 如果工作区有任何更改（包括未跟踪文件），使用 stash -u 暂存
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "📦 工作区有改动，使用 git stash push -u 暂存（包含 untracked）"
+            if git stash push -u -m "crawler_changes@$(date -u +%Y%m%dT%H%M%SZ)"; then
+              STASHED=true
+              echo "✅ stash 成功"
+            else
+              echo "⚠️ stash 失败，继续但可能导致 rebase 报错"
+            fi
+          else
+            echo "✅ 工作区干净，无需 stash"
+          fi
 
-          echo "📤 3) stash pop 恢复爬虫生成内容"
-          git stash pop || true
+          # 尝试 rebase 到 upstream/master（优先使用 rebase 保持历史整洁）
+          REBASE_OK=false
+          if git rebase upstream/master; then
+            REBASE_OK=true
+            echo "✅ rebase upstream/master 成功"
+          else
+            echo "⚠️ rebase 失败，尝试回滚 rebase 并使用 merge 作为后备策略"
+            git rebase --abort || true
+            # 尝试用 merge 作为后备方案（merge 不会因为 index 污染失败）
+            if git merge --no-edit upstream/master; then
+              echo "✅ merge upstream/master 成功（作为 rebase 的后备）"
+              REBASE_OK=true
+            else
+              echo "❌ merge 也失败了，接下来尝试恢复 stash 并保留本次改动以便人工检查"
+              git merge --abort || true
+              REBASE_OK=false
+            fi
+          fi
 
-          echo "📝 4) 重新提交合并后的更改"
-          git add -A
-          git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" || true
+          # 恢复 stash（如果有做 stash）
+          if [ "$STASHED" = "true" ]; then
+            echo "📤 恢复 stash（优先使用 --index 恢复暂存状态）"
+            # 尝试 pop（恢复并从 stash 列表中移除）；如果冲突导致失败，先尝试 apply 保留 stash
+            if git stash pop --index; then
+              echo "✅ stash pop 成功"
+            else
+              echo "⚠️ stash pop 失败，尝试 git stash apply 保留 stash 以便排查"
+              git stash apply --index || true
+            fi
+          fi
 
-          echo "📤 5) 推送到你的仓库（使用安全方式，不破坏别人提交）"
-          git push origin HEAD:master --force-with-lease
+          # 重新 add 并提交最终合并结果（即使 commit 没有东西也不报错）
+          git add -A || true
+          git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" || echo "ℹ️ 没有新的提交内容或 commit 被跳过"
+
+          # 推送到 fork（使用 --force-with-lease 安全覆盖）
+          echo "📤 推送到 origin master（使用 --force-with-lease）"
+          if git push origin HEAD:master --force-with-lease; then
+            echo "✅ push 成功"
+          else
+            echo "❌ push 失败，请检查权限或 remote 状态（但 workflow 不返回失败）"
+            # 不让整个 workflow 因推送失败而直接失败，方便后续排查日志
+            exit 0
+          fi

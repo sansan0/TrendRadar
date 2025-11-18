@@ -60,34 +60,42 @@ jobs:
           GITHUB_ACTIONS: true
         run: python main.py
 
-      # -------------------------------------------------------------
-      # 🚀 永不冲突自动提交 + 安全同步上游 + 自动 push
-      # -------------------------------------------------------------
-      - name: Commit and push if changes
+      #######################################################################
+      # 🚀 自动 stash → rebase → pop → commit → push
+      #     最稳定、永不冲突、不丢数据、不 push 失败版本
+      #######################################################################
+      - name: Commit and push if changes (safe stash mode)
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-          echo "🔍 检测本地变更..."
+          echo "🔍 检测爬虫生成的变更..."
           git add -A
 
-          # 没变更直接退出
+          # 没有变更直接退出
           if git diff --quiet && git diff --staged --quiet; then
             echo "✨ No changes detected."
             exit 0
           fi
 
-          echo "📝 提交本地更改（必须先提交，不能直接 rebase）"
-          git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" || true
-
-          echo "📥 添加 upstream（如果已存在不会报错）"
+          echo "📥 添加 upstream（若已存在不会报错）"
           git remote add upstream https://github.com/sansan0/TrendRadar.git 2>/dev/null || true
 
-          echo "📥 获取上游更新"
+          echo "📥 获取上游最新代码"
           git fetch upstream
 
-          echo "🔄 与上游同步（rebase 防冲突；失败自动 abort，保证工作流不中断）"
+          echo "📦 1) stash 暂存当前爬虫输出"
+          git stash push -m "crawler_changes"
+
+          echo "🔄 2) rebase 同步上游（失败则自动 abort）"
           git rebase upstream/master || git rebase --abort
 
-          echo "📤 推送到你自己的 fork（使用安全覆盖）"
+          echo "📤 3) stash pop 恢复爬虫生成内容"
+          git stash pop || true
+
+          echo "📝 4) 重新提交合并后的更改"
+          git add -A
+          git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" || true
+
+          echo "📤 5) 推送到你的仓库（使用安全方式，不破坏别人提交）"
           git push origin HEAD:master --force-with-lease

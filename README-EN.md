@@ -33,7 +33,7 @@
 
 <div align="center">
 
-**[中文](README.md)** | **English**
+**[中文](README.md)** | **English** | **[日本語](README-JA.md)**
 
 </div>
 

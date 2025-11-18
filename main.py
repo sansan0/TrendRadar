@@ -1,5 +1,8 @@
 # coding=utf-8
 
+import base64
+import hashlib
+import hmac
 import json
 import os
 import random
@@ -14,11 +17,13 @@ from email.utils import formataddr, formatdate, make_msgid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
+from urllib.parse import quote_plus
 
 import pytz
 import requests
 import yaml
 
+from mcp_server.utils.errors import BusinessException
 
 VERSION = "3.0.5"
 
@@ -141,6 +146,9 @@ def load_config():
     config["DINGTALK_WEBHOOK_URL"] = os.environ.get(
         "DINGTALK_WEBHOOK_URL", ""
     ).strip() or webhooks.get("dingtalk_url", "")
+    config["DINGTALK_SECRET"] = os.environ.get(
+        "DINGTALK_SECRET", ""
+    ).strip() or webhooks.get("dingtalk_secret", "")
     config["WEWORK_WEBHOOK_URL"] = os.environ.get(
         "WEWORK_WEBHOOK_URL", ""
     ).strip() or webhooks.get("wework_url", "")
@@ -3502,6 +3510,30 @@ def send_to_feishu(
     return True
 
 
+def build_dingtalk_signed_url(webhook_url: str, secret: str) -> str:
+    """生成带安全加签的钉钉 Webhook 地址。
+
+    若未配置 secret，直接返回原始 Webhook；若加签失败则抛出 BusinessException，
+    交由上层处理并输出可追踪日志。
+    """
+
+    if not secret:
+        return webhook_url
+
+    try:
+        timestamp = str(round(time.time() * 1000))
+        string_to_sign = f"{timestamp}\n{secret}"
+        hmac_code = hmac.new(
+            secret.encode("utf-8"), string_to_sign.encode("utf-8"), digestmod=hashlib.sha256
+        ).digest()
+        sign = quote_plus(base64.b64encode(hmac_code))
+        connector = "&" if "?" in webhook_url else "?"
+        signed_url = f"{webhook_url}{connector}timestamp={timestamp}&sign={sign}"
+        print("钉钉签名生成成功，已附加 timestamp 与 sign 参数")
+        return signed_url
+    except Exception as e:
+        raise BusinessException(f"钉钉签名生成失败: {e}") from e
+
 def send_to_dingtalk(
     webhook_url: str,
     report_data: Dict,
@@ -3515,6 +3547,10 @@ def send_to_dingtalk(
     proxies = None
     if proxy_url:
         proxies = {"http": proxy_url, "https": proxy_url}
+
+    secret = CONFIG.get("DINGTALK_SECRET", "")
+    if secret:
+        print("检测到 DINGTALK_SECRET，钉钉推送将启用安全加签校验")
 
     # 获取分批内容，使用钉钉专用的批次大小
     batches = split_content_into_batches(
@@ -3555,8 +3591,10 @@ def send_to_dingtalk(
         }
 
         try:
+            signed_url = build_dingtalk_signed_url(webhook_url, secret)
+            # 加签模式下签名字段中含特殊字符，使用 proxies 请求保持兼容
             response = requests.post(
-                webhook_url, headers=headers, json=payload, proxies=proxies, timeout=30
+                signed_url, headers=headers, json=payload, proxies=proxies, timeout=30
             )
             if response.status_code == 200:
                 result = response.json()

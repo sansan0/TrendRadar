@@ -27,6 +27,14 @@ class MCPError(Exception):
         return error_dict
 
 
+class BusinessException(Exception):
+    """通用业务异常，用于在业务流程中抛出可预期的错误。"""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
 class DataNotFoundError(MCPError):
     """数据不存在错误"""
 

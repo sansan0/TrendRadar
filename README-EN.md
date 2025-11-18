@@ -47,7 +47,7 @@
 | [🎯 Core Features](#-core-features) | [🚀 Quick Start](#-quick-start) | [🐳 Docker Deployment](#-docker-deployment) | [🤖 AI Analysis](#-ai-analysis-deployment) |
 |:---:|:---:|:---:|:---:|
 | [📝 Changelog](#-changelog) | [🔌 MCP Clients](#-mcp-clients) | [❓ FAQ & Support](#-faq--support) | [⭐ Related Projects](#-related-projects) |
-| [🔧 Custom Platforms](#custom-monitoring-platforms) | [📝 Keywords Config](#frequencywordstxt-configuration) | | |
+| [🔧 Custom Platforms](#custom-monitoring-platforms) | [📝 Keywords Config](#frequencywordstxt-configuration) | [🪄 Sponsors](#-sponsors) | |
 
 </div>
 
@@ -101,8 +101,6 @@ This project uses the API from [newsnow](https://github.com/ourongxing/newsnow) 
 
 </details>
 
-
-> This project uses the API from [newsnow](https://github.com/ourongxing/newsnow) to fetch multi-platform data
 
 ## ✨ Core Features
 
@@ -474,7 +472,11 @@ AI conversational analysis system based on MCP (Model Context Protocol), enablin
   - Cross-platform data comparison (activity stats, keyword co-occurrence)
   - Smart summary generation, similar news finding, historical correlation search
 
-> No more manual data file browsing—AI assistant helps you understand the stories behind the news in seconds
+> **💡 Usage Tip**: AI features require local news data support
+> - Project includes **November 1-15** test data for immediate experience
+> - Recommend deploying the project yourself to get more real-time data
+>
+> See [AI Analysis Deployment](#-ai-analysis-deployment) for details
 
 ### **Zero Technical Barrier Deployment**
 
@@ -904,7 +906,41 @@ frequency_words.txt file added **required word** feature, using + sign
 
    <br>
 
-   **Method 2:** (See Chinese version for detailed steps)
+   **Method 2:**
+
+   1. Open in PC browser https://botbuilder.feishu.cn/home/my-app
+
+   2. Click "New Bot Application"
+
+   3. After entering the created application, click "Process Design" > "Create Process" > "Select Trigger"
+
+   4. Scroll down, click "Webhook Trigger"
+
+   5. Now you'll see "Webhook Address", copy this link to local notepad temporarily, continue with next steps
+
+   6. In "Parameters" put the following content, then click "Done"
+
+   ```json
+   {
+     "message_type": "text",
+     "content": {
+       "total_titles": "{{Content}}",
+       "timestamp": "{{Content}}",
+       "report_type": "{{Content}}",
+       "text": "{{Content}}"
+     }
+   }
+   ```
+
+   7. Click "Select Action" > "Send Feishu Message", check "Group Message", then click the input box below, click "Groups I Manage" (if no group, you can create one in Feishu app)
+
+   8. Message title fill "TrendRadar Trending Monitor"
+
+   9. Most critical part, click + button, select "Webhook Trigger", then arrange as shown in image
+
+   ![Feishu Bot Config Example](_image/image.png)
+
+   10. After configuration, put Webhook address from step 5 into GitHub Secrets `FEISHU_WEBHOOK_URL`
 
    </details>
 
@@ -1399,7 +1435,31 @@ docker exec -it trend-radar ls -la /app/config/
 
 ## 🤖 AI Analysis Deployment
 
-TrendRadar v3.0.0 added **MCP (Model Context Protocol)** based AI analysis feature, allowing natural language conversations with news data for deep analysis. Best prerequisite for using **AI features** is running this project for at least one day (accumulate news data).
+TrendRadar v3.0.0 added **MCP (Model Context Protocol)** based AI analysis feature, allowing natural language conversations with news data for deep analysis.
+
+
+### ⚠️ Important Notice Before Use
+
+
+**Critical: AI features require local news data support**
+
+AI analysis **does not** query real-time online data directly, but analyzes **locally accumulated news data** (stored in the `output` folder)
+
+
+#### Usage Instructions:
+
+1. **Built-in Test Data**: The `output` directory includes news data from **November 1-15, 2025** by default for quick feature testing
+
+2. **Query Limitations**:
+   - ✅ Only query data within available date range (Nov 1-15)
+   - ❌ Cannot query real-time news or future dates
+
+3. **Getting Latest Data**:
+   - Test data is for quick experience only, **recommend deploying the project yourself** to get real-time data
+   - Follow [Quick Start](#-quick-start) to deploy and run the project
+   - After accumulating news data for at least 1 day, you can query the latest trending topics
+
+---
 
 ### 1. Quick Deployment
 
@@ -1528,7 +1588,189 @@ Create `.cursor/mcp.json`:
 
 </details>
 
-(Additional client configs including VSCode/Cline/Continue, Claude Code CLI, MCP Inspector, and others available in Chinese version)
+<details>
+<summary><b>👉 Click to expand: VSCode (Cline/Continue)</b></summary>
+
+#### Cline Configuration
+
+Add in Cline's MCP settings:
+
+**HTTP Mode**:
+```json
+{
+  "trendradar": {
+    "url": "http://localhost:3333/mcp",
+    "type": "streamableHttp",
+    "autoApprove": [],
+    "disabled": false
+  }
+}
+```
+
+**STDIO Mode** (Recommended):
+```json
+{
+  "trendradar": {
+    "command": "uv",
+    "args": [
+      "--directory",
+      "/path/to/TrendRadar",
+      "run",
+      "python",
+      "-m",
+      "mcp_server.server"
+    ],
+    "type": "stdio",
+    "disabled": false
+  }
+}
+```
+
+#### Continue Configuration
+
+Edit `~/.continue/config.json`:
+```json
+{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "uv",
+          "args": [
+            "--directory",
+            "/path/to/TrendRadar",
+            "run",
+            "python",
+            "-m",
+            "mcp_server.server"
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+**Usage Examples**:
+```
+Analyze recent 7 days "Tesla" popularity trend
+Generate today's trending summary report
+Search "Bitcoin" related news and analyze sentiment
+```
+
+</details>
+
+<details>
+<summary><b>👉 Click to expand: Claude Code CLI</b></summary>
+
+#### HTTP Mode Configuration
+
+```bash
+# 1. Start HTTP service
+# Windows: start-http.bat
+# Mac/Linux: ./start-http.sh
+
+# 2. Add MCP server
+claude mcp add --transport http trendradar http://localhost:3333/mcp
+
+# 3. Verify connection (ensure service started)
+claude mcp list
+```
+
+#### Usage Examples
+
+```bash
+# Query news
+claude "Search today's Zhihu trending news, top 10"
+
+# Trend analysis
+claude "Analyze 'artificial intelligence' topic popularity trend for the past week"
+
+# Data comparison
+claude "Compare Zhihu and Weibo platform attention on 'Bitcoin'"
+```
+
+</details>
+
+<details>
+<summary><b>👉 Click to expand: MCP Inspector</b> (Debug Tool)</summary>
+<br>
+
+MCP Inspector is the official debug tool for testing MCP connections:
+
+#### Usage Steps
+
+1. **Start TrendRadar HTTP Service**:
+   ```bash
+   # Windows
+   start-http.bat
+
+   # Mac/Linux
+   ./start-http.sh
+   ```
+
+2. **Start MCP Inspector**:
+   ```bash
+   npx @modelcontextprotocol/inspector
+   ```
+
+3. **Connect in Browser**:
+   - Visit: `http://localhost:3333/mcp`
+   - Test "Ping Server" function to verify connection
+   - Check "List Tools" returns 13 tools:
+     - Basic Query: get_latest_news, get_news_by_date, get_trending_topics
+     - Smart Search: search_news, search_related_news_history
+     - Advanced Analysis: analyze_topic_trend, analyze_data_insights, analyze_sentiment, find_similar_news, generate_summary_report
+     - System Management: get_current_config, get_system_status, trigger_crawl
+
+</details>
+
+<details>
+<summary><b>👉 Click to expand: Other MCP-Compatible Clients</b></summary>
+<br>
+
+Any client supporting Model Context Protocol can connect to TrendRadar:
+
+#### HTTP Mode
+
+**Service Address**: `http://localhost:3333/mcp`
+
+**Basic Config Template**:
+```json
+{
+  "name": "trendradar",
+  "url": "http://localhost:3333/mcp",
+  "type": "http",
+  "description": "News Trending Aggregation Analysis"
+}
+```
+
+#### STDIO Mode (Recommended)
+
+**Basic Config Template**:
+```json
+{
+  "name": "trendradar",
+  "command": "uv",
+  "args": [
+    "--directory",
+    "/path/to/TrendRadar",
+    "run",
+    "python",
+    "-m",
+    "mcp_server.server"
+  ],
+  "type": "stdio"
+}
+```
+
+**Notes**:
+- Replace `/path/to/TrendRadar` with actual project path
+- Windows paths use backslash escape: `C:\\Users\\...`
+- Ensure project dependencies installed (ran setup script)
+
+</details>
 
 
 ## ☕ FAQ & Support
@@ -1541,28 +1783,13 @@ Create `.cursor/mcp.json`:
 <summary><b>👉 Click to expand: Author's Note</b></summary>
 <br>
 
-Thanks for all support! Due to sponsor support, the **one-yuan donation** QR code has been removed.
+Thanks for all support! Due to 302.AI sponsorship, my personal **one-yuan donation** QR code has been removed.
 
 Previous **one-yuan supporters** are listed in the **Acknowledgments** section at the top.
 
 This project's development and maintenance require significant time, effort, and costs (including AI model fees). With sponsorship support, I can maintain it more confidently.
 
-Currently, major AI model prices are relatively affordable. If you don't have a suitable model yet, clicking **302.AI** below also supports the developer:
-
-<div align="center">
-
-<span style="margin-left: 10px"><a href="https://share.302.ai/mEOUzG" target="_blank"><img src="_image/icon-302ai.png" alt="302ai logo" width="100"/></a></span>
-
-</div>
-
-**Usage Process:**
-
-1. After registration and top-up, enter [Management Dashboard](https://302.ai/dashboard/overview) at top right
-2. Click [API Keys](https://302.ai/apis/list) on the left
-3. Find default API KEY at page bottom, click eye icon to view, then copy (Note: don't click the copy button on the far right)
-4. Cherry Studio has integrated 302.AI, just fill in API key to use (currently must fill key first to see complete model list)
-
-If you already have a suitable model, welcome to **register and try**~
+Currently, major AI model prices are relatively affordable. Welcome to register and try, you can **[click here to claim $1 free credit](#-sponsors)**.
 
 </details>
 
@@ -1580,15 +1807,57 @@ If you already have a suitable model, welcome to **register and try**~
 
 ## 🪄 Sponsors
 
-> 302.AI is a pay-as-you-go enterprise-level AI resource platform
-> Providing the latest and most comprehensive **AI models** and **APIs** on the market, plus various ready-to-use online AI applications.
+> **302.AI** is a pay-as-you-go enterprise-level AI resource platform
+> Providing the latest and most comprehensive **AI models** and **APIs** on the market, plus various ready-to-use online AI applications
 
 
 <div align="center">
 
-<span style="margin-left: 10px"><a href="https://share.302.ai/mEOUzG" target="_blank"><img src="_image/banner-302ai-en.jpg" alt="302ai banner" width="800"/></a>
-
+<a href="https://share.302.ai/mEOUzG" target="_blank">
+  <img src="_image/banner-302ai-en.jpg" alt="302.AI" width="800"/>
+</a>
 </div>
+
+### 💰 302.AI New User Benefits
+
+> The $1 credit can be used to call various AI models (such as Claude, GPT, etc.)
+> This project's AI analysis features require AI model integration. See [AI Analysis Deployment](#-ai-analysis-deployment) for configuration tutorial
+
+[![Register & Claim](https://img.shields.io/badge/Register_302.AI-Claim_$1_Free_Credit-FF6B6B?style=for-the-badge&logo=openai&logoColor=white)](https://share.302.ai/mEOUzG)
+
+<details id="sponsor-tutorial">
+<summary><b>👉 Click to expand: 302.AI Usage Tutorial</b></summary>
+
+
+### Step 1: Get API Key
+
+1. After registration, go to [Management Dashboard](https://302.ai/dashboard/overview) at top right
+2. Click [API Keys](https://302.ai/apis/list) on the left
+3. Find default API KEY at page bottom, **click eye icon to view**, then copy
+   (⚠️ Note: Don't click the copy button on the far right)
+
+
+### Step 2: Configure in Cherry Studio
+
+1. Open Cherry Studio, go to settings
+2. Select **"302.AI"** as model provider
+3. Paste the API Key you just copied
+4. Click **Manage**, now you can use all supported AI models
+
+**Tip:** Cherry Studio has natively integrated 302.AI, you can see the complete model list after configuration.
+
+
+**Q: How long does $1 free credit last?**
+A: Depends on usage frequency and model selection, can run multiple test sessions.
+
+**Q: What after free credit runs out?**
+A: You can top up as needed, pay-as-you-go. Major AI model prices are now relatively affordable.
+
+</details>
+
+<br>
+
+---
 
 
 ### Common Questions

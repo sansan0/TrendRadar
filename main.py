@@ -1517,10 +1517,7 @@ def format_title_for_platform(
         return result
 
     elif platform == "telegram":
-        if link_url:
-            formatted_title = f'<a href="{link_url}">{html_escape(cleaned_title)}</a>'
-        else:
-            formatted_title = cleaned_title
+        formatted_title = html_escape(cleaned_title)
 
         title_prefix = "🆕 " if title_data.get("is_new") else ""
 

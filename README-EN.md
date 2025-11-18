@@ -913,8 +913,8 @@ frequency_words.txt file added **required word** feature, using + sign
    <br>
 
    **GitHub Secret Configuration (⚠️ Name must match exactly):**
-   - **Name**: `DINGTALK_WEBHOOK_URL` (Please copy and paste this name, do not type manually)
-   - **Secret (Value)**: Your DingTalk bot Webhook address
+   - **Name**: `DINGTALK_WEBHOOK_URL` (Webhook address)
+   - **Name**: `DINGTALK_SECRET` (Signature secret, required when "Signature" security is enabled)
 
    <br>
 
@@ -928,12 +928,13 @@ frequency_words.txt file added **required word** feature, using + sign
    2. **Configure Bot**:
       - Set bot name
       - **Security Settings**:
-        - **Custom Keywords**: Set "Trending" or "热点"
+        - Option A: **Custom Keywords** – set simple keywords like "Trending" or "热点"
+        - Option B: **Signature** – turn on "Signature" and keep the generated secret; store it in GitHub Secrets `DINGTALK_SECRET`
 
    3. **Complete Setup**:
       - Check service terms agreement → Click "Done"
-      - Copy the obtained Webhook URL
-      - Put URL into GitHub Secrets `DINGTALK_WEBHOOK_URL`
+      - Copy the obtained Webhook URL → put into `DINGTALK_WEBHOOK_URL`
+      - If signature is enabled, also copy the secret → put into `DINGTALK_SECRET`
 
    **Note**: Mobile can only receive messages, cannot create new bots.
    </details>

@@ -982,8 +982,8 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    <br>
 
    **GitHub Secret 配置（⚠️ Name 名称必须严格一致）：**
-   - **Name（名称）**：`DINGTALK_WEBHOOK_URL`（请复制粘贴此名称，不要手打）
-   - **Secret（值）**：你的钉钉机器人 Webhook 地址
+   - **Name（名称）**：`DINGTALK_WEBHOOK_URL`（Webhook 地址，复制粘贴避免误差）
+   - **Name（名称）**：`DINGTALK_SECRET`（若开启“加签”安全设置，将生成的密钥填入此项）
 
    <br>
 
@@ -997,12 +997,13 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    2. **配置机器人**：
       - 设置机器人名称
       - **安全设置**：
-        - **自定义关键词**：设置 "热点"
+        - 方案 A：**自定义关键词**（如 "Trending" / "TrendRadar" / "热点"）
+        - 方案 B：**加签**（推荐 GitHub Actions 使用），开启后复制生成的密钥，配置到 `DINGTALK_SECRET`
 
    3. **完成设置**：
       - 勾选服务条款协议 → 点击"完成"
-      - 复制获得的 Webhook URL
-      - 将 URL 配置到 GitHub Secrets 中的 `DINGTALK_WEBHOOK_URL`
+      - 复制获得的 Webhook URL → 填入 `DINGTALK_WEBHOOK_URL`
+      - 如开启加签，将密钥填入 `DINGTALK_SECRET`
 
    **注意**：移动端只能接收消息，无法创建新机器人。
    </details>

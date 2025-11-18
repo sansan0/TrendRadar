@@ -2,7 +2,7 @@ name: Hot News Crawler
 
 on:
   schedule:
-    - cron: "0 * * * *" # 每小时整点执行
+    - cron: "0 * * * *"  # 每小时执行
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 拉取完整仓库（必须），否则无法 rebase
+      # 🚩 必须完整 checkout 才能 rebase
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -31,7 +31,6 @@ jobs:
 
       - name: Verify required files
         run: |
-          echo "🔍 检查配置文件..."
           if [ ! -f config/config.yaml ]; then
             echo "❌ 缺少 config/config.yaml"
             exit 1
@@ -60,31 +59,42 @@ jobs:
           GITHUB_ACTIONS: true
         run: python main.py
 
-      # 🔥 永不冲突自动提交 + 推送
-      - name: Commit and push if changes
+      # -------------------------------------------------------------
+      # 🚀 永不冲突自动提交 + 安全同步上游 + 自动 push（不破坏历史）
+      # -------------------------------------------------------------
+      - name: Commit and push changes safely
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
           git add -A
 
-          # 没有变化直接退出
+          # 无更改退出
           if git diff --quiet && git diff --staged --quiet; then
-            echo "✨ No changes detected. Skipping commit."
+            echo "✨ No changes to commit."
             exit 0
           fi
 
-          echo "📥 添加 upstream（如果已存在不会报错）"
+          echo "📝 Commit local changes"
+          git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" || true
+
+          # ---------------------------------------------------------
+          # 1. 设置上游仓库（如果已经存在不会报错）
+          # ---------------------------------------------------------
+          echo "📥 Add upstream"
           git remote add upstream https://github.com/sansan0/TrendRadar.git 2>/dev/null || true
 
-          echo "📥 获取上游更新"
+          echo "📥 Fetch upstream"
           git fetch upstream
 
-          echo "🔄 与上游同步（rebase 防止冲突）"
-          git rebase upstream/master
+          # ---------------------------------------------------------
+          # 2. 安全 rebase：如果失败不会终止 workflow
+          # ---------------------------------------------------------
+          echo "🔄 Rebase to keep fork up to date"
+          git rebase upstream/master || git rebase --abort
 
-          echo "📝 本地提交"
-          git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)"
-
-          echo "📤 推送到自己的仓库（覆盖冲突情况）"
+          # ---------------------------------------------------------
+          # 3. 推送更新（使用 force-with-lease，安全、不会覆盖别人内容）
+          # ---------------------------------------------------------
+          echo "📤 Push to your fork"
           git push origin HEAD:master --force-with-lease

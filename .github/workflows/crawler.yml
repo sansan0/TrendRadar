@@ -2,9 +2,11 @@ name: Hot News Crawler
 
 on:
   schedule:
-    - cron: "0 * * * *" 
+    # 我们使用的是 github 官方提供的资源来进行的推送，而每个账号的资源是限额的，为了不被官方判定为滥用而面临封号的风险，不建议比半小时更低
+    - cron: "0 * * * *" # 每小时整点运行一次(实际有偏差) 或者 "*/30 * * * *" (每半小时执行一次) 或者 "*/30 0-14 * * *"(每天早上 8 点到晚上 10 点期间，每半小时运行一次)
   workflow_dispatch:
 
+# 添加权限设置
 permissions:
   contents: write
 
@@ -15,8 +17,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # ⚠ 必须拉完整提交历史，否则无法 pull
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -30,15 +30,21 @@ jobs:
 
       - name: Verify required files
         run: |
+          echo "🔍 检查必需的配置文件..."
+
           if [ ! -f config/config.yaml ]; then
-            echo "❌ config/config.yaml 不存在"
+            echo "❌ 错误: config/config.yaml 文件不存在"
+            echo "请参考项目文档创建配置文件"
             exit 1
           fi
 
           if [ ! -f config/frequency_words.txt ]; then
-            echo "❌ config/frequency_words.txt 不存在"
+            echo "❌ 错误: config/frequency_words.txt 文件不存在"
+            echo "请参考项目文档创建频率词配置文件"
             exit 1
           fi
+
+          echo "✅ 配置文件检查通过"
 
       - name: Run crawler
         env:
@@ -60,16 +66,7 @@ jobs:
 
       - name: Commit and push if changes
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
           git add -A
-
-          # 如果无改动就退出
-          git diff --quiet && git diff --staged --quiet && exit 0
-
-          # ⚠⚠⚠ 关键：先同步远端 master，避免 push 冲突
-          git pull --rebase origin master
-
-          git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)"
-          git push
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" && git push)

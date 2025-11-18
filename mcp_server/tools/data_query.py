@@ -106,11 +106,11 @@ class DataQueryTools:
         Returns:
             搜索结果字典
 
-        Example:
+        Example (假设今天是 2025-11-17):
             >>> tools = DataQueryTools()
             >>> result = tools.search_news_by_keyword(
             ...     keyword="人工智能",
-            ...     date_range={"start": "2025-10-01", "end": "2025-10-11"},
+            ...     date_range={"start": "2025-11-08", "end": "2025-11-17"},
             ...     limit=50
             ... )
             >>> print(result['total'])

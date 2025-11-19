@@ -44,10 +44,10 @@
 
 <div align="center">
 
-| [🎯 Core Features](#-core-features) | [🚀 Quick Start](#-quick-start) | [🐳 Docker Deployment](#-docker-deployment) | [🤖 AI Analysis](#-ai-analysis-deployment) |
+| [🎯 Core Features](#-core-features) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration Guide](#-configuration-guide) | [🐳 Docker Deployment](#-docker-deployment) |
 |:---:|:---:|:---:|:---:|
-| [📝 Changelog](#-changelog) | [🔌 MCP Clients](#-mcp-clients) | [❓ FAQ & Support](#-faq--support) | [⭐ Related Projects](#-related-projects) |
-| [🔧 Custom Platforms](#custom-monitoring-platforms) | [📝 Keywords Config](#frequencywordstxt-configuration) | | |
+| [🤖 AI Analysis](#-ai-analysis) | [🔌 MCP Clients](#-mcp-clients) | [📝 Changelog](#-changelog) | [❓ FAQ & Support](#-faq--support) |
+| [⭐ Related Projects](#-related-projects) | [🪄 Sponsors](#-sponsors) | | |
 
 </div>
 
@@ -56,11 +56,19 @@
 - Thanks to **followers**, your interactions make the content more meaningful 😎
 
 <details>
-<summary>👉 Click to view <strong>Acknowledgments</strong> (Current <strong>🔥71🔥</strong> supporters)</summary>
+<summary>👉 Click to view <strong>Acknowledgments</strong> (Current <strong>🔥72🔥</strong> supporters)</summary>
+
+### Infrastructure Support
+
+Thanks to **GitHub** for providing free infrastructure, which is the biggest prerequisite for this project to run conveniently with **one-click fork**.
 
 ### Data Support
 
-This project uses the API from [newsnow](https://github.com/ourongxing/newsnow) to fetch multi-platform data
+This project uses the API from [newsnow](https://github.com/ourongxing/newsnow) to fetch multi-platform data. Special thanks to the author for providing this service.
+
+After communication, the author indicated no concerns about server pressure, but this is based on their goodwill and trust. Please everyone:
+- **Visit the [newsnow project](https://github.com/ourongxing/newsnow) and give it a star**
+- When deploying with Docker, please control the frequency reasonably and avoid being overly greedy
 
 ### Promotion Support
 
@@ -73,6 +81,8 @@ This project uses the API from [newsnow](https://github.com/ourongxing/newsnow) 
 ### Community Support
 
 > Thanks to **financial supporters**. Your generosity has transformed into snacks and drinks beside my keyboard, accompanying every iteration of this project
+>
+> **"One-yuan appreciation"** has been suspended. If you still want to support the author, please visit the [official account](#-faq--support) article and click "Like Author" at the bottom.
 
 | Supporter | Amount (CNY) | Date | Note |
 | :-------: | :----------: | :--: | :--: |
@@ -102,8 +112,6 @@ This project uses the API from [newsnow](https://github.com/ourongxing/newsnow) 
 </details>
 
 
-> This project uses the API from [newsnow](https://github.com/ourongxing/newsnow) to fetch multi-platform data
-
 ## ✨ Core Features
 
 ### **Multi-Platform Trending News Aggregation**
@@ -122,53 +130,32 @@ This project uses the API from [newsnow](https://github.com/ourongxing/newsnow) 
 
 Default monitoring of 11 mainstream platforms, with support for adding custom platforms.
 
-<details id="custom-monitoring-platforms">
-<summary><strong>👉 Click to expand: Custom Monitoring Platforms</strong></summary>
-<br>
-
-The news data comes from [newsnow](https://github.com/ourongxing/newsnow). You can visit the [website](https://newsnow.busiyi.world/) and click [More] to see if your desired platform is available.
-
-To add platforms, visit the [source code](https://github.com/ourongxing/newsnow/tree/main/server/sources), and modify the `platforms` configuration in `config/config.yaml`:
-
-```yaml
-platforms:
-  - id: "toutiao"
-    name: "Toutiao"
-  - id: "baidu"
-    name: "Baidu Hot"
-  - id: "wallstreetcn-hot"
-    name: "Wallstreetcn"
-  # Add more platforms...
-```
-
-If you're unsure, you can copy from [community-shared configurations](https://github.com/sansan0/TrendRadar/issues/95).
-
-</details>
+> 💡 For detailed configuration, see [Configuration Guide - Platform Configuration](#1-platform-configuration)
 
 ### **Smart Push Strategies**
 
 **Three Push Modes**:
 
-| Mode | Target Users | Push Timing | Display Content | Use Case |
-|------|--------------|-------------|-----------------|----------|
-| **Daily Summary**<br/>`daily` | 📋 Managers/Regular Users | Scheduled push (default: hourly) | All matched news of the day<br/>+ New news section | Daily reports<br/>Comprehensive trend overview |
-| **Current Rankings**<br/>`current` | 📰 Content Creators | Scheduled push (default: hourly) | Current ranking matches<br/>+ New news section | Real-time hot topics<br/>What's trending now |
-| **Incremental Monitor**<br/>`incremental` | 📈 Traders/Investors | Push only when new | Newly appeared matching news | Avoid duplicate info<br/>High-frequency monitoring |
+| Mode | Target Users | Push Feature |
+|------|--------------|--------------|
+| **Daily Summary** (daily) | Managers/Regular Users | Push all matched news of the day (includes previously pushed) |
+| **Current Rankings** (current) | Content Creators | Push current ranking matches (continuously ranked news appear each time) |
+| **Incremental Monitor** (incremental) | Traders/Investors | Push only new content, zero duplication |
+
+> 💡 **Quick Selection Guide:**
+> - 🔄 Don't want duplicate news → Use `incremental`
+> - 📊 Want complete ranking trends → Use `current`
+> - 📝 Need daily summary reports → Use `daily`
+>
+> For detailed comparison and configuration, see [Configuration Guide - Push Mode Details](#3-push-mode-details)
 
 **Additional Feature - Push Time Window Control** (Optional):
 
-This feature works independently with any push mode:
+- Set push time range (e.g., 09:00-18:00), push only within specified time
+- Configure multiple pushes within window or once per day
+- Avoid notifications during non-work hours
 
-- **Time Window Limit**: Set push time range (e.g., 09:00-18:00 or 20:00-22:00)
-- **Push Frequency Control**:
-  - Multiple pushes within window: Push every execution
-  - Once per day: Only push once within window (suitable for daily/current modes)
-- **Typical Scenarios**:
-  - Work hours push: Only receive messages during 09:00-18:00 on weekdays
-  - Evening summary: Receive summary at fixed evening time (e.g., 20:00-22:00)
-  - Do not disturb: Prevent notifications during non-work hours
-
-> Tip: This feature is disabled by default, enable it manually in `config/config.yaml` with `push_window.enabled`
+> 💡 This feature is disabled by default, see [Quick Start](#-quick-start) for configuration
 
 ### **Precise Content Filtering**
 
@@ -177,165 +164,8 @@ Set personal keywords (e.g., AI, BYD, Education Policy) to receive only relevant
 - Supports normal words, required words (+), and filter words (!)
 - Group-based management with independent statistics for different topics
 
-> You can also skip filtering and receive all trending news. See v2.0.1 in [Changelog](#-changelog)
-
-<details id="frequencywordstxt-configuration">
-<summary><strong>👉 Click to expand: frequency_words.txt Configuration</strong></summary>
-<br>
-
-Configure monitoring keywords in `frequency_words.txt` with three syntax types and grouping features.
-
-Keywords at the top have higher priority. Adjust keyword order based on your interests.
-
-| Syntax Type | Symbol | Purpose | Example | Matching Logic |
-|------------|--------|---------|---------|----------------|
-| **Normal** | None | Basic matching | `Huawei` | Match any one |
-| **Required** | `+` | Scope limiting | `+phone` | Must include both |
-| **Filter** | `!` | Noise exclusion | `!ad` | Exclude if included |
-
-### 📋 Basic Syntax
-
-#### 1. **Normal Keywords** - Basic Matching
-```txt
-Huawei
-OPPO
-Apple
-```
-**Effect:** News containing **any one** of these words will be captured
-
-#### 2. **Required Words** `+word` - Scope Limiting
-```txt
-Huawei
-OPPO
-+phone
-```
-**Effect:** Must include both normal word **and** required word to be captured
-
-#### 3. **Filter Words** `!word` - Noise Exclusion
-```txt
-Apple
-Huawei
-!fruit
-!price
-```
-**Effect:** News containing filter words will be **excluded**, even if it contains keywords
-
-### 🔗 Group Feature - Importance of Empty Lines
-
-**Core Rule:** Use **empty lines** to separate different groups, each group is independently counted
-
-#### Example Configuration:
-```txt
-iPhone
-Huawei
-OPPO
-+launch
-
-A-shares
-Shanghai Index
-Shenzhen Index
-+fluctuation
-!prediction
-
-World Cup
-Euro Cup
-Asian Cup
-+match
-```
-
-#### Group Explanation and Matching Effects:
-
-**Group 1 - Phone Launches:**
-- Keywords: iPhone, Huawei, OPPO
-- Required: launch
-- Effect: Must include phone brand name and "launch"
-
-**Matching Examples:**
-- ✅ "iPhone 15 officially launched with pricing" ← Has "iPhone" + "launch"
-- ✅ "Huawei Mate60 series launch livestream" ← Has "Huawei" + "launch"
-- ✅ "OPPO Find X7 launch date confirmed" ← Has "OPPO" + "launch"
-- ❌ "iPhone sales hit record high" ← Has "iPhone" but missing "launch"
-
-**Group 2 - Stock Market:**
-- Keywords: A-shares, Shanghai Index, Shenzhen Index
-- Required: fluctuation
-- Filter: prediction
-- Effect: Include stock-related words and "fluctuation", but exclude "prediction"
-
-**Matching Examples:**
-- ✅ "A-shares major fluctuation analysis today" ← Has "A-shares" + "fluctuation"
-- ✅ "Shanghai Index fluctuation reasons explained" ← Has "Shanghai Index" + "fluctuation"
-- ❌ "Experts predict A-shares fluctuation trends" ← Has "A-shares" + "fluctuation" but contains "prediction"
-- ❌ "A-shares trading volume hits new high" ← Has "A-shares" but missing "fluctuation"
-
-**Group 3 - Football Events:**
-- Keywords: World Cup, Euro Cup, Asian Cup
-- Required: match
-- Effect: Must include cup name and "match"
-
-**Matching Examples:**
-- ✅ "World Cup group stage match results" ← Has "World Cup" + "match"
-- ✅ "Euro Cup final match time" ← Has "Euro Cup" + "match"
-- ❌ "World Cup tickets on sale" ← Has "World Cup" but missing "match"
-
-### 🎯 Configuration Tips
-
-#### 1. **From Broad to Strict Strategy**
-```txt
-# Step 1: Start with broad keywords for testing
-Artificial Intelligence
-AI
-ChatGPT
-
-# Step 2: After finding mismatches, add required words
-Artificial Intelligence
-AI
-ChatGPT
-+technology
-
-# Step 3: After finding noise, add filter words
-Artificial Intelligence
-AI
-ChatGPT
-+technology
-!advertisement
-!training
-```
-
-#### 2. **Avoid Over-Complexity**
-❌ **Not Recommended:** Too many words in one group
-```txt
-Huawei
-OPPO
-Apple
-Samsung
-vivo
-OnePlus
-Meizu
-+phone
-+launch
-+sales
-!fake
-!repair
-!second-hand
-```
-
-✅ **Recommended:** Split into precise groups
-```txt
-Huawei
-OPPO
-+new product
-
-Apple
-Samsung
-+launch
-
-phone
-sales
-+market
-```
-
-</details>
+> 💡 Keyword configuration tutorial: [Configuration Guide - Keyword Configuration](#2-keyword-configuration)
+> 💡 You can also skip filtering and receive all trending news (leave frequency_words.txt empty)
 
 
 ### **Trending Analysis**
@@ -348,64 +178,7 @@ Real-time tracking of news popularity changes helps you understand not just "wha
 - **Continuity Analysis**: Distinguishes between one-time hot topics and continuously developing news
 - **Cross-Platform Comparison**: Same news across different platforms, showing media attention differences
 
-> Never miss the complete development of important news, from topic emergence to peak discussion
-
-<details>
-<summary><strong>👉 Click to expand: Push Format Explanation</strong></summary>
-<br>
-
-📊 Trending Keywords Stats
-
-🔥 [1/3] AI ChatGPT : 2 items
-
-  1. [Baidu Hot] 🆕 ChatGPT-5 officially launched [**1**] - 09:15 (1 time)
-
-  2. [Toutiao] AI chip concept stocks surge [**3**] - [08:30 ~ 10:45] (3 times)
-
-━━━━━━━━━━━━━━━━━━━
-
-📈 [2/3] BYD Tesla : 2 items
-
-  1. [Weibo] 🆕 BYD monthly sales break record [**2**] - 10:20 (1 time)
-
-  2. [Douyin] Tesla price reduction promotion [**4**] - [07:45 ~ 09:15] (2 times)
-
-━━━━━━━━━━━━━━━━━━━
-
-📌 [3/3] A-shares Stock Market : 1 item
-
-  1. [Wallstreetcn] A-shares midday review [**5**] - [11:30 ~ 12:00] (2 times)
-
-🆕 New Trending News (Total 2 items)
-
-**Baidu Hot** (1 item):
-  1. ChatGPT-5 officially launched [**1**]
-
-**Weibo** (1 item):
-  1. BYD monthly sales break record [**2**]
-
-Updated: 2025-01-15 12:30:15
-
-
-## **Message Format Explanation**
-
-| Format Element | Example | Meaning | Description |
-| ------------- | ------- | -------- | ----------- |
-| 🔥📈📌 | 🔥 [1/3] AI ChatGPT | Popularity Level | 🔥 High (≥10) 📈 Medium (5-9) 📌 Normal (<5) |
-| [Number/Total] | [1/3] | Rank Position | Current group rank among all matches |
-| Keyword Group | AI ChatGPT | Keyword Group | Group from config, title must contain words |
-| : N items | : 2 items | Match Count | Total news matching this group |
-| [Platform] | [Baidu Hot] | Source Platform | Platform name of the news |
-| 🆕 | 🆕 ChatGPT-5 officially launched | New Mark | First appearance in this round |
-| [**number**] | [**1**] | High Rank | Rank ≤ threshold, bold red display |
-| [number] | [7] | Normal Rank | Rank > threshold, normal display |
-| - time | - 09:15 | First Time | Time when news was first discovered |
-| [time~time] | [08:30 ~ 10:45] | Duration | Time range from first to last appearance |
-| (N times) | (3 times) | Frequency | Total appearances during monitoring |
-| **New Section** | 🆕 **New Trending News** | New Topic Summary | Separately shows newly appeared topics |
-
-</details>
-
+> 💡 Push format reference: [Configuration Guide - Push Format Reference](#5-push-format-reference)
 
 ### **Personalized Trending Algorithm**
 
@@ -415,42 +188,7 @@ No longer controlled by platform algorithms, TrendRadar reorganizes all trending
 - **Focus on Persistent Topics** (30%): Repeatedly appearing news is more important
 - **Consider Ranking Quality** (10%): Not just frequent, but consistently top-ranked
 
-> Merge trending searches from各 platforms and re-sort by your interests. These three ratios can be adjusted for your scenarios.
-
-<details>
-<summary><strong>👉 Click to expand: Trending Weight Adjustment</strong></summary>
-<br>
-
-Current default configuration is balanced.
-
-### Two Core Scenarios
-
-**Real-Time Trending Type**:
-```yaml
-weight:
-  rank_weight: 0.8    # Mainly focus on ranking
-  frequency_weight: 0.1  # Less concern about continuity
-  hotness_weight: 0.1
-```
-**Target Users**: Content creators, marketers, users wanting to quickly understand current hot topics
-
-**In-Depth Topic Type**:
-```yaml
-weight:
-  rank_weight: 0.4    # Moderate ranking focus
-  frequency_weight: 0.5  # Emphasize sustained heat within the day
-  hotness_weight: 0.1
-```
-**Target Users**: Investors, researchers, journalists, users needing deep trend analysis
-
-### Adjustment Method
-1. **Three numbers must sum to 1.0**
-2. **Increase what's important**: Increase rank_weight for rankings, frequency_weight for continuity
-3. **Suggest adjusting 0.1-0.2 at a time**, observe effects
-
-Core idea: Users pursuing speed and timeliness increase ranking weight, users pursuing depth and stability increase frequency weight.
-
-</details>
+> 💡 Weight adjustment guide: [Configuration Guide - Advanced Configuration](#4-advanced-configuration---hotspot-weight-adjustment)
 
 ### **Multi-Channel Real-Time Push**
 
@@ -474,7 +212,11 @@ AI conversational analysis system based on MCP (Model Context Protocol), enablin
   - Cross-platform data comparison (activity stats, keyword co-occurrence)
   - Smart summary generation, similar news finding, historical correlation search
 
-> No more manual data file browsing—AI assistant helps you understand the stories behind the news in seconds
+> **💡 Usage Tip**: AI features require local news data support
+> - Project includes **November 1-15** test data for immediate experience
+> - Recommend deploying the project yourself to get more real-time data
+>
+> See [AI Analysis](#-ai-analysis) for details
 
 ### **Zero Technical Barrier Deployment**
 
@@ -804,7 +546,7 @@ frequency_words.txt file added **required word** feature, using + sign
 
 ## 🚀 Quick Start
 
-> After configuration, news data updates after one hour. To accelerate, refer to [Step 4] to manually test configuration
+> **📖 Reminder**: Fork users should first **[check the latest official documentation](https://github.com/sansan0/TrendRadar?tab=readme-ov-file)** to ensure the configuration steps are up to date.
 
 1. **Fork this project** to your GitHub account
 
@@ -904,7 +646,41 @@ frequency_words.txt file added **required word** feature, using + sign
 
    <br>
 
-   **Method 2:** (See Chinese version for detailed steps)
+   **Method 2:**
+
+   1. Open in PC browser https://botbuilder.feishu.cn/home/my-app
+
+   2. Click "New Bot Application"
+
+   3. After entering the created application, click "Process Design" > "Create Process" > "Select Trigger"
+
+   4. Scroll down, click "Webhook Trigger"
+
+   5. Now you'll see "Webhook Address", copy this link to local notepad temporarily, continue with next steps
+
+   6. In "Parameters" put the following content, then click "Done"
+
+   ```json
+   {
+     "message_type": "text",
+     "content": {
+       "total_titles": "{{Content}}",
+       "timestamp": "{{Content}}",
+       "report_type": "{{Content}}",
+       "text": "{{Content}}"
+     }
+   }
+   ```
+
+   7. Click "Select Action" > "Send Feishu Message", check "Group Message", then click the input box below, click "Groups I Manage" (if no group, you can create one in Feishu app)
+
+   8. Message title fill "TrendRadar Trending Monitor"
+
+   9. Most critical part, click + button, select "Webhook Trigger", then arrange as shown in image
+
+   ![Feishu Bot Config Example](_image/image.png)
+
+   10. After configuration, put Webhook address from step 5 into GitHub Secrets `FEISHU_WEBHOOK_URL`
 
    </details>
 
@@ -1174,12 +950,36 @@ frequency_words.txt file added **required word** feature, using + sign
 
    > **💡 Beginner Quick Start Tip**:
    >
-   > For first deployment, suggest completing **GitHub Secrets** configuration first (choose one push platform), then jump to [Step 4] to test push success.
+   > For first deployment, suggest completing **GitHub Secrets** configuration first (choose one push platform), then jump to [Step 3] to test push success.
    >
    > **Don't modify** `config/config.yaml` and `frequency_words.txt` temporarily, adjust these configs after push test succeeds as needed.
 
 
-3. **Configuration Notes:**:
+3. **Manual Test News Push**:
+
+   > 💡 **Complete Step 1-2 first, then test immediately!** Test success first, then adjust configuration (Step 4) as needed.
+   >
+   > ⚠️ **IMPORTANT: Enter your own forked project, not this project!**
+
+   **How to find your Actions page**:
+
+   - **Method 1**: Open your forked project homepage, click the **Actions** tab at the top
+   - **Method 2**: Direct access `https://github.com/YourUsername/TrendRadar/actions`
+
+   **Example comparison**:
+   - ❌ Author's project: `https://github.com/sansan0/TrendRadar/actions`
+   - ✅ Your project: `https://github.com/YourUsername/TrendRadar/actions`
+
+   **Testing steps**:
+   1. Enter your project's Actions page
+   2. Find **"Hot News Crawler"** and click in
+      - If you don't see this text, refer to [#109](https://github.com/sansan0/TrendRadar/issues/109) to solve
+   3. Click **"Run workflow"** button on the right to run
+   4. Wait about 1 minute, messages will be pushed to your configured platform
+
+4. **Configuration Notes (Optional)**:
+
+    > 💡 Default configuration works normally, only adjust if you need personalization
 
     - **Push Settings**: Configure push mode and notification options in [config/config.yaml](config/config.yaml)
     - **Keyword Settings**: Add your interested keywords in [config/frequency_words.txt](config/frequency_words.txt)
@@ -1187,13 +987,327 @@ frequency_words.txt file added **required word** feature, using + sign
 
     **Note**: Suggest only adjusting explicitly documented config items, other options mainly for author's development testing
 
-4. **Manual Test News Push**:
 
-    Using my project as example, you should test in **your forked** project
+## ⚙️ Configuration Guide
 
-    1. **Enter Actions**: https://github.com/sansan0/TrendRadar/actions
-    2. Find "Hot News Crawler" and click in. If you don't see this text, refer to [#109](https://github.com/sansan0/TrendRadar/issues/109) to solve
-    3. Click "Run workflow" button to run, wait about 1 minute for data to arrive on your phone
+> **📖 Reminder**: This chapter provides detailed configuration explanations. Suggest completing [Quick Start](#-quick-start) basic configuration first, then refer to detailed options here as needed.
+
+### 1. Platform Configuration
+
+<details id="custom-monitoring-platforms">
+<summary>👉 Click to expand: <strong>Custom Monitoring Platforms</strong></summary>
+<br>
+
+This project's news data comes from [newsnow](https://github.com/ourongxing/newsnow). You can click the [website](https://newsnow.busiyi.world/), click [More], to see if there are platforms you want.
+
+For specific additions, visit [project source code](https://github.com/ourongxing/newsnow/tree/main/server/sources), based on the file names there, modify the `platforms` configuration in `config/config.yaml` file:
+
+```yaml
+platforms:
+  - id: "toutiao"
+    name: "Toutiao"
+  - id: "baidu"
+    name: "Baidu Hot Search"
+  - id: "wallstreetcn-hot"
+    name: "Wallstreetcn"
+  # Add more platforms...
+```
+If you don't know how to look, you can directly copy the partially organized [Platform Configuration](https://github.com/sansan0/TrendRadar/issues/95)
+
+</details>
+
+### 2. Keyword Configuration
+
+<details id="frequencywordstxt-configuration-tutorial">
+<summary>👉 Click to expand: <strong>frequency_words.txt Configuration Tutorial</strong></summary>
+<br>
+
+Configure monitoring keywords in `frequency_words.txt` with three syntax types and grouping features.
+
+Keywords at the top have higher priority. Adjust keyword order based on your interests.
+
+| Syntax Type | Symbol | Purpose | Example | Matching Logic |
+|------------|--------|---------|---------|----------------|
+| **Normal** | None | Basic matching | `Huawei` | Match any one |
+| **Required** | `+` | Scope limiting | `+phone` | Must include both |
+| **Filter** | `!` | Noise exclusion | `!ad` | Exclude if included |
+
+#### 📋 Basic Syntax
+
+##### 1. **Normal Keywords** - Basic Matching
+```txt
+Huawei
+OPPO
+Apple
+```
+**Effect:** News containing **any one** of these words will be captured
+
+##### 2. **Required Words** `+word` - Scope Limiting
+```txt
+Huawei
+OPPO
++phone
+```
+**Effect:** Must include both normal word **and** required word to be captured
+
+##### 3. **Filter Words** `!word` - Noise Exclusion
+```txt
+Apple
+Huawei
+!fruit
+!price
+```
+**Effect:** News containing filter words will be **excluded**, even if it contains keywords
+
+#### 🔗 Group Feature - Importance of Empty Lines
+
+**Core Rule:** Use **empty lines** to separate different groups, each group is independently counted
+
+##### Example Configuration:
+```txt
+iPhone
+Huawei
+OPPO
++launch
+
+A-shares
+Shanghai Index
+Shenzhen Index
++fluctuation
+!prediction
+
+World Cup
+Euro Cup
+Asian Cup
++match
+```
+
+##### Group Explanation and Matching Effects:
+
+**Group 1 - Phone Launches:**
+- Keywords: iPhone, Huawei, OPPO
+- Required: launch
+- Effect: Must include phone brand name and "launch"
+
+**Matching Examples:**
+- ✅ "iPhone 15 officially launched with pricing" ← Has "iPhone" + "launch"
+- ✅ "Huawei Mate60 series launch livestream" ← Has "Huawei" + "launch"
+- ✅ "OPPO Find X7 launch date confirmed" ← Has "OPPO" + "launch"
+- ❌ "iPhone sales hit record high" ← Has "iPhone" but missing "launch"
+
+**Group 2 - Stock Market:**
+- Keywords: A-shares, Shanghai Index, Shenzhen Index
+- Required: fluctuation
+- Filter: prediction
+- Effect: Include stock-related words and "fluctuation", but exclude "prediction"
+
+**Matching Examples:**
+- ✅ "A-shares major fluctuation analysis today" ← Has "A-shares" + "fluctuation"
+- ✅ "Shanghai Index fluctuation reasons explained" ← Has "Shanghai Index" + "fluctuation"
+- ❌ "Experts predict A-shares fluctuation trends" ← Has "A-shares" + "fluctuation" but contains "prediction"
+- ❌ "A-shares trading volume hits new high" ← Has "A-shares" but missing "fluctuation"
+
+**Group 3 - Football Events:**
+- Keywords: World Cup, Euro Cup, Asian Cup
+- Required: match
+- Effect: Must include cup name and "match"
+
+**Matching Examples:**
+- ✅ "World Cup group stage match results" ← Has "World Cup" + "match"
+- ✅ "Euro Cup final match time" ← Has "Euro Cup" + "match"
+- ❌ "World Cup tickets on sale" ← Has "World Cup" but missing "match"
+
+#### 🎯 Configuration Tips
+
+##### 1. **From Broad to Strict Strategy**
+```txt
+# Step 1: Start with broad keywords for testing
+Artificial Intelligence
+AI
+ChatGPT
+
+# Step 2: After finding mismatches, add required words
+Artificial Intelligence
+AI
+ChatGPT
++technology
+
+# Step 3: After finding noise, add filter words
+Artificial Intelligence
+AI
+ChatGPT
++technology
+!advertisement
+!training
+```
+
+##### 2. **Avoid Over-Complexity**
+❌ **Not Recommended:** Too many words in one group
+```txt
+Huawei
+OPPO
+Apple
+Samsung
+vivo
+OnePlus
+Meizu
++phone
++launch
++sales
+!fake
+!repair
+!second-hand
+```
+
+��� **Recommended:** Split into precise groups
+```txt
+Huawei
+OPPO
++new product
+
+Apple
+Samsung
++launch
+
+phone
+sales
++market
+```
+
+</details>
+
+### 3. Push Mode Details
+
+<details>
+<summary>👉 Click to expand: <strong>Three Push Modes Detailed Comparison</strong></summary>
+<br>
+
+#### Detailed Comparison Table
+
+| Mode | Target Users | Push Timing | Display Content | Typical Use Case |
+|------|----------|----------|----------|--------------|
+| **Daily Summary**<br/>`daily` | 📋 Managers/Regular Users | Scheduled push (default hourly) | All matched news of the day<br/>+ New news section | **Example**: Check all important news of the day at 6 PM<br/>**Feature**: See full-day trend, don't miss any hot topic<br/>**Note**: Will include previously pushed news |
+| **Current Rankings**<br/>`current` | 📰 Content Creators | Scheduled push (default hourly) | Current ranking matches<br/>+ New news section | **Example**: Track "which topics are hottest now" hourly<br/>**Feature**: Real-time understanding of current popularity ranking changes<br/>**Note**: Continuously ranked news appear each time |
+| **Incremental Monitor**<br/>`incremental` | 📈 Traders/Investors | Push only when new | Newly appeared frequency word matches | **Example**: Monitor "Tesla", only notify when new news appears<br/>**Feature**: Zero duplication, only see first-time news<br/>**Suitable for**: High-frequency monitoring, avoid information disturbance |
+
+#### Actual Push Effect Example
+
+Assume you monitor "Apple" keyword, execute once per hour:
+
+| Time | daily Mode Push | current Mode Push | incremental Mode Push |
+|-----|--------------|----------------|-------------------|
+| 10:00 | News A, News B | News A, News B | News A, News B |
+| 11:00 | News A, News B, News C | News B, News C, News D | **Only** News C |
+| 12:00 | News A, News B, News C | News C, News D, News E | **Only** News D, News E |
+
+**Explanation**:
+- `daily`: Cumulative display of all news of the day (A, B, C all retained)
+- `current`: Display current ranking news (ranking changed, News D on list, News A off list)
+- `incremental`: **Only push newly appeared news** (avoid duplicate disturbance)
+
+#### Common Questions
+
+> **💡 Encountered this problem?** 👉 "Execute once per hour, news output in first execution still appears in next hour execution"
+> - **Reason**: You might have selected `daily` (Daily Summary) or `current` (Current Rankings) mode
+> - **Solution**: Change to `incremental` (Incremental Monitor) mode, only push new content
+
+</details>
+
+### 4. Advanced Configuration - Hotspot Weight Adjustment
+
+<details>
+<summary>👉 Click to expand: <strong>Hotspot Weight Adjustment</strong></summary>
+<br>
+
+Current default configuration is balanced.
+
+#### Two Core Scenarios
+
+**Real-Time Trending Type**:
+```yaml
+weight:
+  rank_weight: 0.8    # Mainly focus on ranking
+  frequency_weight: 0.1  # Less concern about continuity
+  hotness_weight: 0.1
+```
+**Target Users**: Content creators, marketers, users wanting to quickly understand current hot topics
+
+**In-Depth Topic Type**:
+```yaml
+weight:
+  rank_weight: 0.4    # Moderate ranking focus
+  frequency_weight: 0.5  # Emphasize sustained heat within the day
+  hotness_weight: 0.1
+```
+**Target Users**: Investors, researchers, journalists, users needing deep trend analysis
+
+#### Adjustment Method
+1. **Three numbers must sum to 1.0**
+2. **Increase what's important**: Increase rank_weight for rankings, frequency_weight for continuity
+3. **Suggest adjusting 0.1-0.2 at a time**, observe effects
+
+Core idea: Users pursuing speed and timeliness increase ranking weight, users pursuing depth and stability increase frequency weight.
+
+</details>
+
+### 5. Push Format Reference
+
+<details>
+<summary>👉 Click to expand: <strong>Push Format Explanation</strong></summary>
+<br>
+
+#### Push Example
+
+📊 Trending Keywords Stats
+
+🔥 [1/3] AI ChatGPT : 2 items
+
+  1. [Baidu Hot] 🆕 ChatGPT-5 officially launched [**1**] - 09:15 (1 time)
+
+  2. [Toutiao] AI chip concept stocks surge [**3**] - [08:30 ~ 10:45] (3 times)
+
+━━━━━━━━━━━━━━━━━━━
+
+📈 [2/3] BYD Tesla : 2 items
+
+  1. [Weibo] 🆕 BYD monthly sales break record [**2**] - 10:20 (1 time)
+
+  2. [Douyin] Tesla price reduction promotion [**4**] - [07:45 ~ 09:15] (2 times)
+
+━━━━━━━━━━━━━━━━━━━
+
+📌 [3/3] A-shares Stock Market : 1 item
+
+  1. [Wallstreetcn] A-shares midday review [**5**] - [11:30 ~ 12:00] (2 times)
+
+🆕 New Trending News (Total 2 items)
+
+**Baidu Hot** (1 item):
+  1. ChatGPT-5 officially launched [**1**]
+
+**Weibo** (1 item):
+  1. BYD monthly sales break record [**2**]
+
+Updated: 2025-01-15 12:30:15
+
+#### Message Format Explanation
+
+| Format Element | Example | Meaning | Description |
+| ------------- | ------- | -------- | ----------- |
+| 🔥📈📌 | 🔥 [1/3] AI ChatGPT | Popularity Level | 🔥 High (≥10) 📈 Medium (5-9) 📌 Normal (<5) |
+| [Number/Total] | [1/3] | Rank Position | Current group rank among all matches |
+| Keyword Group | AI ChatGPT | Keyword Group | Group from config, title must contain words |
+| : N items | : 2 items | Match Count | Total news matching this group |
+| [Platform] | [Baidu Hot] | Source Platform | Platform name of the news |
+| 🆕 | 🆕 ChatGPT-5 officially launched | New Mark | First appearance in this round |
+| [**number**] | [**1**] | High Rank | Rank ≤ threshold, bold red display |
+| [number] | [7] | Normal Rank | Rank > threshold, normal display |
+| - time | - 09:15 | First Time | Time when news was first discovered |
+| [time~time] | [08:30 ~ 10:45] | Duration | Time range from first to last appearance |
+| (N times) | (3 times) | Frequency | Total appearances during monitoring |
+| **New Section** | 🆕 **New Trending News** | New Topic Summary | Separately shows newly appeared topics |
+
+</details>
 
 
 ## 🐳 Docker Deployment
@@ -1397,9 +1511,33 @@ docker exec -it trend-radar ls -la /app/config/
 ```
 
 
-## 🤖 AI Analysis Deployment
+## 🤖 AI Analysis
 
-TrendRadar v3.0.0 added **MCP (Model Context Protocol)** based AI analysis feature, allowing natural language conversations with news data for deep analysis. Best prerequisite for using **AI features** is running this project for at least one day (accumulate news data).
+TrendRadar v3.0.0 added **MCP (Model Context Protocol)** based AI analysis feature, allowing natural language conversations with news data for deep analysis.
+
+
+### ⚠️ Important Notice Before Use
+
+
+**Critical: AI features require local news data support**
+
+AI analysis **does not** query real-time online data directly, but analyzes **locally accumulated news data** (stored in the `output` folder)
+
+
+#### Usage Instructions:
+
+1. **Built-in Test Data**: The `output` directory includes news data from **November 1-15, 2025** by default for quick feature testing
+
+2. **Query Limitations**:
+   - ✅ Only query data within available date range (Nov 1-15)
+   - ❌ Cannot query real-time news or future dates
+
+3. **Getting Latest Data**:
+   - Test data is for quick experience only, **recommend deploying the project yourself** to get real-time data
+   - Follow [Quick Start](#-quick-start) to deploy and run the project
+   - After accumulating news data for at least 1 day, you can query the latest trending topics
+
+---
 
 ### 1. Quick Deployment
 
@@ -1528,7 +1666,189 @@ Create `.cursor/mcp.json`:
 
 </details>
 
-(Additional client configs including VSCode/Cline/Continue, Claude Code CLI, MCP Inspector, and others available in Chinese version)
+<details>
+<summary><b>👉 Click to expand: VSCode (Cline/Continue)</b></summary>
+
+#### Cline Configuration
+
+Add in Cline's MCP settings:
+
+**HTTP Mode**:
+```json
+{
+  "trendradar": {
+    "url": "http://localhost:3333/mcp",
+    "type": "streamableHttp",
+    "autoApprove": [],
+    "disabled": false
+  }
+}
+```
+
+**STDIO Mode** (Recommended):
+```json
+{
+  "trendradar": {
+    "command": "uv",
+    "args": [
+      "--directory",
+      "/path/to/TrendRadar",
+      "run",
+      "python",
+      "-m",
+      "mcp_server.server"
+    ],
+    "type": "stdio",
+    "disabled": false
+  }
+}
+```
+
+#### Continue Configuration
+
+Edit `~/.continue/config.json`:
+```json
+{
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "uv",
+          "args": [
+            "--directory",
+            "/path/to/TrendRadar",
+            "run",
+            "python",
+            "-m",
+            "mcp_server.server"
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+**Usage Examples**:
+```
+Analyze recent 7 days "Tesla" popularity trend
+Generate today's trending summary report
+Search "Bitcoin" related news and analyze sentiment
+```
+
+</details>
+
+<details>
+<summary><b>👉 Click to expand: Claude Code CLI</b></summary>
+
+#### HTTP Mode Configuration
+
+```bash
+# 1. Start HTTP service
+# Windows: start-http.bat
+# Mac/Linux: ./start-http.sh
+
+# 2. Add MCP server
+claude mcp add --transport http trendradar http://localhost:3333/mcp
+
+# 3. Verify connection (ensure service started)
+claude mcp list
+```
+
+#### Usage Examples
+
+```bash
+# Query news
+claude "Search today's Zhihu trending news, top 10"
+
+# Trend analysis
+claude "Analyze 'artificial intelligence' topic popularity trend for the past week"
+
+# Data comparison
+claude "Compare Zhihu and Weibo platform attention on 'Bitcoin'"
+```
+
+</details>
+
+<details>
+<summary><b>👉 Click to expand: MCP Inspector</b> (Debug Tool)</summary>
+<br>
+
+MCP Inspector is the official debug tool for testing MCP connections:
+
+#### Usage Steps
+
+1. **Start TrendRadar HTTP Service**:
+   ```bash
+   # Windows
+   start-http.bat
+
+   # Mac/Linux
+   ./start-http.sh
+   ```
+
+2. **Start MCP Inspector**:
+   ```bash
+   npx @modelcontextprotocol/inspector
+   ```
+
+3. **Connect in Browser**:
+   - Visit: `http://localhost:3333/mcp`
+   - Test "Ping Server" function to verify connection
+   - Check "List Tools" returns 13 tools:
+     - Basic Query: get_latest_news, get_news_by_date, get_trending_topics
+     - Smart Search: search_news, search_related_news_history
+     - Advanced Analysis: analyze_topic_trend, analyze_data_insights, analyze_sentiment, find_similar_news, generate_summary_report
+     - System Management: get_current_config, get_system_status, trigger_crawl
+
+</details>
+
+<details>
+<summary><b>👉 Click to expand: Other MCP-Compatible Clients</b></summary>
+<br>
+
+Any client supporting Model Context Protocol can connect to TrendRadar:
+
+#### HTTP Mode
+
+**Service Address**: `http://localhost:3333/mcp`
+
+**Basic Config Template**:
+```json
+{
+  "name": "trendradar",
+  "url": "http://localhost:3333/mcp",
+  "type": "http",
+  "description": "News Trending Aggregation Analysis"
+}
+```
+
+#### STDIO Mode (Recommended)
+
+**Basic Config Template**:
+```json
+{
+  "name": "trendradar",
+  "command": "uv",
+  "args": [
+    "--directory",
+    "/path/to/TrendRadar",
+    "run",
+    "python",
+    "-m",
+    "mcp_server.server"
+  ],
+  "type": "stdio"
+}
+```
+
+**Notes**:
+- Replace `/path/to/TrendRadar` with actual project path
+- Windows paths use backslash escape: `C:\\Users\\...`
+- Ensure project dependencies installed (ran setup script)
+
+</details>
 
 
 ## ☕ FAQ & Support
@@ -1541,33 +1861,19 @@ Create `.cursor/mcp.json`:
 <summary><b>👉 Click to expand: Author's Note</b></summary>
 <br>
 
-Thanks for all support! Due to sponsor support, the **one-yuan donation** QR code has been removed.
+Thanks for all support! Due to 302.AI sponsorship, my personal **one-yuan donation** QR code has been removed.
 
 Previous **one-yuan supporters** are listed in the **Acknowledgments** section at the top.
 
 This project's development and maintenance require significant time, effort, and costs (including AI model fees). With sponsorship support, I can maintain it more confidently.
 
-Currently, major AI model prices are relatively affordable. If you don't have a suitable model yet, clicking **302.AI** below also supports the developer:
-
-<div align="center">
-
-<span style="margin-left: 10px"><a href="https://share.302.ai/mEOUzG" target="_blank"><img src="_image/icon-302ai.png" alt="302ai logo" width="100"/></a></span>
-
-</div>
-
-**Usage Process:**
-
-1. After registration and top-up, enter [Management Dashboard](https://302.ai/dashboard/overview) at top right
-2. Click [API Keys](https://302.ai/apis/list) on the left
-3. Find default API KEY at page bottom, click eye icon to view, then copy (Note: don't click the copy button on the far right)
-4. Cherry Studio has integrated 302.AI, just fill in API key to use (currently must fill key first to see complete model list)
-
-If you already have a suitable model, welcome to **register and try**~
+Currently, major AI model prices are relatively affordable. Welcome to register and try, you can **[click here to claim $1 free credit](#-sponsors)**.
 
 </details>
 
 - **GitHub Issues**: Suitable for targeted answers. Please provide complete info when asking (screenshots, error logs, system environment, etc.)
 - **WeChat Official Account**: Suitable for quick consultation. Suggest priority to communicate in public comment area of related articles. If private message, please use polite language 😉
+- 💡 Deployment successful? Welcome to leave comments and likes on our official account to share your experience~
 
 
 <div align="center">
@@ -1580,15 +1886,57 @@ If you already have a suitable model, welcome to **register and try**~
 
 ## 🪄 Sponsors
 
-> 302.AI is a pay-as-you-go enterprise-level AI resource platform
-> Providing the latest and most comprehensive **AI models** and **APIs** on the market, plus various ready-to-use online AI applications.
+> **302.AI** is a pay-as-you-go enterprise-level AI resource platform
+> Providing the latest and most comprehensive **AI models** and **APIs** on the market, plus various ready-to-use online AI applications
 
 
 <div align="center">
 
-<span style="margin-left: 10px"><a href="https://share.302.ai/mEOUzG" target="_blank"><img src="_image/banner-302ai-en.jpg" alt="302ai banner" width="800"/></a>
-
+<a href="https://share.302.ai/mEOUzG" target="_blank">
+  <img src="_image/banner-302ai-en.jpg" alt="302.AI" width="800"/>
+</a>
 </div>
+
+### 💰 302.AI New User Benefits
+
+> The $1 credit can be used to call various AI models (such as Claude, GPT, etc.)   
+> This project's AI analysis features require AI model integration. See [AI Analysis Deployment](#-ai-analysis-deployment) for configuration tutorial
+
+[![Register & Claim](https://img.shields.io/badge/Register_302.AI-Claim_$1_Free_Credit-FF6B6B?style=for-the-badge&logo=openai&logoColor=white)](https://share.302.ai/mEOUzG)
+
+<details id="sponsor-tutorial">
+<summary><b>👉 Click to expand: 302.AI Usage Tutorial</b></summary>
+
+
+### Step 1: Get API Key
+
+1. After registration, go to [Management Dashboard](https://302.ai/dashboard/overview) at top right
+2. Click [API Keys](https://302.ai/apis/list) on the left
+3. Find default API KEY at page bottom, **click eye icon to view**, then copy
+   (⚠️ Note: Don't click the copy button on the far right)
+
+
+### Step 2: Configure in Cherry Studio
+
+1. Open Cherry Studio, go to settings
+2. Select **"302.AI"** as model provider
+3. Paste the API Key you just copied
+4. Click **Manage**, now you can use all supported AI models
+
+**Tip:** Cherry Studio has natively integrated 302.AI, you can see the complete model list after configuration.
+
+
+**Q: How long does $1 free credit last?**
+A: Depends on usage frequency and model selection, can run multiple test sessions.
+
+**Q: What after free credit runs out?**
+A: You can top up as needed, pay-as-you-go. Major AI model prices are now relatively affordable.
+
+</details>
+
+<br>
+
+---
 
 
 ### Common Questions

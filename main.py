@@ -4336,6 +4336,7 @@ class NewsAnalyzer:
     def _has_notification_configured(self) -> bool:
         """检查是否配置了任何通知渠道"""
         print("DISCORD URL", CONFIG["DISCORD_WEBHOOK_URL"])
+        print("FEISHU URL", CONFIG["FEISHU_WEBHOOK_URL"])
         return any(
             [
                 CONFIG["DISCORD_WEBHOOK_URL"],
@@ -4496,9 +4497,7 @@ class NewsAnalyzer:
             )
             return True
         elif CONFIG["ENABLE_NOTIFICATION"] and not has_notification:
-            print("is enabled? %s", CONFIG["ENABLE_NOTIFICATION"])
-            print("has notification? %s", has_notification)
-            print("⚠️ 警告：通知功能已启用但未配置任何通知渠道，将跳过通知发送 Test")
+            print("⚠️ 警告：通知功能已启用但未配置任何通知渠道，将跳过通知发送")
         elif not CONFIG["ENABLE_NOTIFICATION"]:
             print(f"跳过{report_type}通知：通知功能已禁用")
         elif (

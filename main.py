@@ -1488,6 +1488,38 @@ def format_title_for_platform(
 
         return result
 
+    elif platform == "discord":
+        if link_url:
+            # Discord uses standard Markdown link syntax: [Text](URL)
+            formatted_title = f"[{cleaned_title}]({link_url})"
+        else:
+            formatted_title = cleaned_title
+
+        # Use Discord's default bold/italic formatting
+        title_prefix = "🆕 " if title_data.get("is_new") else ""
+
+        if show_source:
+            # Source name is included, potentially in brackets
+            # We use standard markdown for consistency with other platforms that don't support color
+            result = (
+                f"**[{title_data['source_name']}]** {title_prefix}{formatted_title}"
+            )
+        else:
+            result = f"{title_prefix}{formatted_title}"
+
+        if rank_display:
+            result += f" {rank_display}"
+
+        # Discord can use code blocks (`) or italics (*) for secondary info
+        if title_data["time_display"]:
+            result += f" - *{title_data['time_display']}*"
+
+        if title_data["count"] > 1:
+            # Use code block for count to make it distinct
+            result += f" `({title_data['count']}次)`"
+
+        return result
+
     elif platform == "dingtalk":
         if link_url:
             formatted_title = f"[{cleaned_title}]({link_url})"
@@ -3049,6 +3081,10 @@ def split_content_into_batches(
                 elif format_type == "feishu":
                     formatted_title = format_title_for_platform(
                         "feishu", first_title_data, show_source=True
+                    )
+                elif format_type == "discord":
+                    formatted_title = format_title_for_platform(
+                        "discord", first_title_data, show_source=True
                     )
                 elif format_type == "dingtalk":
                     formatted_title = format_title_for_platform(

@@ -89,6 +89,9 @@ def load_config():
         "FEISHU_BATCH_SIZE": config_data["notification"].get(
             "feishu_batch_size", 29000
         ),
+        "DISCORD_BATCH_SIZE": config_data["notification"].get(
+            "discord_batch_size", 4000
+        ),
         "BATCH_SEND_INTERVAL": config_data["notification"]["batch_send_interval"],
         "FEISHU_MESSAGE_SEPARATOR": config_data["notification"][
             "feishu_message_separator"
@@ -192,6 +195,9 @@ def load_config():
     if config["FEISHU_WEBHOOK_URL"]:
         source = "环境变量" if os.environ.get("FEISHU_WEBHOOK_URL") else "配置文件"
         notification_sources.append(f"飞书({source})")
+    if config["DISCORD_WEBHOOK_URL"]:
+        source = "环境变量" if os.environ.get("DISCORD_WEBHOOK_URL") else "配置文件"
+        notification_sources.append(f"Discord({source})")
     if config["DINGTALK_WEBHOOK_URL"]:
         source = "环境变量" if os.environ.get("DINGTALK_WEBHOOK_URL") else "配置文件"
         notification_sources.append(f"钉钉({source})")
@@ -3386,8 +3392,8 @@ def send_to_notifications(
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
     if discord_url:
-        results["discord"] = send_to_feishu(
-            feishu_url,
+        results["discord"] = send_to_discord(
+            discord_url,
             report_data,
             report_type,
             update_info_to_send,
@@ -4293,8 +4299,10 @@ class NewsAnalyzer:
 
     def _has_notification_configured(self) -> bool:
         """检查是否配置了任何通知渠道"""
+        print("DISCORD URL", CONFIG["DISCORD_WEBHOOK_URL"])
         return any(
             [
+                CONFIG["DISCORD_WEBHOOK_URL"],
                 CONFIG["FEISHU_WEBHOOK_URL"],
                 CONFIG["DINGTALK_WEBHOOK_URL"],
                 CONFIG["WEWORK_WEBHOOK_URL"],
@@ -4452,7 +4460,9 @@ class NewsAnalyzer:
             )
             return True
         elif CONFIG["ENABLE_NOTIFICATION"] and not has_notification:
-            print("⚠️ 警告：通知功能已启用但未配置任何通知渠道，将跳过通知发送")
+            print("is enabled? %s", CONFIG["ENABLE_NOTIFICATION"])
+            print("has notification? %s", has_notification)
+            print("⚠️ 警告：通知功能已启用但未配置任何通知渠道，将跳过通知发送 Test")
         elif not CONFIG["ENABLE_NOTIFICATION"]:
             print(f"跳过{report_type}通知：通知功能已禁用")
         elif (

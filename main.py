@@ -20,7 +20,7 @@ import requests
 import yaml
 
 
-VERSION = "3.0.5"
+VERSION = "3.1.0"
 
 
 # === SMTP邮件配置 ===
@@ -144,6 +144,9 @@ def load_config():
     config["WEWORK_WEBHOOK_URL"] = os.environ.get(
         "WEWORK_WEBHOOK_URL", ""
     ).strip() or webhooks.get("wework_url", "")
+    config["WEWORK_MSG_TYPE"] = os.environ.get(
+        "WEWORK_MSG_TYPE", ""
+    ).strip() or webhooks.get("wework_msg_type", "markdown")
     config["TELEGRAM_BOT_TOKEN"] = os.environ.get(
         "TELEGRAM_BOT_TOKEN", ""
     ).strip() or webhooks.get("telegram_bot_token", "")
@@ -3583,6 +3586,50 @@ def send_to_dingtalk(
     return True
 
 
+def strip_markdown(text: str) -> str:
+    """去除文本中的 markdown 语法格式，用于个人微信推送"""
+
+    # 去除粗体 **text** 或 __text__
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'__(.+?)__', r'\1', text)
+
+    # 去除斜体 *text* 或 _text_
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    text = re.sub(r'_(.+?)_', r'\1', text)
+
+    # 去除删除线 ~~text~~
+    text = re.sub(r'~~(.+?)~~', r'\1', text)
+
+    # 转换链接 [text](url) -> text url（保留 URL）
+    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\1 \2', text)
+    # 如果不需要保留 URL，可以使用下面这行（只保留标题文本）：
+    # text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+
+    # 去除图片 ![alt](url) -> alt
+    text = re.sub(r'!\[(.+?)\]\(.+?\)', r'\1', text)
+
+    # 去除行内代码 `code`
+    text = re.sub(r'`(.+?)`', r'\1', text)
+
+    # 去除引用符号 >
+    text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
+
+    # 去除标题符号 # ## ### 等
+    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+
+    # 去除水平分割线 --- 或 ***
+    text = re.sub(r'^[\-\*]{3,}\s*$', '', text, flags=re.MULTILINE)
+
+    # 去除 HTML 标签 <font color='xxx'>text</font> -> text
+    text = re.sub(r'<font[^>]*>(.+?)</font>', r'\1', text)
+    text = re.sub(r'<[^>]+>', '', text)
+
+    # 清理多余的空行（保留最多两个连续空行）
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    return text.strip()
+
+
 def send_to_wework(
     webhook_url: str,
     report_data: Dict,
@@ -3591,11 +3638,20 @@ def send_to_wework(
     proxy_url: Optional[str] = None,
     mode: str = "daily",
 ) -> bool:
-    """发送到企业微信（支持分批发送）"""
+    """发送到企业微信（支持分批发送，支持 markdown 和 text 两种格式）"""
     headers = {"Content-Type": "application/json"}
     proxies = None
     if proxy_url:
         proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 获取消息类型配置（markdown 或 text）
+    msg_type = CONFIG.get("WEWORK_MSG_TYPE", "markdown").lower()
+    is_text_mode = msg_type == "text"
+
+    if is_text_mode:
+        print(f"企业微信使用 text 格式（个人微信模式）[{report_type}]")
+    else:
+        print(f"企业微信使用 markdown 格式（群机器人模式）[{report_type}]")
 
     # 获取分批内容
     batches = split_content_into_batches(report_data, "wework", update_info, mode=mode)
@@ -3604,17 +3660,28 @@ def send_to_wework(
 
     # 逐批发送
     for i, batch_content in enumerate(batches, 1):
-        batch_size = len(batch_content.encode("utf-8"))
+        # 添加批次标识
+        if len(batches) > 1:
+            if is_text_mode:
+                batch_header = f"[第 {i}/{len(batches)} 批次]\n\n"
+            else:
+                batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
+            batch_content = batch_header + batch_content
+
+        # 根据消息类型构建 payload
+        if is_text_mode:
+            # text 格式：去除 markdown 语法
+            plain_content = strip_markdown(batch_content)
+            payload = {"msgtype": "text", "text": {"content": plain_content}}
+            batch_size = len(plain_content.encode("utf-8"))
+        else:
+            # markdown 格式：保持原样
+            payload = {"msgtype": "markdown", "markdown": {"content": batch_content}}
+            batch_size = len(batch_content.encode("utf-8"))
+
         print(
             f"发送企业微信第 {i}/{len(batches)} 批次，大小：{batch_size} 字节 [{report_type}]"
         )
-
-        # 添加批次标识
-        if len(batches) > 1:
-            batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
-            batch_content = batch_header + batch_content
-
-        payload = {"msgtype": "markdown", "markdown": {"content": batch_content}}
 
         try:
             response = requests.post(

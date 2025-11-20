@@ -3525,6 +3525,8 @@ def format_for_discord(
 
     payload = {
         "embeds": [embed],
+        "allowed_mentions": {"parse": []},
+        "flags": 4096,  # SILENT MESSAGE (no notifications)
     }
     return payload
 

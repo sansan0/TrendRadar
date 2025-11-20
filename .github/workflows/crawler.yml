@@ -17,16 +17,34 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          # 获取完整历史以便后续 git pull/rebase 正常工作
+          fetch-depth: 0
+
+      - name: Cache pip and venv
+        uses: actions/cache@v4
+        with:
+          # 缓存 pip 的 cache 以及可能的虚拟环境目录，避免每次都重新下载依赖
+          path: |
+            ~/.cache/pip
+            .venv
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      - name: Install dependencies
+      - name: Create and activate venv, install dependencies
         run: |
+          python -m venv .venv
+          # 使用虚拟环境里的 pip，并指定 cache-dir 指向已缓存的位置
+          . .venv/bin/activate
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt --cache-dir ~/.cache/pip
+        shell: bash
 
       - name: Verify required files
         run: |
@@ -45,6 +63,7 @@ jobs:
           fi
 
           echo "✅ 配置文件检查通过"
+        shell: bash
 
       - name: Run crawler
         env:
@@ -62,11 +81,28 @@ jobs:
           NTFY_SERVER_URL: ${{ secrets.NTFY_SERVER_URL }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           GITHUB_ACTIONS: true
-        run: python main.py
+        run: |
+          # 使用之前创建的虚拟环境运行
+          . .venv/bin/activate
+          python main.py
+        shell: bash
 
       - name: Commit and push if changes
         run: |
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'actions@github.com'
+
           git add -A
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" && git push)
+          # 若有改动则提交并推送；使用带 ref 的 push
+          if ! git diff --quiet && ! git diff --staged --quiet; then
+            git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)"
+
+            # 确保拉取到最新远程变更并尝试 rebase，避免 push 失败
+            # 使用 github 的 ref name（自动展开）
+            git pull --rebase origin ${{ github.ref_name }} || true
+            
+            git push origin ${{ github.ref_name }}
+          else
+            echo "No changes to commit"
+          fi
+        shell: bash

@@ -41,7 +41,7 @@
 > 本项目以轻量，易部署为目标
 
 <details>
-<summary>⚠️ 点击展开：<strong>查看最新文档</strong>（Fork 用户必读）</summary>
+<summary> 点击展开：<strong>查看最新文档</strong>（Fork 用户必读）</summary>
 <br>
 
 最近有很多第一次接触 GitHub 的新用户使用本项目，因此特别补充这个说明。

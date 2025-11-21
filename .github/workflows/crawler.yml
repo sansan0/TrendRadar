@@ -65,6 +65,28 @@ jobs:
           GITHUB_ACTIONS: true
         run: python main.py
 
+      - name: Run translation processor
+        if: env.GEMINI_API_KEY != null
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # Find the latest generated txt file in output directory
+          LATEST_TXT_FILE=$(find output -name "*.txt" -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2-)
+          if [ -n "$LATEST_TXT_FILE" ] && [ -f "$LATEST_TXT_FILE" ]; then
+            echo "Found latest txt file: $LATEST_TXT_FILE"
+            # Determine the output path for translated files
+            OUTPUT_DIR=$(dirname "$LATEST_TXT_FILE")
+            BASENAME=$(basename "$LATEST_TXT_FILE" .txt)
+            TRANSLATED_FILE="$OUTPUT_DIR/translated_${BASENAME}"
+
+            echo "Running translation for: $LATEST_TXT_FILE"
+            python translation_processor.py "$LATEST_TXT_FILE" "$TRANSLATED_FILE.txt" "$GEMINI_API_KEY"
+            echo "Translation completed. Files generated:"
+            ls -la "$TRANSLATED_FILE".*
+          else
+            echo "No txt file found to translate"
+          fi
+
       - name: Commit and push if changes
         run: |
           git config --global user.name 'GitHub Actions'

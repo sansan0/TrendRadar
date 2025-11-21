@@ -186,9 +186,9 @@ class AnalyticsTools:
         Returns:
             趋势分析结果字典
 
-        Examples:
-            - analyze_topic_trend_unified(topic="人工智能", analysis_type="trend", date_range={"start": "2025-10-18", "end": "2025-10-25"})
-            - analyze_topic_trend_unified(topic="特斯拉", analysis_type="lifecycle", date_range={"start": "2025-10-18", "end": "2025-10-25"})
+        Examples (假设今天是 2025-11-17):
+            - 用户："分析AI最近7天的趋势" → analyze_topic_trend_unified(topic="人工智能", analysis_type="trend", date_range={"start": "2025-11-11", "end": "2025-11-17"})
+            - 用户："看看特斯拉本月的热度" → analyze_topic_trend_unified(topic="特斯拉", analysis_type="lifecycle", date_range={"start": "2025-11-01", "end": "2025-11-17"})
             - analyze_topic_trend_unified(topic="比特币", analysis_type="viral", threshold=3.0)
             - analyze_topic_trend_unified(topic="ChatGPT", analysis_type="predict", lookahead_hours=6)
         """
@@ -270,10 +270,10 @@ class AnalyticsTools:
 
             代码调用示例：
             >>> tools = AnalyticsTools()
-            >>> # 分析7天趋势
+            >>> # 分析7天趋势（假设今天是 2025-11-17）
             >>> result = tools.get_topic_trend_analysis(
             ...     topic="人工智能",
-            ...     date_range={"start": "2025-10-18", "end": "2025-10-25"},
+            ...     date_range={"start": "2025-11-11", "end": "2025-11-17"},
             ...     granularity="day"
             ... )
             >>> # 分析历史月份趋势
@@ -421,10 +421,10 @@ class AnalyticsTools:
             - "分析各平台今天的热点分布"
 
             代码调用示例：
-            >>> tools = AnalyticsTools()
+            >>> # 对比各平台（假设今天是 2025-11-17）
             >>> result = tools.compare_platforms(
             ...     topic="人工智能",
-            ...     date_range={"start": "2025-10-01", "end": "2025-10-11"}
+            ...     date_range={"start": "2025-11-08", "end": "2025-11-17"}
             ... )
             >>> print(result['platform_stats'])
         """
@@ -668,10 +668,10 @@ class AnalyticsTools:
             ...     topic="特斯拉",
             ...     limit=10
             ... )
-            >>> # 分析一周内的特斯拉新闻，返回前10条按权重排序
+            >>> # 分析一周内的特斯拉新闻（假设今天是 2025-11-17）
             >>> result = tools.analyze_sentiment(
             ...     topic="特斯拉",
-            ...     date_range={"start": "2025-10-06", "end": "2025-10-13"},
+            ...     date_range={"start": "2025-11-11", "end": "2025-11-17"},
             ...     limit=10
             ... )
             >>> print(result['ai_prompt'])  # 获取生成的提示词
@@ -1355,9 +1355,9 @@ class AnalyticsTools:
             - "分析各平台的发布时间规律"
 
             代码调用示例：
-            >>> tools = AnalyticsTools()
+            >>> # 查看各平台活跃度（假设今天是 2025-11-17）
             >>> result = tools.get_platform_activity_stats(
-            ...     date_range={"start": "2025-10-01", "end": "2025-10-11"}
+            ...     date_range={"start": "2025-11-08", "end": "2025-11-17"}
             ... )
             >>> print(result['platform_activity'])
         """
@@ -1486,10 +1486,10 @@ class AnalyticsTools:
             - "追踪'比特币'话题的热度变化"
 
             代码调用示例：
-            >>> tools = AnalyticsTools()
+            >>> # 分析话题生命周期（假设今天是 2025-11-17）
             >>> result = tools.analyze_topic_lifecycle(
             ...     topic="人工智能",
-            ...     date_range={"start": "2025-10-18", "end": "2025-10-25"}
+            ...     date_range={"start": "2025-10-19", "end": "2025-11-17"}
             ... )
             >>> print(result['lifecycle_stage'])
         """

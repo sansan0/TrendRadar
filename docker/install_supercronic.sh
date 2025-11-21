@@ -50,8 +50,9 @@ echo "${SUPERCRONIC_SHA1SUM}  ${SUPERCRONIC_BIN}" | sha1sum -c -
 chmod +x "${SUPERCRONIC_BIN}"
 mv "${SUPERCRONIC_BIN}" "/usr/local/bin/${SUPERCRONIC_BIN}"
 ln -sf "/usr/local/bin/${SUPERCRONIC_BIN}" /usr/local/bin/supercronic
-supercronic -version
 
+# 验证安装
+supercronic -version
 apt-get remove -y curl
 apt-get clean
 rm -rf /var/lib/apt/lists/*

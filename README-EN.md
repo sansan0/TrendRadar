@@ -1,7 +1,7 @@
 <div align="center" id="trendradar">
 
 <a href="https://github.com/sansan0/TrendRadar" title="TrendRadar">
-  <img src="/_image/banner.jpg" alt="TrendRadar Banner" width="50%">
+  <img src="/_image/banner.webp" alt="TrendRadar Banner" width="80%">
 </a>
 
 🚀 Deploy in <strong>30 seconds</strong> — Your Smart Trending News Assistant
@@ -841,8 +841,16 @@ frequency_words.txt file added **required word** feature, using + sign
    | **126 Mail** | 126.com | smtp.126.com | 465 | SSL |
    | **Sina Mail** | sina.com | smtp.sina.com | 465 | SSL |
    | **Sohu Mail** | sohu.com | smtp.sohu.com | 465 | SSL |
+   | **189 Mail** | 189.cn | smtp.189.cn | 465 | SSL |
 
    > **Auto-detect**: When using above emails, no need to manually configure `EMAIL_SMTP_SERVER` and `EMAIL_SMTP_PORT`, system auto-detects.
+   >
+   > **Feedback Notice**:
+   > - If you successfully test with **other email providers**, please open an [Issue](https://github.com/sansan0/TrendRadar/issues) to let us know, we'll add to support list
+   > - If above email configurations are incorrect or unusable, please also open an [Issue](https://github.com/sansan0/TrendRadar/issues) for feedback to help improve the project
+   >
+   > **Special Thanks**:
+   > - Thanks to [@DYZYD](https://github.com/DYZYD) for contributing 189 Mail (189.cn) configuration and completing self-send-receive testing ([#291](https://github.com/sansan0/TrendRadar/issues/291))
 
    **Common Email Settings:**
 

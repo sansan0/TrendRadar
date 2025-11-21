@@ -48,6 +48,8 @@ SMTP_CONFIGS = {
     "sina.com": {"server": "smtp.sina.com", "port": 465, "encryption": "SSL"},
     # 搜狐邮箱（使用 SSL）
     "sohu.com": {"server": "smtp.sohu.com", "port": 465, "encryption": "SSL"},
+    # 天翼邮箱（使用 SSL）
+    "189.cn": {"server": "smtp.189.cn", "port": 465, "encryption": "SSL"},
 }
 
 

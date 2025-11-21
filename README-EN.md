@@ -1,7 +1,7 @@
 <div align="center" id="trendradar">
 
 <a href="https://github.com/sansan0/TrendRadar" title="TrendRadar">
-  <img src="/_image/banner.jpg" alt="TrendRadar Banner" width="50%">
+  <img src="/_image/banner.webp" alt="TrendRadar Banner" width="80%">
 </a>
 
 🚀 Deploy in <strong>30 seconds</strong> — Your Smart Trending News Assistant
@@ -13,10 +13,11 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v3.0.5-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](https://github.com/sansan0/TrendRadar)
 [![MCP](https://img.shields.io/badge/MCP-v1.0.2-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![WeWork](https://img.shields.io/badge/WeWork-Notification-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
+[![WeChat](https://img.shields.io/badge/WeChat-Notification-00D4AA?style=flat-square)](https://weixin.qq.com/)
 [![Telegram](https://img.shields.io/badge/Telegram-Notification-00D4AA?style=flat-square)](https://telegram.org/)
 [![DingTalk](https://img.shields.io/badge/DingTalk-Notification-00D4AA?style=flat-square)](#)
 [![Feishu](https://img.shields.io/badge/Feishu-Notification-00D4AA?style=flat-square)](https://www.feishu.cn/)
@@ -250,11 +251,18 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 - **Major Version Upgrade**: Upgrading from v1.x to v2.y, recommend deleting existing fork and re-forking to save effort and avoid config conflicts
 
 
-### 2025/11/12 - v3.0.5
+### 2025/11/20 - v3.1.0
 
-- Fixed email sending SSL/TLS port configuration logic error
-- Optimized email service providers (QQ/163/126) to default use port 465 (SSL)
-- **Added Docker environment variable support**: Core config items (`enable_crawler`, `report_mode`, `push_window`, etc.) support override via environment variables, solving config file modification issues for NAS users (see [🐳 Docker Deployment](#-docker-deployment) chapter)
+- **Added Personal WeChat Push Support**: WeWork application can push to personal WeChat without installing WeWork APP
+- Supports two message formats: `markdown` (WeWork group bot) and `text` (personal WeChat app)
+- Added `WEWORK_MSG_TYPE` environment variable configuration, supporting GitHub Actions, Docker, docker-compose and other deployment methods
+- `text` mode automatically strips Markdown syntax for clean plain text push
+- See "Personal WeChat Push" configuration in Quick Start
+
+**Upgrade Instructions** (GitHub Fork Users):
+- Required updates: `main.py`, `config/config.yaml`
+- Optional update: `.github/workflows/crawler.yml` (if using GitHub Actions)
+- Recommended: Use minor version upgrade method - copy and replace the files above
 
 
 
@@ -266,6 +274,13 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 
 <details>
 <summary><strong>👉 Click to expand: Historical Updates</strong></summary>
+
+### 2025/11/12 - v3.0.5
+
+- Fixed email sending SSL/TLS port configuration logic error
+- Optimized email service providers (QQ/163/126) to default use port 465 (SSL)
+- **Added Docker environment variable support**: Core config items (`enable_crawler`, `report_mode`, `push_window`, etc.) support override via environment variables, solving config file modification issues for NAS users (see [🐳 Docker Deployment](#-docker-deployment) chapter)
+
 
 ### 2025/10/26 - mcp-v1.0.1
 
@@ -596,6 +611,37 @@ frequency_words.txt file added **required word** feature, using + sign
    </details>
 
    <details>
+   <summary> <strong>👉 Click to expand: Personal WeChat Push</strong> (Based on WeWork app, push to personal WeChat)</summary>
+   <br>
+
+   > This solution is based on WeWork's plugin mechanism. The push style is plain text (no markdown format), but it can push directly to personal WeChat without installing WeWork App.
+
+   **GitHub Secret Configuration (⚠️ Name must match exactly):**
+   - **Name**: `WEWORK_WEBHOOK_URL` (Please copy and paste this name, do not type manually)
+   - **Secret (Value)**: Your WeWork app Webhook address
+
+   - **Name**: `WEWORK_MSG_TYPE` (Please copy and paste this name, do not type manually)
+   - **Secret (Value)**: `text`
+
+   <br>
+
+   **Setup Steps:**
+
+   1. Complete the WeWork bot Webhook setup above
+   2. Add `WEWORK_MSG_TYPE` Secret with value `text`
+   3. Follow the image below to link personal WeChat
+   4. After configuration, WeWork App can be deleted from phone
+
+   <img src="_image/wework.png" title="Personal WeChat Push Configuration"/>
+
+   **Notes**:
+   - Uses the same Webhook address as WeWork bot
+   - Difference is message format: `text` for plain text, `markdown` for rich text (default)
+   - Plain text format will automatically remove all markdown syntax (bold, links, etc.)
+
+   </details>
+
+   <details>
    <summary> <strong>👉 Click to expand: Feishu Bot</strong> (Most user-friendly message display)</summary>
    <br>
 
@@ -795,8 +841,16 @@ frequency_words.txt file added **required word** feature, using + sign
    | **126 Mail** | 126.com | smtp.126.com | 465 | SSL |
    | **Sina Mail** | sina.com | smtp.sina.com | 465 | SSL |
    | **Sohu Mail** | sohu.com | smtp.sohu.com | 465 | SSL |
+   | **189 Mail** | 189.cn | smtp.189.cn | 465 | SSL |
 
    > **Auto-detect**: When using above emails, no need to manually configure `EMAIL_SMTP_SERVER` and `EMAIL_SMTP_PORT`, system auto-detects.
+   >
+   > **Feedback Notice**:
+   > - If you successfully test with **other email providers**, please open an [Issue](https://github.com/sansan0/TrendRadar/issues) to let us know, we'll add to support list
+   > - If above email configurations are incorrect or unusable, please also open an [Issue](https://github.com/sansan0/TrendRadar/issues) for feedback to help improve the project
+   >
+   > **Special Thanks**:
+   > - Thanks to [@DYZYD](https://github.com/DYZYD) for contributing 189 Mail (189.cn) configuration and completing self-send-receive testing ([#291](https://github.com/sansan0/TrendRadar/issues/291))
 
    **Common Email Settings:**
 
@@ -986,6 +1040,31 @@ frequency_words.txt file added **required word** feature, using + sign
     - **Push Frequency Adjustment**: In [.github/workflows/crawler.yml](.github/workflows/crawler.yml) adjust carefully, don't be greedy
 
     **Note**: Suggest only adjusting explicitly documented config items, other options mainly for author's development testing
+
+5. **🎉 Deployment Success! Share Your Experience**
+
+   Congratulations on completing TrendRadar configuration! You can now start tracking trending news.
+
+   💬 **Join our community to share your experience~**
+
+   - Want to learn more tips and advanced techniques?
+   - Need quick help with issues?
+   - Have great ideas to share?
+
+   👉 **Follow our WeChat Official Account「硅基茶水间」(Silicon Tea Room)**, your likes and comments are the driving force for continuous updates!
+
+   For detailed communication methods, please check → [FAQ & Support](#-faq--support)
+
+6. **🤖 Want Smarter Analysis? Try AI-Enhanced Features** (Optional)
+
+   Basic configuration already meets daily needs, but if you want:
+
+   - 📊 Let AI automatically analyze trending topics and data insights
+   - 🔍 Search and query news using natural language
+   - 💡 Get sentiment analysis, topic prediction, and deep analytics
+   - ⚡ Directly access data in AI tools like Claude, Cursor, etc.
+
+   👉 **Learn More**: [AI Analysis](#-ai-analysis) — Unlock hidden capabilities and make trend tracking more efficient!
 
 
 ## ⚙️ Configuration Guide
@@ -1853,36 +1932,26 @@ Any client supporting Model Context Protocol can connect to TrendRadar:
 
 ## ☕ FAQ & Support
 
-> If you want to support this project, you can search **Tencent Charity** on WeChat and donate to **Education Support Programs** as you wish~
+> If you want to support this project, you can search **Tencent Charity** on WeChat and donate to **Education Support Programs** as you wish
 >
-> We're anxious about information overload, while they struggle in information deserts without even learning opportunities, so they need support more than me.
-
-<details>
-<summary><b>👉 Click to expand: Author's Note</b></summary>
-<br>
-
-Thanks for all support! Due to 302.AI sponsorship, my personal **one-yuan donation** QR code has been removed.
-
-Previous **one-yuan supporters** are listed in the **Acknowledgments** section at the top.
-
-This project's development and maintenance require significant time, effort, and costs (including AI model fees). With sponsorship support, I can maintain it more confidently.
-
-Currently, major AI model prices are relatively affordable. Welcome to register and try, you can **[click here to claim $1 free credit](#-sponsors)**.
-
-</details>
+> Thanks to those who participated in the **one-yuan donation**! You are listed in the **Acknowledgments** at the top. Your support gives more motivation to open source maintenance. Personal donation QR code has been removed.
 
 - **GitHub Issues**: Suitable for targeted answers. Please provide complete info when asking (screenshots, error logs, system environment, etc.)
 - **WeChat Official Account**: Suitable for quick consultation. Suggest priority to communicate in public comment area of related articles. If private message, please use polite language 😉
-- 💡 Deployment successful? Welcome to leave comments and likes on our official account to share your experience~
+- 💡 Deployment successful? Come to our official account to share your experience! Your likes and suggestions are the driving force for continuous updates~
 
 
 <div align="center">
 
 | WeChat Official Account |
 |:---:|
-| <img src="_image/weixin.png" width="400" title="Silicon-based Tea Room"/> |
+| <img src="_image/weixin.png" width="400" title="Silicon Tea Room"/> |
 
 </div>
+
+<br>
+
+---
 
 ## 🪄 Sponsors
 
@@ -2021,7 +2090,7 @@ A: You can top up as needed, pay-as-you-go. Major AI model prices are now relati
 
 ### Project Articles
 
-> **Related Articles** (Chinese):
+> **4 Related Articles** (Chinese):
 
 - [Comment here for mobile Q&A by project author](https://mp.weixin.qq.com/s/KYEPfTPVzZNWFclZh4am_g)
 - [Breaking 1000 stars in 2 months - My GitHub project promotion experience](https://mp.weixin.qq.com/s/jzn0vLiQFX408opcfpPPxQ)
@@ -2034,7 +2103,7 @@ A: You can top up as needed, pay-as-you-go. Major AI model prices are now relati
 - **Core Function**: Quickly filter project code to feed AI, you just need to add personal requirements
 - **Project Address**: https://github.com/sansan0/ai-code-context-helper
 
-## ⭐ Related Projects
+### Other Projects
 
 > 📍 Chairman Mao's Footprint Map - Interactive dynamic display of complete trajectory 1893-1976. Welcome comrades to contribute data
 
@@ -2044,21 +2113,6 @@ A: You can top up as needed, pay-as-you-go. Major AI model prices are now relati
 
 - https://github.com/sansan0/bilibili-comment-analyzer
 
-
-<details>
-<summary><strong>👉 Click to expand: WeChat Push Notification Solution</strong></summary>
-<br>
-
-> Since this solution is based on WeWork's plugin mechanism and has very different push styles, I temporarily don't plan to include related implementation in the current project
-
-- Fork this user's project: https://github.com/jayzqj/TrendRadar
-- Complete WeWork push setup above
-- Follow the image below to operate
-- After configuration, you can delete WeWork app from your phone
-
-<img src="_image/wework.png" title="github"/>
-
-</details>
 
 ### Project Workflow Diagram
 

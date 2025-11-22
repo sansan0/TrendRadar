@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 新闻爬虫容器管理工具 - supercronic
+(Modified with Translation Features)
 """
 
 import os
@@ -9,7 +10,122 @@ import sys
 import subprocess
 import time
 from pathlib import Path
+import importlib.util
 
+# ==========================================
+# [New Feature] Title Translation Utilities
+# ==========================================
+
+def ensure_translator_library():
+    """Check and install deep-translator library if missing"""
+    if importlib.util.find_spec("deep_translator") is None:
+        print("📦 Installing translation library (deep-translator)...")
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install", "deep-translator"], check=True)
+            print("✅ Library installed successfully.")
+        except Exception as e:
+            print(f"❌ Failed to install library: {e}")
+            return False
+    return True
+
+def translate_text(text, target='en'):
+    """
+    Translate text to English
+    NOTE: This function uses Google Translate API via deep-translator.
+    """
+    try:
+        from deep_translator import GoogleTranslator
+        # Split text to handle potential length limits or formatting, though deep-translator handles chunks well.
+        # Translating from auto-detected language to English
+        translator = GoogleTranslator(source='auto', target=target)
+        return translator.translate(text)
+    except Exception as e:
+        return f"[Translation Error] {text}"
+
+def translate_latest_report():
+    """
+    Find the latest output file and translate it to English.
+    """
+    print("🔄 Starting translation of the latest report...")
+
+    if not ensure_translator_library():
+        return
+
+    output_dir = Path("/app/output")
+    if not output_dir.exists():
+        print("❌ Output directory not found (/app/output)")
+        return
+
+    # Find latest date directory
+    date_dirs = sorted([d for d in output_dir.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
+    if not date_dirs:
+        print("❌ No data found in output directory")
+        return
+
+    latest_dir = date_dirs[0]
+    txt_dir = latest_dir / "txt"
+
+    if not txt_dir.exists():
+        print(f"❌ No txt directory in {latest_dir}")
+        return
+
+    # Find all txt files
+    txt_files = list(txt_dir.glob("*.txt"))
+    if not txt_files:
+        print("❌ No text files found to translate")
+        return
+
+    print(f"📂 Processing files in: {latest_dir.name}")
+
+    for file_path in txt_files:
+        if "_en" in file_path.name:
+            continue # Skip already translated files
+
+        print(f"  📄 Translating {file_path.name}...")
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+
+            translated_lines = []
+            from deep_translator import GoogleTranslator
+            translator = GoogleTranslator(source='auto', target='en')
+
+            # Batch translation strategy is better, but doing line-by-line for safety with simple formats
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    translated_lines.append("\n")
+                    continue
+
+                # Simple heuristic: if line is just separator or symbols, skip
+                if all(c in "=-*# \t" for c in line):
+                    translated_lines.append(line + "\n")
+                    continue
+
+                try:
+                    # Translate content
+                    trans = translator.translate(line)
+                    translated_lines.append(f"{trans}\n")
+                    # Sleep briefly to avoid rate limiting
+                    time.sleep(0.2)
+                except:
+                    translated_lines.append(line + "\n")
+
+            # Save as new file
+            new_filename = file_path.stem + "_en.txt"
+            new_path = file_path.parent / new_filename
+
+            with open(new_path, 'w', encoding='utf-8') as f:
+                f.writelines(translated_lines)
+
+            print(f"  ✅ Saved English version: {new_filename}")
+
+        except Exception as e:
+            print(f"  ❌ Error translating {file_path.name}: {e}")
+
+# ==========================================
+# End of Translation Utilities
+# ==========================================
 
 def run_command(cmd, shell=True, capture_output=True):
     """执行系统命令"""
@@ -41,14 +157,14 @@ def parse_cron_schedule(cron_expr):
     """解析cron表达式并返回人类可读的描述"""
     if not cron_expr or cron_expr == "未设置":
         return "未设置"
-    
+
     try:
         parts = cron_expr.strip().split()
         if len(parts) != 5:
             return f"原始表达式: {cron_expr}"
-        
+
         minute, hour, day, month, weekday = parts
-        
+
         # 分析分钟
         if minute == "*":
             minute_desc = "每分钟"
@@ -59,7 +175,7 @@ def parse_cron_schedule(cron_expr):
             minute_desc = f"在第{minute}分钟"
         else:
             minute_desc = f"在第{minute}分钟"
-        
+
         # 分析小时
         if hour == "*":
             hour_desc = "每小时"
@@ -70,7 +186,7 @@ def parse_cron_schedule(cron_expr):
             hour_desc = f"在{hour}点"
         else:
             hour_desc = f"在{hour}点"
-        
+
         # 分析日期
         if day == "*":
             day_desc = "每天"
@@ -79,23 +195,23 @@ def parse_cron_schedule(cron_expr):
             day_desc = f"每{interval}天"
         else:
             day_desc = f"每月{day}号"
-        
+
         # 分析月份
         if month == "*":
             month_desc = "每月"
         else:
             month_desc = f"在{month}月"
-        
+
         # 分析星期
         weekday_names = {
-            "0": "周日", "1": "周一", "2": "周二", "3": "周三", 
+            "0": "周日", "1": "周一", "2": "周二", "3": "周三",
             "4": "周四", "5": "周五", "6": "周六", "7": "周日"
         }
         if weekday == "*":
             weekday_desc = ""
         else:
             weekday_desc = f"在{weekday_names.get(weekday, weekday)}"
-        
+
         # 组合描述
         if minute.startswith("*/") and hour == "*" and day == "*" and month == "*" and weekday == "*":
             # 简单的间隔模式，如 */30 * * * *
@@ -113,7 +229,7 @@ def parse_cron_schedule(cron_expr):
                 return " ".join(desc_parts) + "执行"
             else:
                 return f"复杂表达式: {cron_expr}"
-    
+
     except Exception as e:
         return f"解析失败: {cron_expr}"
 
@@ -129,7 +245,7 @@ def show_status():
         with open('/proc/1/cmdline', 'r') as f:
             pid1_cmdline = f.read().replace('\x00', ' ').strip()
         print(f"  🔍 PID 1 进程: {pid1_cmdline}")
-        
+
         if "supercronic" in pid1_cmdline.lower():
             print("  ✅ supercronic 正确运行为 PID 1")
             supercronic_is_pid1 = True
@@ -143,14 +259,14 @@ def show_status():
     cron_schedule = os.environ.get("CRON_SCHEDULE", "未设置")
     run_mode = os.environ.get("RUN_MODE", "未设置")
     immediate_run = os.environ.get("IMMEDIATE_RUN", "未设置")
-    
+
     print(f"  ⚙️ 运行配置:")
     print(f"    CRON_SCHEDULE: {cron_schedule}")
-    
+
     # 解析并显示cron表达式的含义
     cron_description = parse_cron_schedule(cron_schedule)
     print(f"    ⏰ 执行频率: {cron_description}")
-    
+
     print(f"    RUN_MODE: {run_mode}")
     print(f"    IMMEDIATE_RUN: {immediate_run}")
 
@@ -170,7 +286,7 @@ def show_status():
         ("/tmp/crontab", "crontab文件"),
         ("/entrypoint.sh", "启动脚本")
     ]
-    
+
     print("  📂 关键文件检查:")
     for file_path, description in key_files:
         if Path(file_path).exists():
@@ -195,7 +311,7 @@ def show_status():
             if len(stat_content) >= 22:
                 # starttime 是第22个字段（索引21）
                 starttime_ticks = int(stat_content[21])
-                
+
                 # 读取系统启动时间
                 with open('/proc/stat', 'r') as stat_f:
                     for line in stat_f:
@@ -204,17 +320,17 @@ def show_status():
                             break
                     else:
                         boot_time = 0
-                
+
                 # 读取系统时钟频率
                 clock_ticks = os.sysconf(os.sysconf_names['SC_CLK_TCK'])
-                
+
                 if boot_time > 0:
                     pid1_start_time = boot_time + (starttime_ticks / clock_ticks)
                     current_time = time.time()
                     uptime_seconds = int(current_time - pid1_start_time)
                     uptime_minutes = uptime_seconds // 60
                     uptime_hours = uptime_minutes // 60
-                    
+
                     if uptime_hours > 0:
                         print(f"    PID 1 运行时间: {uptime_hours} 小时 {uptime_minutes % 60} 分钟")
                     else:
@@ -231,11 +347,11 @@ def show_status():
     if supercronic_is_pid1:
         print("    ✅ supercronic 正确运行为 PID 1")
         print("    ✅ 定时任务应该正常工作")
-        
+
         # 显示当前的调度信息
         if cron_schedule != "未设置":
             print(f"    ⏰ 当前调度: {cron_description}")
-            
+
             # 提供一些常见的调度建议
             if "分钟" in cron_description and "每30分钟" not in cron_description and "每60分钟" not in cron_description:
                 print("    💡 频繁执行模式，适合实时监控")
@@ -243,18 +359,18 @@ def show_status():
                 print("    💡 按小时执行模式，适合定期汇总")
             elif "天" in cron_description:
                 print("    💡 每日执行模式，适合日报生成")
-        
+
         print("    💡 如果定时任务不执行，检查:")
-        print("       • crontab 格式是否正确")
-        print("       • 时区设置是否正确")
-        print("       • 应用程序是否有错误")
+        print("        • crontab 格式是否正确")
+        print("        • 时区设置是否正确")
+        print("        • 应用程序是否有错误")
     else:
         print("    ❌ supercronic 状态异常")
         if pid1_cmdline:
             print(f"    📋 当前 PID 1: {pid1_cmdline}")
         print("    💡 建议操作:")
-        print("       • 重启容器: docker restart trend-radar")
-        print("       • 检查容器日志: docker logs trend-radar")
+        print("        • 重启容器: docker restart trend-radar")
+        print("        • 检查容器日志: docker logs trend-radar")
 
     # 显示日志检查建议
     print("  📋 运行状态检查:")
@@ -354,7 +470,7 @@ def show_logs():
             "/proc/1/fd/1",  # PID 1 的标准输出
             "/proc/1/fd/2",  # PID 1 的标准错误
         ]
-        
+
         for log_file in log_files:
             if Path(log_file).exists():
                 print(f"📄 尝试读取: {log_file}")
@@ -362,7 +478,7 @@ def show_logs():
                 break
         else:
             print("📋 无法找到标准日志文件，建议使用: docker logs trend-radar")
-            
+
     except KeyboardInterrupt:
         print("\n👋 退出日志查看")
     except Exception as e:
@@ -374,13 +490,13 @@ def restart_supercronic():
     """重启supercronic进程"""
     print("🔄 重启supercronic...")
     print("⚠️ 注意: supercronic 是 PID 1，无法直接重启")
-    
+
     # 检查当前 PID 1
     try:
         with open('/proc/1/cmdline', 'r') as f:
             pid1_cmdline = f.read().replace('\x00', ' ').strip()
         print(f"  🔍 当前 PID 1: {pid1_cmdline}")
-        
+
         if "supercronic" in pid1_cmdline.lower():
             print("  ✅ PID 1 是 supercronic")
             print("  💡 要重启 supercronic，需要重启整个容器:")
@@ -400,73 +516,3 @@ def show_help():
 🐳 TrendRadar 容器管理工具
 
 📋 命令列表:
-  run         - 手动执行一次爬虫
-  status      - 显示容器运行状态
-  config      - 显示当前配置
-  files       - 显示输出文件
-  logs        - 实时查看日志
-  restart     - 重启说明
-  help        - 显示此帮助
-
-📖 使用示例:
-  # 在容器中执行
-  python manage.py run
-  python manage.py status
-  python manage.py logs
-  
-  # 在宿主机执行
-  docker exec -it trend-radar python manage.py run
-  docker exec -it trend-radar python manage.py status
-  docker logs trend-radar
-
-💡 常用操作指南:
-  1. 检查运行状态: status
-     - 查看 supercronic 是否为 PID 1
-     - 检查配置文件和关键文件
-     - 查看 cron 调度设置
-  
-  2. 手动执行测试: run  
-     - 立即执行一次新闻爬取
-     - 测试程序是否正常工作
-  
-  3. 查看日志: logs
-     - 实时监控运行情况
-     - 也可使用: docker logs trend-radar
-  
-  4. 重启服务: restart
-     - 由于 supercronic 是 PID 1，需要重启整个容器
-     - 使用: docker restart trend-radar
-"""
-    print(help_text)
-
-
-def main():
-    if len(sys.argv) < 2:
-        show_help()
-        return
-
-    command = sys.argv[1]
-    commands = {
-        "run": manual_run,
-        "status": show_status,
-        "config": show_config,
-        "files": show_files,
-        "logs": show_logs,
-        "restart": restart_supercronic,
-        "help": show_help,
-    }
-
-    if command in commands:
-        try:
-            commands[command]()
-        except KeyboardInterrupt:
-            print("\n👋 操作已取消")
-        except Exception as e:
-            print(f"❌ 执行出错: {e}")
-    else:
-        print(f"❌ 未知命令: {command}")
-        print("运行 'python manage.py help' 查看可用命令")
-
-
-if __name__ == "__main__":
-    main()

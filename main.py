@@ -19,6 +19,9 @@ import pytz
 import requests
 import yaml
 from feedgen.feed import FeedGenerator
+import feedparser
+from email.utils import parsedate_to_datetime
+from datetime import timedelta
 
 
 VERSION = "3.1.1"
@@ -4101,113 +4104,133 @@ def generate_rss_feed(
     id_to_name: Dict,
     title_info: Dict,
     output_path: str = "rss.xml",
-    base_url: str = "https://example.com/rss.xml", # Placeholder for actual URL
-    site_url: str = "https://example.com", # Placeholder for actual site URL
+    base_url: str = "https://example.com/rss.xml",
+    site_url: str = "https://example.com",
+    max_entries: int = 14, # Keep last 14 days
 ):
-    """生成RSS订阅"""
-    fg = FeedGenerator()
-    fg.id(base_url)
-    fg.title("TrendRadar News Feed")
-    fg.author({"name": "TrendRadar", "email": "noreply@example.com"})
-    fg.link(href=base_url, rel="self")
-    fg.link(href=site_url, rel="alternate")
-    fg.description("Latest news and trends from TrendRadar.")
-    fg.language("zh-CN")
-    
-    # Use the current time for feed update time
-    current_time_localized = get_beijing_time()
-    fg.updated(current_time_localized.isoformat())
-
-    # Collect all unique news items with their full details
-    unique_news_items = {}  # key: (title, url), value: full_data
-
-    for source_id, titles_data in all_results.items():
-        source_name = id_to_name.get(source_id, source_id)
-        for title, data in titles_data.items():
-            url = data.get("url", "") or data.get("mobileUrl", "")
-            # Use a tuple of (title, url) as a unique identifier for news items
-            # This helps avoid duplicate entries if the same news appears on different platforms
-            item_key = (title, url)
-
-            # Get the full info including first_time, last_time, count etc.
-            full_info = title_info.get(source_id, {}).get(title, {})
-
-            if item_key not in unique_news_items:
-                unique_news_items[item_key] = {
-                    "title": title,
-                    "link": url,
-                    "description": f"来源: {source_name} - {title}", # Basic description
-                    "pub_date": full_info.get("first_time"),
-                    "last_modified": full_info.get("last_time"),
-                }
-            else:
-                # Update if new info (e.g., earlier first_time) is found
-                current_pub_date_str = unique_news_items[item_key].get("pub_date")
-                new_pub_date_str = full_info.get("first_time")
-
-                if new_pub_date_str and (not current_pub_date_str or new_pub_date_str < current_pub_date_str):
-                    unique_news_items[item_key]["pub_date"] = new_pub_date_str
-                
-                current_last_modified_str = unique_news_items[item_key].get("last_modified")
-                new_last_modified_str = full_info.get("last_time")
-                
-                if new_last_modified_str and (not current_last_modified_str or new_last_modified_str > current_last_modified_str):
-                    unique_news_items[item_key]["last_modified"] = new_last_modified_str
-
-    # Convert unique_news_items to a sortable list based on publication date
-    sorted_news_items = []
-    for item_key, item_data in unique_news_items.items():
-        pub_date_str = item_data.get("pub_date")
-        if pub_date_str:
-            try:
-                # The format is "HH时MM分". We need to combine it with today's date.
-                # RSS entries need full datetime. Assume it's for the current date.
-                today_date_str = get_beijing_time().strftime("%Y-%m-%d")
-                pub_datetime_str = f"{today_date_str} {pub_date_str.replace('时', ':').replace('分', '')}"
-                pub_datetime = datetime.strptime(pub_datetime_str, "%Y-%m-%d %H:%M")
-                
-                # Localize to Asia/Shanghai timezone
-                shanghai_tz = pytz.timezone("Asia/Shanghai")
-                pub_datetime_localized = shanghai_tz.localize(pub_datetime)
-                item_data["pub_datetime"] = pub_datetime_localized
-                sorted_news_items.append(item_data)
-            except ValueError as e:
-                print(f"Error parsing pub_date for RSS entry: {pub_date_str} - {e}")
-        else:
-            # If no specific pub_date, use current time as a fallback
-            item_data["pub_datetime"] = get_beijing_time()
-            sorted_news_items.append(item_data)
-
-    # Sort news items by publication date in descending order
-    sorted_news_items.sort(key=lambda x: x["pub_datetime"], reverse=True)
-
-
-    for item in sorted_news_items:
-        fe = fg.add_entry()
-        fe.id(item["link"] or item["title"])  # Use link as ID, fallback to title
-        fe.title(item["title"])
-        fe.link(href=item["link"])
-        fe.description(item["description"])
-        fe.pubDate(item["pub_datetime"].isoformat())
-        
-        # If last_modified is available and different from pub_date, add it
-        if item["last_modified"] and item["last_modified"] != item["pub_date"]:
-            try:
-                today_date_str = get_beijing_time().strftime("%Y-%m-%d")
-                mod_datetime_str = f"{today_date_str} {item['last_modified'].replace('时', ':').replace('分', '')}"
-                mod_datetime = datetime.strptime(mod_datetime_str, "%Y-%m-%d %H:%M")
-                shanghai_tz = pytz.timezone("Asia/Shanghai")
-                mod_datetime_localized = shanghai_tz.localize(mod_datetime)
-                fe.updated(mod_datetime_localized.isoformat())
-            except ValueError as e:
-                print(f"Error parsing last_modified date for RSS entry: {item['last_modified']} - {e}")
-
+    """生成RSS订阅（每日摘要模式，保留历史记录）"""
     try:
+        now = get_beijing_time()
+        today_str = now.strftime('%Y-%m-%d')
+
+        # --- 1. 加载历史条目 ---
+        existing_entries = []
+        if os.path.exists(output_path):
+            # 使用utf-8编码打开文件
+            with open(output_path, 'r', encoding='utf-8') as f:
+                parsed_feed = feedparser.parse(f.read())
+            
+            for entry in parsed_feed.entries:
+                # 检查条目标题中是否包含日期
+                entry_date_str = ""
+                if 'title' in entry and ' - ' in entry.title:
+                    try:
+                        # 从标题 '每日热点新闻摘要 - YYYY-MM-DD' 中提取日期
+                        date_part = entry.title.split(' - ')[-1]
+                        datetime.strptime(date_part, '%Y-%m-%d') # 验证格式
+                        entry_date_str = date_part
+                    except (ValueError, IndexError):
+                        entry_date_str = "" # 格式不匹配则忽略
+
+                # 过滤掉今天的条目，因为我们会重新生成它
+                if entry_date_str != today_str:
+                    existing_entries.append(entry)
+        
+        print(f"从 {output_path} 加载了 {len(existing_entries)} 个历史 RSS 条目。")
+
+        # --- 2. 生成今天的摘要 ---
+        word_groups, filter_words = load_frequency_words()
+        stats, _ = count_word_frequency(
+            all_results,
+            word_groups,
+            filter_words,
+            id_to_name,
+            title_info,
+            CONFIG["RANK_THRESHOLD"],
+            new_titles=None,
+            mode='daily'
+        )
+
+        html_content = f"<h1>{today_str} 热点新闻</h1>"
+        if not stats or all(stat['count'] == 0 for stat in stats):
+            html_content += "<p>暂无匹配的热点新闻。</p>"
+        else:
+            for stat in stats:
+                if stat['count'] > 0:
+                    html_content += f"<h2>{html_escape(stat['word'])} ({stat['count']}条)</h2><ul>"
+                    for item in stat['titles']:
+                        title = html_escape(item['title'])
+                        link = item.get('url') or item.get('mobileUrl')
+                        source = html_escape(item['source_name'])
+                        rank_display = ""
+                        if ranks := item.get("ranks", []):
+                            min_rank = min(ranks)
+                            rank_display = f" <strong>[排名: {min_rank}]</strong>" if min_rank <= CONFIG["RANK_THRESHOLD"] else f" [排名: {min_rank}]"
+                        time_display = f" - {html_escape(item.get('time_display', ''))}" if item.get('time_display') else ""
+                        count_display = f" ({item.get('count', 1)}次)" if item.get('count', 1) > 1 else ""
+                        html_content += f"<li>[{source}]{rank_display} <a href='{link}'>{title}</a>{time_display}{count_display}</li>"
+                    html_content += "</ul>"
+        
+        today_entry = {
+            'title': f"每日热点新闻摘要 - {today_str}",
+            'link': site_url,
+            'description': html_content,
+            'pubDate': now,
+            'guid': f"{site_url}/{today_str}"
+        }
+
+        # --- 3. 合并并生成新 Feed ---
+        fg = FeedGenerator()
+        fg.id(site_url)
+        fg.title("TrendRadar 每日热点摘要")
+        fg.author({"name": "TrendRadar", "email": "noreply@example.com"})
+        fg.link(href=base_url, rel="self")
+        fg.link(href=site_url, rel="alternate")
+        fg.description("每日热点新闻摘要，由 TrendRadar 生成。")
+        fg.language("zh-CN")
+        fg.lastBuildDate(now)
+
+        # 添加今天的条目
+        fe = fg.add_entry()
+        fe.id(today_entry['guid'])
+        fe.title(today_entry['title'])
+        fe.link(href=today_entry['link'])
+        fe.description(today_entry['description'], isSummary=False)
+        fe.pubDate(today_entry['pubDate'])
+
+        # 添加历史条目，并限制数量
+        for i, entry in enumerate(existing_entries):
+            if i >= max_entries - 1:
+                print(f"已达到最大条目数 {max_entries}，停止添加更早的历史记录。")
+                break
+            fe = fg.add_entry()
+            fe.id(entry.get('id', entry.get('link', entry.title)))
+            fe.title(entry.get('title', ''))
+            fe.link(href=entry.get('link', ''))
+            fe.description(entry.get('summary', ''), isSummary=False)
+            
+            # 处理时区问题
+            published_time = None
+            if 'published_parsed' in entry and entry.published_parsed:
+                # feedparser 返回的是 time.struct_time
+                dt_naive = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                # 假设历史条目是UTC时间，需要转换为本地时区
+                published_time = pytz.utc.localize(dt_naive).astimezone(pytz.timezone("Asia/Shanghai"))
+            
+            if published_time:
+                 fe.pubDate(published_time)
+            else: # Fallback for entries without proper pubDate
+                fe.pubDate(now - timedelta(days=i+1))
+
+
         with open(output_path, "wb") as f:
             f.write(fg.rss_str(pretty=True))
-        print(f"RSS feed generated successfully to {output_path}")
+        print(f"RSS feed (daily digest with history) generated successfully to {output_path}")
+
     except Exception as e:
-        print(f"Error generating RSS feed: {e}")
+        print(f"Error generating RSS feed (daily digest with history): {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # === 主分析器 ===

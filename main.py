@@ -20,7 +20,7 @@ import requests
 import yaml
 
 
-VERSION = "3.1.0"
+VERSION = "3.1.1"
 
 
 # === SMTP邮件配置 ===
@@ -527,7 +527,11 @@ class DataFetcher:
                     data = json.loads(response)
                     results[id_value] = {}
                     for index, item in enumerate(data.get("items", []), 1):
-                        title = item["title"]
+                        title = item.get("title")
+                        # 跳过无效标题（None、float、空字符串）
+                        if title is None or isinstance(title, float) or not str(title).strip():
+                            continue
+                        title = str(title).strip()
                         url = item.get("url", "")
                         mobile_url = item.get("mobileUrl", "")
 
@@ -949,6 +953,12 @@ def matches_word_groups(
     title: str, word_groups: List[Dict], filter_words: List[str]
 ) -> bool:
     """检查标题是否匹配词组规则"""
+    # 防御性类型检查：确保 title 是有效字符串
+    if not isinstance(title, str):
+        title = str(title) if title is not None else ""
+    if not title.strip():
+        return False
+
     # 如果没有配置词组，则匹配所有标题（支持显示全部新闻）
     if not word_groups:
         return True
@@ -1152,8 +1162,8 @@ def count_word_frequency(
             source_url = title_data.get("url", "")
             source_mobile_url = title_data.get("mobileUrl", "")
 
-            # 找到匹配的词组
-            title_lower = title.lower()
+            # 找到匹配的词组（防御性转换确保类型安全）
+            title_lower = str(title).lower() if not isinstance(title, str) else title.lower()
             for group in word_groups:
                 required_words = group["required"]
                 normal_words = group["normal"]

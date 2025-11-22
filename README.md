@@ -13,7 +13,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.1.1-blue.svg)](https://github.com/sansan0/TrendRadar)
 [![MCP](https://img.shields.io/badge/MCP-v1.0.2-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
@@ -315,6 +315,26 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - **大版本升级**：从 v1.x 升级到 v2.y，建议删除现有 fork 后重新 fork，这样更省力且避免配置冲突
 
 
+### 2025/11/22 - v3.1.1
+
+- **修复数据异常导致的崩溃问题**：解决部分用户在 GitHub Actions 环境中遇到的 `'float' object has no attribute 'lower'` 错误
+- 新增双重防护机制：在数据获取阶段过滤无效标题（None、float、空字符串），同时在函数调用处添加类型检查
+- 提升系统稳定性，确保在数据源返回异常格式时仍能正常运行
+
+**升级说明**（GitHub Fork 用户）：
+- 必须更新：`main.py`
+- 建议使用小版本升级方式：复制替换上述文件
+
+
+### 2025/11/18 - mcp-v1.0.2
+
+  **MCP 模块更新:**
+  - 优化查询今日新闻却可能错误返回过去日期的情况
+
+
+<details>
+<summary>👉 点击展开：<strong>历史更新</strong></summary>
+
 ### 2025/11/20 - v3.1.0
 
 - **新增个人微信推送支持**：企业微信应用可推送到个人微信，无需安装企业微信 APP
@@ -327,17 +347,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - 必须更新：`main.py`、`config/config.yaml`
 - 可选更新：`.github/workflows/crawler.yml`（如使用 GitHub Actions 部署）
 - 建议使用小版本升级方式：复制替换上述文件
-
-
-
-### 2025/11/18 - mcp-v1.0.2
-
-  **MCP 模块更新:**
-  - 优化查询今日新闻却可能错误返回过去日期的情况
-
-
-<details>
-<summary>👉 点击展开：<strong>历史更新</strong></summary>
 
 ### 2025/11/12 - v3.0.5
 

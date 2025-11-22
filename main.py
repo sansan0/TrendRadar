@@ -18,6 +18,7 @@ from typing import Dict, List, Tuple, Optional, Union
 import pytz
 import requests
 import yaml
+from feedgen.feed import FeedGenerator
 
 
 VERSION = "3.1.1"
@@ -131,6 +132,14 @@ def load_config():
             "HOTNESS_WEIGHT": config_data["weight"]["hotness_weight"],
         },
         "PLATFORMS": config_data["platforms"],
+        "RSS_ENABLED": os.environ.get("RSS_ENABLED", "").strip().lower()
+        in ("true", "1")
+        if os.environ.get("RSS_ENABLED", "").strip()
+        else config_data.get("rss", {}).get("enable_rss", False),
+        "RSS_BASE_URL": os.environ.get("RSS_BASE_URL", "").strip()
+        or config_data.get("rss", {}).get("base_url", "https://example.com/rss.xml"),
+        "RSS_SITE_URL": os.environ.get("RSS_SITE_URL", "").strip()
+        or config_data.get("rss", {}).get("site_url", "https://example.com"),
     }
 
     # 通知渠道配置（环境变量优先）
@@ -4074,6 +4083,7 @@ def send_to_ntfy(
         except Exception as e:
             print(f"ntfy第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}")
 
+
     # 判断整体发送是否成功
     if success_count == total_batches:
         print(f"ntfy所有 {total_batches} 批次发送完成 [{report_type}]")
@@ -4084,6 +4094,120 @@ def send_to_ntfy(
     else:
         print(f"ntfy发送完全失败 [{report_type}]")
         return False
+
+
+def generate_rss_feed(
+    all_results: Dict,
+    id_to_name: Dict,
+    title_info: Dict,
+    output_path: str = "rss.xml",
+    base_url: str = "https://example.com/rss.xml", # Placeholder for actual URL
+    site_url: str = "https://example.com", # Placeholder for actual site URL
+):
+    """生成RSS订阅"""
+    fg = FeedGenerator()
+    fg.id(base_url)
+    fg.title("TrendRadar News Feed")
+    fg.author({"name": "TrendRadar", "email": "noreply@example.com"})
+    fg.link(href=base_url, rel="self")
+    fg.link(href=site_url, rel="alternate")
+    fg.description("Latest news and trends from TrendRadar.")
+    fg.language("zh-CN")
+    
+    # Use the current time for feed update time
+    current_time_localized = get_beijing_time()
+    fg.updated(current_time_localized.isoformat())
+
+    # Collect all unique news items with their full details
+    unique_news_items = {}  # key: (title, url), value: full_data
+
+    for source_id, titles_data in all_results.items():
+        source_name = id_to_name.get(source_id, source_id)
+        for title, data in titles_data.items():
+            url = data.get("url", "") or data.get("mobileUrl", "")
+            # Use a tuple of (title, url) as a unique identifier for news items
+            # This helps avoid duplicate entries if the same news appears on different platforms
+            item_key = (title, url)
+
+            # Get the full info including first_time, last_time, count etc.
+            full_info = title_info.get(source_id, {}).get(title, {})
+
+            if item_key not in unique_news_items:
+                unique_news_items[item_key] = {
+                    "title": title,
+                    "link": url,
+                    "description": f"来源: {source_name} - {title}", # Basic description
+                    "pub_date": full_info.get("first_time"),
+                    "last_modified": full_info.get("last_time"),
+                }
+            else:
+                # Update if new info (e.g., earlier first_time) is found
+                current_pub_date_str = unique_news_items[item_key].get("pub_date")
+                new_pub_date_str = full_info.get("first_time")
+
+                if new_pub_date_str and (not current_pub_date_str or new_pub_date_str < current_pub_date_str):
+                    unique_news_items[item_key]["pub_date"] = new_pub_date_str
+                
+                current_last_modified_str = unique_news_items[item_key].get("last_modified")
+                new_last_modified_str = full_info.get("last_time")
+                
+                if new_last_modified_str and (not current_last_modified_str or new_last_modified_str > current_last_modified_str):
+                    unique_news_items[item_key]["last_modified"] = new_last_modified_str
+
+    # Convert unique_news_items to a sortable list based on publication date
+    sorted_news_items = []
+    for item_key, item_data in unique_news_items.items():
+        pub_date_str = item_data.get("pub_date")
+        if pub_date_str:
+            try:
+                # The format is "HH时MM分". We need to combine it with today's date.
+                # RSS entries need full datetime. Assume it's for the current date.
+                today_date_str = get_beijing_time().strftime("%Y-%m-%d")
+                pub_datetime_str = f"{today_date_str} {pub_date_str.replace('时', ':').replace('分', '')}"
+                pub_datetime = datetime.strptime(pub_datetime_str, "%Y-%m-%d %H:%M")
+                
+                # Localize to Asia/Shanghai timezone
+                shanghai_tz = pytz.timezone("Asia/Shanghai")
+                pub_datetime_localized = shanghai_tz.localize(pub_datetime)
+                item_data["pub_datetime"] = pub_datetime_localized
+                sorted_news_items.append(item_data)
+            except ValueError as e:
+                print(f"Error parsing pub_date for RSS entry: {pub_date_str} - {e}")
+        else:
+            # If no specific pub_date, use current time as a fallback
+            item_data["pub_datetime"] = get_beijing_time()
+            sorted_news_items.append(item_data)
+
+    # Sort news items by publication date in descending order
+    sorted_news_items.sort(key=lambda x: x["pub_datetime"], reverse=True)
+
+
+    for item in sorted_news_items:
+        fe = fg.add_entry()
+        fe.id(item["link"] or item["title"])  # Use link as ID, fallback to title
+        fe.title(item["title"])
+        fe.link(href=item["link"])
+        fe.description(item["description"])
+        fe.pubDate(item["pub_datetime"].isoformat())
+        
+        # If last_modified is available and different from pub_date, add it
+        if item["last_modified"] and item["last_modified"] != item["pub_date"]:
+            try:
+                today_date_str = get_beijing_time().strftime("%Y-%m-%d")
+                mod_datetime_str = f"{today_date_str} {item['last_modified'].replace('时', ':').replace('分', '')}"
+                mod_datetime = datetime.strptime(mod_datetime_str, "%Y-%m-%d %H:%M")
+                shanghai_tz = pytz.timezone("Asia/Shanghai")
+                mod_datetime_localized = shanghai_tz.localize(mod_datetime)
+                fe.updated(mod_datetime_localized.isoformat())
+            except ValueError as e:
+                print(f"Error parsing last_modified date for RSS entry: {item['last_modified']} - {e}")
+
+    try:
+        with open(output_path, "wb") as f:
+            f.write(fg.rss_str(pretty=True))
+        print(f"RSS feed generated successfully to {output_path}")
+    except Exception as e:
+        print(f"Error generating RSS feed: {e}")
 
 
 # === 主分析器 ===
@@ -4538,6 +4662,17 @@ class NewsAnalyzer:
                         id_to_name=combined_id_to_name,
                         html_file_path=html_file,
                     )
+
+                # Generate RSS feed after processing all current data
+                if CONFIG["RSS_ENABLED"]:
+                    generate_rss_feed(
+                        all_results,
+                        historical_id_to_name,
+                        historical_title_info,
+                        base_url=CONFIG["RSS_BASE_URL"],
+                        site_url=CONFIG["RSS_SITE_URL"],
+                    )
+
             else:
                 print("❌ 严重错误：无法读取刚保存的数据文件")
                 raise RuntimeError("数据一致性检查失败：保存后立即读取失败")
@@ -4567,6 +4702,19 @@ class NewsAnalyzer:
                     id_to_name=id_to_name,
                     html_file_path=html_file,
                 )
+            
+            # Generate RSS feed using the current day's data
+            if CONFIG["RSS_ENABLED"]:
+                analysis_data_for_rss = self._load_analysis_data()
+                if analysis_data_for_rss:
+                    all_results_for_rss, id_to_name_for_rss, title_info_for_rss, _, _, _ = analysis_data_for_rss
+                    generate_rss_feed(
+                        all_results_for_rss,
+                        id_to_name_for_rss,
+                        title_info_for_rss,
+                        base_url=CONFIG["RSS_BASE_URL"],
+                        site_url=CONFIG["RSS_SITE_URL"],
+                    )
 
         # 生成汇总报告（如果需要）
         summary_html = None

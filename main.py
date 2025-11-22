@@ -1,5 +1,7 @@
 # coding=utf-8
 
+import base64
+import hmac
 import json
 import os
 import random
@@ -143,6 +145,9 @@ def load_config():
     config["DINGTALK_WEBHOOK_URL"] = os.environ.get(
         "DINGTALK_WEBHOOK_URL", ""
     ).strip() or webhooks.get("dingtalk_url", "")
+    config["DINGTALK_SECRET"] = os.environ.get(
+        "DINGTALK_SECRET", ""
+    ).strip() or webhooks.get("dingtalk_secret", "")
     config["WEWORK_WEBHOOK_URL"] = os.environ.get(
         "WEWORK_WEBHOOK_URL", ""
     ).strip() or webhooks.get("wework_url", "")
@@ -3365,8 +3370,15 @@ def send_to_notifications(
 
     # 发送到钉钉
     if dingtalk_url:
+        dingtalk_secret = CONFIG.get("DINGTALK_SECRET", "")
         results["dingtalk"] = send_to_dingtalk(
-            dingtalk_url, report_data, report_type, update_info_to_send, proxy_url, mode
+            dingtalk_url,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+            dingtalk_secret if dingtalk_secret else None,
         )
 
     # 发送到企业微信
@@ -3524,12 +3536,26 @@ def send_to_dingtalk(
     update_info: Optional[Dict] = None,
     proxy_url: Optional[str] = None,
     mode: str = "daily",
+    dingtalk_secret: Optional[str] = None,
 ) -> bool:
-    """发送到钉钉（支持分批发送）"""
+    """发送到钉钉（支持分批发送，支持加签）"""
     headers = {"Content-Type": "application/json"}
     proxies = None
     if proxy_url:
         proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 钉钉加签逻辑
+    def generate_dingtalk_signature(secret: str) -> Tuple[str, str]:
+        """生成钉钉加签参数"""
+        timestamp = str(round(time.time() * 1000))
+        secret_enc = secret.encode("utf-8")
+        string_to_sign = f"{timestamp}\n{secret}"
+        string_to_sign_enc = string_to_sign.encode("utf-8")
+        hmac_code = hmac.new(
+            secret_enc, string_to_sign_enc, digestmod=hmac.sha256
+        ).digest()
+        sign = base64.b64encode(hmac_code).decode("utf-8")
+        return timestamp, sign
 
     # 获取分批内容，使用钉钉专用的批次大小
     batches = split_content_into_batches(
@@ -3569,9 +3595,17 @@ def send_to_dingtalk(
             },
         }
 
+        # 如果配置了 secret，则对 webhook_url 进行加签（每个批次都重新生成，确保时间戳最新）
+        actual_webhook_url = webhook_url
+        if dingtalk_secret:
+            timestamp, sign = generate_dingtalk_signature(dingtalk_secret)
+            # 检查 URL 是否已有参数
+            separator = "&" if "?" in actual_webhook_url else "?"
+            actual_webhook_url = f"{actual_webhook_url}{separator}timestamp={timestamp}&sign={sign}"
+
         try:
             response = requests.post(
-                webhook_url, headers=headers, json=payload, proxies=proxies, timeout=30
+                actual_webhook_url, headers=headers, json=payload, proxies=proxies, timeout=30
             )
             if response.status_code == 200:
                 result = response.json()

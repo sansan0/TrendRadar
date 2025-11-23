@@ -20,7 +20,7 @@ import requests
 import yaml
 
 
-VERSION = "3.1.1"
+VERSION = "3.2.0"
 
 
 # === SMTP邮件配置 ===
@@ -74,6 +74,14 @@ def load_config():
         "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
         or config_data["report"]["mode"],
         "RANK_THRESHOLD": config_data["report"]["rank_threshold"],
+        "SORT_BY_POSITION_FIRST": os.environ.get("SORT_BY_POSITION_FIRST", "").strip().lower()
+        in ("true", "1")
+        if os.environ.get("SORT_BY_POSITION_FIRST", "").strip()
+        else config_data["report"].get("sort_by_position_first", False),
+        "MAX_NEWS_PER_KEYWORD": int(
+            os.environ.get("MAX_NEWS_PER_KEYWORD", "").strip() or "0"
+        )
+        or config_data["report"].get("max_news_per_keyword", 0),
         "USE_PROXY": config_data["crawler"]["use_proxy"],
         "DEFAULT_PROXY": config_data["crawler"]["default_proxy"],
         "ENABLE_CRAWLER": os.environ.get("ENABLE_CRAWLER", "").strip().lower()
@@ -639,9 +647,18 @@ def load_frequency_words(
         group_required_words = []
         group_normal_words = []
         group_filter_words = []
+        group_max_count = 0  # 默认不限制
 
         for word in words:
-            if word.startswith("!"):
+            if word.startswith("@"):
+                # 解析最大显示数量（只接受正整数）
+                try:
+                    count = int(word[1:])
+                    if count > 0:
+                        group_max_count = count
+                except (ValueError, IndexError):
+                    pass  # 忽略无效的@数字格式
+            elif word.startswith("!"):
                 filter_words.append(word[1:])
                 group_filter_words.append(word[1:])
             elif word.startswith("+"):
@@ -660,6 +677,7 @@ def load_frequency_words(
                     "required": group_required_words,
                     "normal": group_normal_words,
                     "group_key": group_key,
+                    "max_count": group_max_count,  # 新增字段
                 }
             )
 
@@ -1323,6 +1341,14 @@ def count_word_frequency(
             )
 
     stats = []
+    # 创建 group_key 到位置和最大数量的映射
+    group_key_to_position = {
+        group["group_key"]: idx for idx, group in enumerate(word_groups)
+    }
+    group_key_to_max_count = {
+        group["group_key"]: group.get("max_count", 0) for group in word_groups
+    }
+
     for group_key, data in word_stats.items():
         all_titles = []
         for source_id, title_list in data["titles"].items():
@@ -1338,10 +1364,20 @@ def count_word_frequency(
             ),
         )
 
+        # 应用最大显示数量限制（优先级：单独配置 > 全局配置）
+        group_max_count = group_key_to_max_count.get(group_key, 0)
+        if group_max_count == 0:
+            # 使用全局配置
+            group_max_count = CONFIG.get("MAX_NEWS_PER_KEYWORD", 0)
+
+        if group_max_count > 0:
+            sorted_titles = sorted_titles[:group_max_count]
+
         stats.append(
             {
                 "word": group_key,
                 "count": data["count"],
+                "position": group_key_to_position.get(group_key, 999),
                 "titles": sorted_titles,
                 "percentage": (
                     round(data["count"] / total_titles * 100, 2)
@@ -1351,7 +1387,14 @@ def count_word_frequency(
             }
         )
 
-    stats.sort(key=lambda x: x["count"], reverse=True)
+    # 根据配置选择排序优先级
+    if CONFIG.get("SORT_BY_POSITION_FIRST", False):
+        # 先按配置位置，再按热点条数
+        stats.sort(key=lambda x: (x["position"], -x["count"]))
+    else:
+        # 先按热点条数，再按配置位置（原逻辑）
+        stats.sort(key=lambda x: (-x["count"], x["position"]))
+
     return stats, total_titles
 
 

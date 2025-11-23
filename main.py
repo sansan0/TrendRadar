@@ -74,6 +74,7 @@ def load_config():
     config = {
         "VERSION_CHECK_URL": config_data["app"]["version_check_url"],
         "SHOW_VERSION_UPDATE": config_data["app"]["show_version_update"],
+        "TIMEZONE": config_data.get("app", {}).get("timezone", "Asia/Shanghai"),
         "REQUEST_INTERVAL": config_data["crawler"]["request_interval"],
         "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
         or config_data["report"]["mode"],
@@ -236,19 +237,19 @@ print(f"监控平台数量: {len(CONFIG['PLATFORMS'])}")
 
 
 # === 工具函数 ===
-def get_beijing_time():
-    """获取北京时间"""
-    return datetime.now(pytz.timezone("Asia/Shanghai"))
+def get_configured_time():
+    """获取配置中指定的时区时间"""
+    return datetime.now(pytz.timezone(CONFIG["TIMEZONE"]))
 
 
 def format_date_folder():
     """格式化日期文件夹"""
-    return get_beijing_time().strftime("%Y年%m月%d日")
+    return get_configured_time().strftime("%Y年%m月%d日")
 
 
 def format_time_filename():
     """格式化时间文件名"""
-    return get_beijing_time().strftime("%H时%M分")
+    return get_configured_time().strftime("%H时%M分")
 
 
 def clean_title(title: str) -> str:
@@ -359,19 +360,19 @@ class PushRecordManager:
 
     def get_today_record_file(self) -> Path:
         """获取今天的记录文件路径"""
-        today = get_beijing_time().strftime("%Y%m%d")
+        today = get_configured_time().strftime("%Y%m%d")
         return self.record_dir / f"push_record_{today}.json"
 
     def cleanup_old_records(self):
         """清理过期的推送记录"""
         retention_days = CONFIG["PUSH_WINDOW"]["RECORD_RETENTION_DAYS"]
-        current_time = get_beijing_time()
+        current_time = get_configured_time()
 
         for record_file in self.record_dir.glob("push_record_*.json"):
             try:
                 date_str = record_file.stem.replace("push_record_", "")
                 file_date = datetime.strptime(date_str, "%Y%m%d")
-                file_date = pytz.timezone("Asia/Shanghai").localize(file_date)
+                file_date = pytz.timezone(CONFIG["TIMEZONE"]).localize(file_date)
 
                 if (current_time - file_date).days > retention_days:
                     record_file.unlink()
@@ -397,7 +398,7 @@ class PushRecordManager:
     def record_push(self, report_type: str):
         """记录推送"""
         record_file = self.get_today_record_file()
-        now = get_beijing_time()
+        now = get_configured_time()
 
         record = {
             "pushed": True,
@@ -414,7 +415,7 @@ class PushRecordManager:
 
     def is_in_time_range(self, start_time: str, end_time: str) -> bool:
         """检查当前时间是否在指定时间范围内"""
-        now = get_beijing_time()
+        now = get_configured_time()
         current_time = now.strftime("%H:%M")
     
         def normalize_time(time_str: str) -> str:
@@ -2150,7 +2151,7 @@ def render_html_content(
                         <span class="info-label">生成时间</span>
                         <span class="info-value">"""
 
-    now = get_beijing_time()
+    now = get_configured_time()
     html += now.strftime("%m-%d %H:%M")
 
     html += """</span>
@@ -2747,7 +2748,7 @@ def render_feishu_content(
         for i, id_value in enumerate(report_data["failed_ids"], 1):
             text_content += f"  • <font color='red'>{id_value}</font>\n"
 
-    now = get_beijing_time()
+    now = get_configured_time()
     text_content += (
         f"\n\n<font color='grey'>更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"
     )
@@ -2767,7 +2768,7 @@ def render_dingtalk_content(
     total_titles = sum(
         len(stat["titles"]) for stat in report_data["stats"] if stat["count"] > 0
     )
-    now = get_beijing_time()
+    now = get_configured_time()
 
     text_content += f"**总新闻数：** {total_titles}\n\n"
     text_content += f"**时间：** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
@@ -2874,7 +2875,7 @@ def split_content_into_batches(
     total_titles = sum(
         len(stat["titles"]) for stat in report_data["stats"] if stat["count"] > 0
     )
-    now = get_beijing_time()
+    now = get_configured_time()
 
     base_header = ""
     if format_type == "wework":
@@ -3338,7 +3339,7 @@ def send_to_notifications(
         time_range_end = CONFIG["PUSH_WINDOW"]["TIME_RANGE"]["END"]
 
         if not push_manager.is_in_time_range(time_range_start, time_range_end):
-            now = get_beijing_time()
+            now = get_configured_time()
             print(
                 f"推送窗口控制：当前时间 {now.strftime('%H:%M')} 不在推送时间窗口 {time_range_start}-{time_range_end} 内，跳过推送"
             )
@@ -3486,7 +3487,7 @@ def send_to_feishu(
         total_titles = sum(
             len(stat["titles"]) for stat in report_data["stats"] if stat["count"] > 0
         )
-        now = get_beijing_time()
+        now = get_configured_time()
 
         payload = {
             "msg_type": "text",
@@ -3867,7 +3868,7 @@ def send_to_email(
             msg["To"] = ", ".join(recipients)
 
         # 设置邮件主题
-        now = get_beijing_time()
+        now = get_configured_time()
         subject = f"TrendRadar 热点分析报告 - {report_type} - {now.strftime('%m月%d日 %H:%M')}"
         msg["Subject"] = Header(subject, "utf-8")
 
@@ -4110,7 +4111,7 @@ def generate_rss_feed(
 ):
     """生成RSS订阅（每日摘要模式，保留历史记录）"""
     try:
-        now = get_beijing_time()
+        now = get_configured_time()
         today_str = now.strftime('%Y-%m-%d')
 
         # --- 1. 加载历史条目 ---
@@ -4215,7 +4216,7 @@ def generate_rss_feed(
                 # feedparser 返回的是 time.struct_time
                 dt_naive = datetime.fromtimestamp(time.mktime(entry.published_parsed))
                 # 假设历史条目是UTC时间，需要转换为本地时区
-                published_time = pytz.utc.localize(dt_naive).astimezone(pytz.timezone("Asia/Shanghai"))
+                published_time = pytz.utc.localize(dt_naive).astimezone(pytz.timezone(CONFIG["TIMEZONE"]))
             
             if published_time:
                  fe.pubDate(published_time)
@@ -4586,8 +4587,8 @@ class NewsAnalyzer:
 
     def _initialize_and_check_config(self) -> None:
         """通用初始化和配置检查"""
-        now = get_beijing_time()
-        print(f"当前北京时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        now = get_configured_time()
+        print(f"当前时区时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
         if not CONFIG["ENABLE_CRAWLER"]:
             print("爬虫功能已禁用（ENABLE_CRAWLER=False），程序退出")

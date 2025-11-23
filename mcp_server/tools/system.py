@@ -240,9 +240,10 @@ class SystemManagementTools:
 
                     news_data.append(news_item)
 
-            # 获取北京时间
-            beijing_tz = pytz.timezone("Asia/Shanghai")
-            now = datetime.now(beijing_tz)
+            # 获取时区配置
+            timezone_config = config_data.get("app", {}).get("timezone", "Asia/Shanghai")
+            local_tz = pytz.timezone(timezone_config)
+            now = datetime.now(local_tz)
 
             # 构建返回结果
             result = {

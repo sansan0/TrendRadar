@@ -18,6 +18,10 @@ from typing import Dict, List, Tuple, Optional, Union
 import pytz
 import requests
 import yaml
+from feedgen.feed import FeedGenerator
+import feedparser
+from email.utils import parsedate_to_datetime
+from datetime import timedelta
 
 
 VERSION = "3.2.0"
@@ -70,6 +74,7 @@ def load_config():
     config = {
         "VERSION_CHECK_URL": config_data["app"]["version_check_url"],
         "SHOW_VERSION_UPDATE": config_data["app"]["show_version_update"],
+        "TIMEZONE": config_data.get("app", {}).get("timezone", "Asia/Shanghai"),
         "REQUEST_INTERVAL": config_data["crawler"]["request_interval"],
         "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
         or config_data["report"]["mode"],
@@ -139,6 +144,14 @@ def load_config():
             "HOTNESS_WEIGHT": config_data["weight"]["hotness_weight"],
         },
         "PLATFORMS": config_data["platforms"],
+        "RSS_ENABLED": os.environ.get("RSS_ENABLED", "").strip().lower()
+        in ("true", "1")
+        if os.environ.get("RSS_ENABLED", "").strip()
+        else config_data.get("rss", {}).get("enable_rss", False),
+        "RSS_BASE_URL": os.environ.get("RSS_BASE_URL", "").strip()
+        or config_data.get("rss", {}).get("base_url", "https://example.com/rss.xml"),
+        "RSS_SITE_URL": os.environ.get("RSS_SITE_URL", "").strip()
+        or config_data.get("rss", {}).get("site_url", "https://example.com"),
     }
 
     # 通知渠道配置（环境变量优先）
@@ -232,19 +245,19 @@ print(f"监控平台数量: {len(CONFIG['PLATFORMS'])}")
 
 
 # === 工具函数 ===
-def get_beijing_time():
-    """获取北京时间"""
-    return datetime.now(pytz.timezone("Asia/Shanghai"))
+def get_configured_time():
+    """获取配置中指定的时区时间"""
+    return datetime.now(pytz.timezone(CONFIG["TIMEZONE"]))
 
 
 def format_date_folder():
     """格式化日期文件夹"""
-    return get_beijing_time().strftime("%Y年%m月%d日")
+    return get_configured_time().strftime("%Y年%m月%d日")
 
 
 def format_time_filename():
     """格式化时间文件名"""
-    return get_beijing_time().strftime("%H时%M分")
+    return get_configured_time().strftime("%H时%M分")
 
 
 def clean_title(title: str) -> str:
@@ -355,19 +368,19 @@ class PushRecordManager:
 
     def get_today_record_file(self) -> Path:
         """获取今天的记录文件路径"""
-        today = get_beijing_time().strftime("%Y%m%d")
+        today = get_configured_time().strftime("%Y%m%d")
         return self.record_dir / f"push_record_{today}.json"
 
     def cleanup_old_records(self):
         """清理过期的推送记录"""
         retention_days = CONFIG["PUSH_WINDOW"]["RECORD_RETENTION_DAYS"]
-        current_time = get_beijing_time()
+        current_time = get_configured_time()
 
         for record_file in self.record_dir.glob("push_record_*.json"):
             try:
                 date_str = record_file.stem.replace("push_record_", "")
                 file_date = datetime.strptime(date_str, "%Y%m%d")
-                file_date = pytz.timezone("Asia/Shanghai").localize(file_date)
+                file_date = pytz.timezone(CONFIG["TIMEZONE"]).localize(file_date)
 
                 if (current_time - file_date).days > retention_days:
                     record_file.unlink()
@@ -393,7 +406,7 @@ class PushRecordManager:
     def record_push(self, report_type: str):
         """记录推送"""
         record_file = self.get_today_record_file()
-        now = get_beijing_time()
+        now = get_configured_time()
 
         record = {
             "pushed": True,
@@ -410,7 +423,7 @@ class PushRecordManager:
 
     def is_in_time_range(self, start_time: str, end_time: str) -> bool:
         """检查当前时间是否在指定时间范围内"""
-        now = get_beijing_time()
+        now = get_configured_time()
         current_time = now.strftime("%H:%M")
     
         def normalize_time(time_str: str) -> str:
@@ -2181,7 +2194,7 @@ def render_html_content(
                         <span class="info-label">生成时间</span>
                         <span class="info-value">"""
 
-    now = get_beijing_time()
+    now = get_configured_time()
     html += now.strftime("%m-%d %H:%M")
 
     html += """</span>
@@ -2778,7 +2791,7 @@ def render_feishu_content(
         for i, id_value in enumerate(report_data["failed_ids"], 1):
             text_content += f"  • <font color='red'>{id_value}</font>\n"
 
-    now = get_beijing_time()
+    now = get_configured_time()
     text_content += (
         f"\n\n<font color='grey'>更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"
     )
@@ -2798,7 +2811,7 @@ def render_dingtalk_content(
     total_titles = sum(
         len(stat["titles"]) for stat in report_data["stats"] if stat["count"] > 0
     )
-    now = get_beijing_time()
+    now = get_configured_time()
 
     text_content += f"**总新闻数：** {total_titles}\n\n"
     text_content += f"**时间：** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
@@ -2905,7 +2918,7 @@ def split_content_into_batches(
     total_titles = sum(
         len(stat["titles"]) for stat in report_data["stats"] if stat["count"] > 0
     )
-    now = get_beijing_time()
+    now = get_configured_time()
 
     base_header = ""
     if format_type == "wework":
@@ -3369,7 +3382,7 @@ def send_to_notifications(
         time_range_end = CONFIG["PUSH_WINDOW"]["TIME_RANGE"]["END"]
 
         if not push_manager.is_in_time_range(time_range_start, time_range_end):
-            now = get_beijing_time()
+            now = get_configured_time()
             print(
                 f"推送窗口控制：当前时间 {now.strftime('%H:%M')} 不在推送时间窗口 {time_range_start}-{time_range_end} 内，跳过推送"
             )
@@ -3517,7 +3530,7 @@ def send_to_feishu(
         total_titles = sum(
             len(stat["titles"]) for stat in report_data["stats"] if stat["count"] > 0
         )
-        now = get_beijing_time()
+        now = get_configured_time()
 
         payload = {
             "msg_type": "text",
@@ -3898,7 +3911,7 @@ def send_to_email(
             msg["To"] = ", ".join(recipients)
 
         # 设置邮件主题
-        now = get_beijing_time()
+        now = get_configured_time()
         subject = f"TrendRadar 热点分析报告 - {report_type} - {now.strftime('%m月%d日 %H:%M')}"
         msg["Subject"] = Header(subject, "utf-8")
 
@@ -4117,6 +4130,7 @@ def send_to_ntfy(
         except Exception as e:
             print(f"ntfy第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}")
 
+
     # 判断整体发送是否成功
     if success_count == total_batches:
         print(f"ntfy所有 {total_batches} 批次发送完成 [{report_type}]")
@@ -4127,6 +4141,140 @@ def send_to_ntfy(
     else:
         print(f"ntfy发送完全失败 [{report_type}]")
         return False
+
+
+def generate_rss_feed(
+    all_results: Dict,
+    id_to_name: Dict,
+    title_info: Dict,
+    output_path: str = "rss.xml",
+    base_url: str = "https://example.com/rss.xml",
+    site_url: str = "https://example.com",
+    max_entries: int = 14, # Keep last 14 days
+):
+    """生成RSS订阅（每日摘要模式，保留历史记录）"""
+    try:
+        now = get_configured_time()
+        today_str = now.strftime('%Y-%m-%d')
+
+        # --- 1. 加载历史条目 ---
+        existing_entries = []
+        if os.path.exists(output_path):
+            # 使用utf-8编码打开文件
+            with open(output_path, 'r', encoding='utf-8') as f:
+                parsed_feed = feedparser.parse(f.read())
+            
+            for entry in parsed_feed.entries:
+                # 检查条目标题中是否包含日期
+                entry_date_str = ""
+                if 'title' in entry and ' - ' in entry.title:
+                    try:
+                        # 从标题 '每日热点新闻摘要 - YYYY-MM-DD' 中提取日期
+                        date_part = entry.title.split(' - ')[-1]
+                        datetime.strptime(date_part, '%Y-%m-%d') # 验证格式
+                        entry_date_str = date_part
+                    except (ValueError, IndexError):
+                        entry_date_str = "" # 格式不匹配则忽略
+
+                # 过滤掉今天的条目，因为我们会重新生成它
+                if entry_date_str != today_str:
+                    existing_entries.append(entry)
+        
+        print(f"从 {output_path} 加载了 {len(existing_entries)} 个历史 RSS 条目。")
+
+        # --- 2. 生成今天的摘要 ---
+        word_groups, filter_words = load_frequency_words()
+        stats, _ = count_word_frequency(
+            all_results,
+            word_groups,
+            filter_words,
+            id_to_name,
+            title_info,
+            CONFIG["RANK_THRESHOLD"],
+            new_titles=None,
+            mode='daily'
+        )
+
+        html_content = f"<h1>{today_str} 热点新闻</h1>"
+        if not stats or all(stat['count'] == 0 for stat in stats):
+            html_content += "<p>暂无匹配的热点新闻。</p>"
+        else:
+            for stat in stats:
+                if stat['count'] > 0:
+                    html_content += f"<h2>{html_escape(stat['word'])} ({stat['count']}条)</h2><ul>"
+                    for item in stat['titles']:
+                        title = html_escape(item['title'])
+                        link = item.get('url') or item.get('mobileUrl')
+                        source = html_escape(item['source_name'])
+                        rank_display = ""
+                        if ranks := item.get("ranks", []):
+                            min_rank = min(ranks)
+                            rank_display = f" <strong>[排名: {min_rank}]</strong>" if min_rank <= CONFIG["RANK_THRESHOLD"] else f" [排名: {min_rank}]"
+                        time_display = f" - {html_escape(item.get('time_display', ''))}" if item.get('time_display') else ""
+                        count_display = f" ({item.get('count', 1)}次)" if item.get('count', 1) > 1 else ""
+                        html_content += f"<li>[{source}]{rank_display} <a href='{link}'>{title}</a>{time_display}{count_display}</li>"
+                    html_content += "</ul>"
+        
+        today_entry = {
+            'title': f"每日热点新闻摘要 - {today_str}",
+            'link': site_url,
+            'description': html_content,
+            'pubDate': now,
+            'guid': f"{site_url}/{today_str}"
+        }
+
+        # --- 3. 合并并生成新 Feed ---
+        fg = FeedGenerator()
+        fg.id(site_url)
+        fg.title("TrendRadar 每日热点摘要")
+        fg.author({"name": "TrendRadar", "email": "noreply@example.com"})
+        fg.link(href=base_url, rel="self")
+        fg.link(href=site_url, rel="alternate")
+        fg.description("每日热点新闻摘要，由 TrendRadar 生成。")
+        fg.language("zh-CN")
+        fg.lastBuildDate(now)
+
+        # 添加今天的条目
+        fe = fg.add_entry()
+        fe.id(today_entry['guid'])
+        fe.title(today_entry['title'])
+        fe.link(href=today_entry['link'])
+        fe.description(today_entry['description'], isSummary=False)
+        fe.pubDate(today_entry['pubDate'])
+
+        # 添加历史条目，并限制数量
+        for i, entry in enumerate(existing_entries):
+            if i >= max_entries - 1:
+                print(f"已达到最大条目数 {max_entries}，停止添加更早的历史记录。")
+                break
+            fe = fg.add_entry()
+            fe.id(entry.get('id', entry.get('link', entry.title)))
+            fe.title(entry.get('title', ''))
+            fe.link(href=entry.get('link', ''))
+            fe.description(entry.get('summary', ''), isSummary=False)
+            
+            # 处理时区问题
+            published_time = None
+            if 'published_parsed' in entry and entry.published_parsed:
+                # feedparser 返回的是 time.struct_time
+                dt_naive = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                # 假设历史条目是UTC时间，需要转换为本地时区
+                published_time = pytz.utc.localize(dt_naive).astimezone(pytz.timezone(CONFIG["TIMEZONE"]))
+            
+            if published_time:
+                 fe.pubDate(published_time)
+            else: # Fallback for entries without proper pubDate
+                fe.pubDate(now - timedelta(days=i+1))
+
+
+        with open(output_path, "wb") as f:
+            f.write(fg.rss_str(pretty=True))
+        print(f"RSS feed (daily digest with history) generated successfully to {output_path}")
+
+    except Exception as e:
+        print(f"Error generating RSS feed (daily digest with history): {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # === 主分析器 ===
@@ -4482,8 +4630,8 @@ class NewsAnalyzer:
 
     def _initialize_and_check_config(self) -> None:
         """通用初始化和配置检查"""
-        now = get_beijing_time()
-        print(f"当前北京时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        now = get_configured_time()
+        print(f"当前时区时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
         if not CONFIG["ENABLE_CRAWLER"]:
             print("爬虫功能已禁用（ENABLE_CRAWLER=False），程序退出")
@@ -4581,6 +4729,17 @@ class NewsAnalyzer:
                         id_to_name=combined_id_to_name,
                         html_file_path=html_file,
                     )
+
+                # Generate RSS feed after processing all current data
+                if CONFIG["RSS_ENABLED"]:
+                    generate_rss_feed(
+                        all_results,
+                        historical_id_to_name,
+                        historical_title_info,
+                        base_url=CONFIG["RSS_BASE_URL"],
+                        site_url=CONFIG["RSS_SITE_URL"],
+                    )
+
             else:
                 print("❌ 严重错误：无法读取刚保存的数据文件")
                 raise RuntimeError("数据一致性检查失败：保存后立即读取失败")
@@ -4610,6 +4769,19 @@ class NewsAnalyzer:
                     id_to_name=id_to_name,
                     html_file_path=html_file,
                 )
+            
+            # Generate RSS feed using the current day's data
+            if CONFIG["RSS_ENABLED"]:
+                analysis_data_for_rss = self._load_analysis_data()
+                if analysis_data_for_rss:
+                    all_results_for_rss, id_to_name_for_rss, title_info_for_rss, _, _, _ = analysis_data_for_rss
+                    generate_rss_feed(
+                        all_results_for_rss,
+                        id_to_name_for_rss,
+                        title_info_for_rss,
+                        base_url=CONFIG["RSS_BASE_URL"],
+                        site_url=CONFIG["RSS_SITE_URL"],
+                    )
 
         # 生成汇总报告（如果需要）
         summary_html = None

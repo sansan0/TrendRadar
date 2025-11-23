@@ -192,6 +192,23 @@ def load_config():
         "ntfy_token", ""
     )
 
+    # Bark配置
+    config["BARK_SERVER_URL"] = os.environ.get(
+        "BARK_SERVER_URL", "https://api.day.app"
+    ).strip() or webhooks.get("bark_server_url", "https://api.day.app")
+    config["BARK_DEVICE_KEY"] = os.environ.get("BARK_DEVICE_KEY", "").strip() or webhooks.get(
+        "bark_device_key", ""
+    )
+    config["BARK_GROUP"] = os.environ.get("BARK_GROUP", "").strip() or webhooks.get(
+        "bark_group", "TrendRadar"
+    )
+    config["BARK_SOUND"] = os.environ.get("BARK_SOUND", "").strip() or webhooks.get(
+        "bark_sound", "bell"
+    )
+    config["BARK_ICON"] = os.environ.get("BARK_ICON", "").strip() or webhooks.get(
+        "bark_icon", ""
+    )
+
     # 输出配置来源信息
     notification_sources = []
     if config["FEISHU_WEBHOOK_URL"]:
@@ -216,6 +233,9 @@ def load_config():
     if config["NTFY_SERVER_URL"] and config["NTFY_TOPIC"]:
         server_source = "环境变量" if os.environ.get("NTFY_SERVER_URL") else "配置文件"
         notification_sources.append(f"ntfy({server_source})")
+    if config["BARK_DEVICE_KEY"]:
+        source = "环境变量" if os.environ.get("BARK_DEVICE_KEY") else "配置文件"
+        notification_sources.append(f"Bark({source})")
 
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
@@ -1618,6 +1638,30 @@ def format_title_for_platform(
 
         return result
 
+    elif platform == "bark":
+        # Bark 支持 Markdown，优化为移动端友好格式
+        if link_url:
+            formatted_title = f"[{cleaned_title}]({link_url})"
+        else:
+            formatted_title = cleaned_title
+
+        title_prefix = "🆕 " if title_data.get("is_new") else ""
+
+        if show_source:
+            # 使用更简洁的格式，适合移动端显示
+            result = f"**{title_data['source_name']}** {title_prefix}{formatted_title}"
+        else:
+            result = f"{title_prefix}{formatted_title}"
+
+        if rank_display:
+            result += f" {rank_display}"
+        if title_data["time_display"]:
+            result += f" • {title_data['time_display']}"
+        if title_data["count"] > 1:
+            result += f" ({title_data['count']}次)"
+
+        return result
+
     elif platform == "html":
         rank_display = format_rank_display(
             title_data["ranks"], title_data["rank_threshold"], "html"
@@ -2897,6 +2941,8 @@ def split_content_into_batches(
             max_bytes = CONFIG.get("FEISHU_BATCH_SIZE", 29000)
         elif format_type == "ntfy":
             max_bytes = 3800
+        elif format_type == "bark":
+            max_bytes = 4000  # Bark 建议保持合理长度，4000字节适合移动端
         else:
             max_bytes = CONFIG.get("MESSAGE_BATCH_SIZE", 4000)
 
@@ -2914,6 +2960,8 @@ def split_content_into_batches(
         base_header = f"总新闻数： {total_titles}\n\n"
     elif format_type == "ntfy":
         base_header = f"**总新闻数：** {total_titles}\n\n"
+    elif format_type == "bark":
+        base_header = f"📊 **总新闻数：** {total_titles}\n\n"
     elif format_type == "feishu":
         base_header = ""
     elif format_type == "dingtalk":
@@ -2935,6 +2983,10 @@ def split_content_into_batches(
         base_footer = f"\n\n> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
         if update_info:
             base_footer += f"\n> TrendRadar 发现新版本 **{update_info['remote_version']}**，当前 **{update_info['current_version']}**"
+    elif format_type == "bark":
+        base_footer = f"\n\n---\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
+        if update_info:
+            base_footer += f"\nTrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}"
     elif format_type == "feishu":
         base_footer = f"\n\n<font color='grey'>更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"
         if update_info:
@@ -2952,6 +3004,8 @@ def split_content_into_batches(
             stats_header = f"📊 热点词汇统计\n\n"
         elif format_type == "ntfy":
             stats_header = f"📊 **热点词汇统计**\n\n"
+        elif format_type == "bark":
+            stats_header = f"🔥 **热点词汇统计**\n\n"
         elif format_type == "feishu":
             stats_header = f"📊 **热点词汇统计**\n\n"
         elif format_type == "dingtalk":
@@ -3031,6 +3085,17 @@ def split_content_into_batches(
                     )
                 else:
                     word_header = f"📌 {sequence_display} **{word}** : {count} 条\n\n"
+            elif format_type == "bark":
+                if count >= 10:
+                    word_header = (
+                        f"🔥 {sequence_display} **{word}** : **{count}** 条\n\n"
+                    )
+                elif count >= 5:
+                    word_header = (
+                        f"📈 {sequence_display} **{word}** : **{count}** 条\n\n"
+                    )
+                else:
+                    word_header = f"📌 {sequence_display} **{word}** : {count} 条\n\n"
             elif format_type == "feishu":
                 if count >= 10:
                     word_header = f"🔥 <font color='grey'>{sequence_display}</font> **{word}** : <font color='red'>{count}</font> 条\n\n"
@@ -3065,6 +3130,10 @@ def split_content_into_batches(
                 elif format_type == "ntfy":
                     formatted_title = format_title_for_platform(
                         "ntfy", first_title_data, show_source=True
+                    )
+                elif format_type == "bark":
+                    formatted_title = format_title_for_platform(
+                        "bark", first_title_data, show_source=True
                     )
                 elif format_type == "feishu":
                     formatted_title = format_title_for_platform(
@@ -3115,6 +3184,10 @@ def split_content_into_batches(
                     formatted_title = format_title_for_platform(
                         "ntfy", title_data, show_source=True
                     )
+                elif format_type == "bark":
+                    formatted_title = format_title_for_platform(
+                        "bark", title_data, show_source=True
+                    )
                 elif format_type == "feishu":
                     formatted_title = format_title_for_platform(
                         "feishu", title_data, show_source=True
@@ -3152,6 +3225,8 @@ def split_content_into_batches(
                     separator = f"\n\n"
                 elif format_type == "ntfy":
                     separator = f"\n\n"
+                elif format_type == "bark":
+                    separator = f"\n---\n\n"
                 elif format_type == "feishu":
                     separator = f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n"
                 elif format_type == "dingtalk":
@@ -3174,6 +3249,8 @@ def split_content_into_batches(
                 f"\n\n🆕 本次新增热点新闻 (共 {report_data['total_new_count']} 条)\n\n"
             )
         elif format_type == "ntfy":
+            new_header = f"\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
+        elif format_type == "bark":
             new_header = f"\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
         elif format_type == "feishu":
             new_header = f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
@@ -3202,6 +3279,8 @@ def split_content_into_batches(
                 source_header = f"{source_data['source_name']} ({len(source_data['titles'])} 条):\n\n"
             elif format_type == "ntfy":
                 source_header = f"**{source_data['source_name']}** ({len(source_data['titles'])} 条):\n\n"
+            elif format_type == "bark":
+                source_header = f"**{source_data['source_name']}** ({len(source_data['titles'])} 条):\n\n"
             elif format_type == "feishu":
                 source_header = f"**{source_data['source_name']}** ({len(source_data['titles'])} 条):\n\n"
             elif format_type == "dingtalk":
@@ -3221,6 +3300,10 @@ def split_content_into_batches(
                 elif format_type == "telegram":
                     formatted_title = format_title_for_platform(
                         "telegram", title_data_copy, show_source=False
+                    )
+                elif format_type == "bark":
+                    formatted_title = format_title_for_platform(
+                        "bark", title_data_copy, show_source=False
                     )
                 elif format_type == "feishu":
                     formatted_title = format_title_for_platform(
@@ -3267,6 +3350,10 @@ def split_content_into_batches(
                     formatted_title = format_title_for_platform(
                         "telegram", title_data_copy, show_source=False
                     )
+                elif format_type == "bark":
+                    formatted_title = format_title_for_platform(
+                        "bark", title_data_copy, show_source=False
+                    )
                 elif format_type == "feishu":
                     formatted_title = format_title_for_platform(
                         "feishu", title_data_copy, show_source=False
@@ -3303,6 +3390,8 @@ def split_content_into_batches(
             failed_header = f"\n\n⚠️ 数据获取失败的平台：\n\n"
         elif format_type == "ntfy":
             failed_header = f"\n\n⚠️ **数据获取失败的平台：**\n\n"
+        elif format_type == "bark":
+            failed_header = f"\n\n⚠️ **数据获取失败的平台：**\n\n"
         elif format_type == "feishu":
             failed_header = f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n⚠️ **数据获取失败的平台：**\n\n"
         elif format_type == "dingtalk":
@@ -3325,6 +3414,8 @@ def split_content_into_batches(
             if format_type == "feishu":
                 failed_line = f"  • <font color='red'>{id_value}</font>\n"
             elif format_type == "dingtalk":
+                failed_line = f"  • **{id_value}**\n"
+            elif format_type == "bark":
                 failed_line = f"  • **{id_value}**\n"
             else:
                 failed_line = f"  • {id_value}\n"
@@ -3397,6 +3488,11 @@ def send_to_notifications(
     ntfy_server_url = CONFIG["NTFY_SERVER_URL"]
     ntfy_topic = CONFIG["NTFY_TOPIC"]
     ntfy_token = CONFIG.get("NTFY_TOKEN", "")
+    bark_server_url = CONFIG["BARK_SERVER_URL"]
+    bark_device_key = CONFIG["BARK_DEVICE_KEY"]
+    bark_group = CONFIG.get("BARK_GROUP", "TrendRadar")
+    bark_sound = CONFIG.get("BARK_SOUND", "bell")
+    bark_icon = CONFIG.get("BARK_ICON", "")
 
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
@@ -3441,6 +3537,21 @@ def send_to_notifications(
             update_info_to_send,
             proxy_url,
             mode,
+        )
+
+    # 发送到 Bark
+    if bark_device_key:
+        results["bark"] = send_to_bark(
+            bark_server_url,
+            bark_device_key,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+            bark_group,
+            bark_sound,
+            bark_icon,
         )
 
     # 发送邮件
@@ -4129,6 +4240,134 @@ def send_to_ntfy(
         return False
 
 
+def send_to_bark(
+    server_url: str,
+    device_key: str,
+    report_data: Dict,
+    report_type: str,
+    update_info: Optional[Dict] = None,
+    proxy_url: Optional[str] = None,
+    mode: str = "daily",
+    group: str = "TrendRadar",
+    sound: str = "bell",
+    icon: str = "",
+) -> bool:
+    """发送到Bark（支持分批发送，优化移动端显示格式）"""
+    # 报告类型映射
+    report_type_map = {
+        "当日汇总": "📊 当日汇总",
+        "当前榜单汇总": "📈 当前榜单",
+        "增量更新": "🆕 增量更新",
+        "实时增量": "⚡ 实时增量",
+        "实时当前榜单": "⚡ 实时榜单",
+    }
+    title = report_type_map.get(report_type, "📰 热点新闻")
+
+    # 处理 device_key：如果提供的是完整 URL，从中提取 device_key
+    if device_key.startswith(("http://", "https://")):
+        # 从完整 URL 中提取 device_key
+        parts = device_key.rstrip("/").split("/")
+        device_key = parts[-1] if parts else device_key
+        # 如果 URL 中包含服务器地址，也提取出来
+        if len(parts) > 1:
+            server_url = "/".join(parts[:-1])
+
+    # 构建完整URL
+    base_url = server_url.rstrip("/")
+    if not base_url.startswith(("http://", "https://")):
+        base_url = f"https://{base_url}"
+    url = f"{base_url}/{device_key}"
+
+    proxies = None
+    if proxy_url:
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 获取分批内容，Bark 建议保持合理长度
+    batches = split_content_into_batches(
+        report_data, "bark", update_info, max_bytes=4000, mode=mode
+    )
+
+    total_batches = len(batches)
+    print(f"Bark消息分为 {total_batches} 批次发送 [{report_type}]")
+
+    # 逐批发送
+    success_count = 0
+    for idx, batch_content in enumerate(batches, 1):
+        batch_size = len(batch_content.encode("utf-8"))
+        print(
+            f"发送Bark第 {idx}/{total_batches} 批次，大小：{batch_size} 字节 [{report_type}]"
+        )
+
+        # 构建标题（如果是多批次，添加批次信息）
+        batch_title = title
+        if total_batches > 1:
+            batch_title = f"{title} ({idx}/{total_batches})"
+
+        # 构建请求参数
+        params = {
+            "title": batch_title,
+            "body": batch_content,
+            "group": group,
+        }
+
+        # 添加可选参数
+        if sound:
+            params["sound"] = sound
+        if icon:
+            params["icon"] = icon
+
+        try:
+            response = requests.post(
+                url,
+                json=params,
+                proxies=proxies,
+                timeout=30,
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                # Bark 返回格式: {"code": 200, "message": "success", "timestamp": ...}
+                if result.get("code") == 200:
+                    print(f"Bark第 {idx}/{total_batches} 批次发送成功 [{report_type}]")
+                    success_count += 1
+                    if idx < total_batches:
+                        # 批次间间隔，避免推送过快
+                        time.sleep(1)
+                else:
+                    error_msg = result.get("message", "未知错误")
+                    print(
+                        f"Bark第 {idx}/{total_batches} 批次发送失败 [{report_type}]，错误：{error_msg}"
+                    )
+            else:
+                print(
+                    f"Bark第 {idx}/{total_batches} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
+                )
+                try:
+                    print(f"错误详情：{response.text}")
+                except:
+                    pass
+
+        except requests.exceptions.ConnectTimeout:
+            print(f"Bark第 {idx}/{total_batches} 批次连接超时 [{report_type}]")
+        except requests.exceptions.ReadTimeout:
+            print(f"Bark第 {idx}/{total_batches} 批次读取超时 [{report_type}]")
+        except requests.exceptions.ConnectionError as e:
+            print(f"Bark第 {idx}/{total_batches} 批次连接错误 [{report_type}]：{e}")
+        except Exception as e:
+            print(f"Bark第 {idx}/{total_batches} 批次发送异常 [{report_type}]：{e}")
+
+    # 判断整体发送是否成功
+    if success_count == total_batches:
+        print(f"Bark所有 {total_batches} 批次发送完成 [{report_type}]")
+        return True
+    elif success_count > 0:
+        print(f"Bark部分发送成功：{success_count}/{total_batches} 批次 [{report_type}]")
+        return True  # 部分成功也视为成功
+    else:
+        print(f"Bark发送完全失败 [{report_type}]")
+        return False
+
+
 # === 主分析器 ===
 class NewsAnalyzer:
     """新闻分析器"""
@@ -4241,6 +4480,7 @@ class NewsAnalyzer:
                     and CONFIG["EMAIL_TO"]
                 ),
                 (CONFIG["NTFY_SERVER_URL"] and CONFIG["NTFY_TOPIC"]),
+                CONFIG["BARK_DEVICE_KEY"],
             ]
         )
 

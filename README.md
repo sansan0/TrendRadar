@@ -948,9 +948,11 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    - **Secret（值）**：你的飞书机器人 Webhook 地址（该链接开头类似 https://www.feishu.cn/flow/api/trigger-webhook/********）
    <br>
 
-   有两个方案，**方案一**配置简单，**方案二**配置复杂(但是稳定推送)
+   有三个方案，**方案一**配置简单，**方案二**配置复杂(但是稳定推送)，**方案三** 结合 Markpost 服务，支持群机器人，兼容性最好。
 
    其中方案一，由 **ziventian**发现并提供建议，在这里感谢他，默认是个人推送，也可以配置群组推送操作[#97](https://github.com/sansan0/TrendRadar/issues/97) ，
+
+   方案三，由 **jukanntenn** 提供，可有效解决飞书群机器人格式兼容性问题。
 
    **方案一：**
 
@@ -1025,6 +1027,18 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    ![飞书机器人配置示例](_image/image.png)
 
    10. 配置完成后，将第 5 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
+  
+   <br>
+
+   **方案三：**
+
+   1. 打开 PC 端飞书应用（注意是 PC 端，手机飞书不支持添加自定义群机器人），点击左上角的 + 按钮，选择“创建群组”，随便取一个群名称，然后点击创建，创建一个飞书群组
+
+   2. 在消息区点击刚刚创建的群组，点击右上角的三个点，点击“设置”，点击“群机器人”，点击“添加机器人”，点击“自定义机器人”，填写必要信息后点击添加，记录下“Webhook 地址”
+  
+   3. 在 NAS 或者云服务器上部署一个 [Markpost](https://github.com/jukanntenn/markpost) 服务，如果不想自己部署，也可以直接使用 [在线服务](https://markpost.cc/)，记录下 “Post Key“
+
+   4. 配置项 `FEISHU_WEBHOOK_URL` 的值配置为第 2 步中的 “Webhook 地址”；配置项 `MARKPOST_URL` 的值配置为服务地址 + 第 3 步中的 “Post Key”，例如使用了在线服务，Post Key 是 abcdefg，那么值就是 `https://markpost.cc/abcdefg`，如果是自部署的服务，将 `https://markpost.cc` 换成自己的服务地址（保证可公网访问）
 
    </details>
 

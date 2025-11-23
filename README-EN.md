@@ -1,7 +1,7 @@
 <div align="center" id="trendradar">
 
 <a href="https://github.com/sansan0/TrendRadar" title="TrendRadar">
-  <img src="/_image/banner.webp" alt="TrendRadar Banner" width="80%">
+  <img src="/_image/banner.webp" alt="TrendRadar Banner" width="90%">
 </a>
 
 🚀 Deploy in <strong>30 seconds</strong> — Your Smart Trending News Assistant
@@ -13,7 +13,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v3.1.1-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.2.0-blue.svg)](https://github.com/sansan0/TrendRadar)
 [![MCP](https://img.shields.io/badge/MCP-v1.0.2-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![WeWork](https://img.shields.io/badge/WeWork-Notification-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
@@ -45,10 +45,9 @@
 
 <div align="center">
 
-| [🎯 Core Features](#-core-features) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration Guide](#-configuration-guide) | [🐳 Docker Deployment](#-docker-deployment) |
-|:---:|:---:|:---:|:---:|
-| [🤖 AI Analysis](#-ai-analysis) | [🔌 MCP Clients](#-mcp-clients) | [📝 Changelog](#-changelog) | [❓ FAQ & Support](#-faq--support) |
-| [⭐ Related Projects](#-related-projects) | [🪄 Sponsors](#-sponsors) | | |
+| [🚀 Quick Start](#-quick-start) | [🤖 AI Analysis](#-ai-analysis) | [⚙️ Configuration Guide](#configuration-guide) | [📝 Changelog](#-changelog) | [❓ FAQ & Support](#-faq--support) |
+|:---:|:---:|:---:|:---:|:---:|
+| [🐳 Docker Deployment](#-docker-deployment) | [🔌 MCP Clients](#-mcp-clients) | [⭐ Related Projects](#-related-projects) | [🪄 Sponsors](#-sponsors) | |
 
 </div>
 
@@ -162,10 +161,23 @@ Default monitoring of 11 mainstream platforms, with support for adding custom pl
 
 Set personal keywords (e.g., AI, BYD, Education Policy) to receive only relevant trending news, filtering out noise.
 
-- Supports normal words, required words (+), and filter words (!)
-- Group-based management with independent statistics for different topics
+**Basic Syntax** (4 types):
+- Normal words: Basic matching
+- Required words `+`: Narrow scope
+- Filter words `!`: Exclude noise
+- Count limit `@`: Control display count (v3.2.0 new)
 
-> 💡 Keyword configuration tutorial: [Configuration Guide - Keyword Configuration](#2-keyword-configuration)
+**Advanced Features** (v3.2.0 new):
+- 🔢 **Keyword Sorting Control**: Sort by popularity or config order
+- 📊 **Display Count Limit**: Global config + individual override for flexible control
+
+**Group-based Management**:
+- Separate with blank lines, independent statistics for different topics
+
+> 💡 **Basic Configuration**: [Keyword Configuration - Basic Syntax](#keyword-basic-syntax)
+>
+> 💡 **Advanced Configuration**: [Keyword Configuration - Advanced Settings](#keyword-advanced-settings)
+>
 > 💡 You can also skip filtering and receive all trending news (leave frequency_words.txt empty)
 
 
@@ -249,6 +261,30 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 - **Tip**: Do NOT update this project via **Sync fork**. Check [Changelog](#changelog) to understand specific [Upgrade Methods] and [Features]
 - **Minor Version Update**: Upgrading from v2.x to v2.y, replace `main.py` in your forked repo with the latest version
 - **Major Version Upgrade**: Upgrading from v1.x to v2.y, recommend deleting existing fork and re-forking to save effort and avoid config conflicts
+
+
+### 2025/11/23 - v3.2.0
+
+**🎯 New Advanced Customization Features**
+
+1. **Keyword Sorting Priority Configuration**
+   - Two sorting strategies: Popularity first vs Config order first
+   - For different use cases: Hot topic tracking or personalized focus
+
+2. **Display Count Precise Control**
+   - Global config: Unified limit for all keywords
+   - Individual config: Use `@number` syntax to set specific limits
+   - Effectively control push length, highlight key content
+
+> 📖 **Detailed Tutorial**: [Keyword Configuration - Advanced Settings](#keyword-advanced-settings)
+
+**🔧 Upgrade Instructions**:
+- **GitHub Fork Users**: Update `main.py`, `config/config.yaml`
+
+### 2025/11/18 - mcp-v1.0.2
+
+  **MCP Module Update:**
+  - Fix issue where today's news query may return articles from past dates
 
 
 ### 2025/11/22 - v3.1.1
@@ -1076,6 +1112,8 @@ frequency_words.txt file added **required word** feature, using + sign
    👉 **Learn More**: [AI Analysis](#-ai-analysis) — Unlock hidden capabilities and make trend tracking more efficient!
 
 
+<a name="configuration-guide"></a>
+
 ## ⚙️ Configuration Guide
 
 > **📖 Reminder**: This chapter provides detailed configuration explanations. Suggest completing [Quick Start](#-quick-start) basic configuration first, then refer to detailed options here as needed.
@@ -1106,21 +1144,22 @@ If you don't know how to look, you can directly copy the partially organized [Pl
 
 ### 2. Keyword Configuration
 
-<details id="frequencywordstxt-configuration-tutorial">
-<summary>👉 Click to expand: <strong>frequency_words.txt Configuration Tutorial</strong></summary>
-<br>
-
-Configure monitoring keywords in `frequency_words.txt` with three syntax types and grouping features.
-
-Keywords at the top have higher priority. Adjust keyword order based on your interests.
+Configure monitoring keywords in `frequency_words.txt` with four syntax types and grouping features.
 
 | Syntax Type | Symbol | Purpose | Example | Matching Logic |
 |------------|--------|---------|---------|----------------|
 | **Normal** | None | Basic matching | `Huawei` | Match any one |
 | **Required** | `+` | Scope limiting | `+phone` | Must include both |
 | **Filter** | `!` | Noise exclusion | `!ad` | Exclude if included |
+| **Count Limit** | `@` | Control display count | `@10` | Max 10 news (v3.2.0 new) |
 
-#### 📋 Basic Syntax
+#### 2.1 Basic Syntax
+
+<a name="keyword-basic-syntax"></a>
+
+<details>
+<summary>👉 Click to expand: <strong>Basic Syntax Tutorial</strong></summary>
+<br>
 
 ##### 1. **Normal Keywords** - Basic Matching
 ```txt
@@ -1146,6 +1185,18 @@ Huawei
 !price
 ```
 **Effect:** News containing filter words will be **excluded**, even if it contains keywords
+
+##### 4. **Count Limit** `@number` - Control Display Count (v3.2.0 new)
+```txt
+Tesla
+Musk
+@5
+```
+**Effect:** Limit maximum news count for this keyword group
+
+**Priority:** `@number` > Global config > Unlimited
+
+---
 
 #### 🔗 Group Feature - Importance of Empty Lines
 
@@ -1261,6 +1312,69 @@ phone
 sales
 +market
 ```
+
+</details>
+
+#### 2.2 Advanced Settings (v3.2.0 new)
+
+<a name="keyword-advanced-settings"></a>
+
+<details>
+<summary>👉 Click to expand: <strong>Advanced Settings Tutorial</strong></summary>
+<br>
+
+##### Keyword Sorting Priority
+
+**Config Location:** `config/config.yaml`
+
+```yaml
+report:
+  sort_by_position_first: false  # Sorting priority config
+```
+
+| Value | Sorting Rule | Use Case |
+|-------|-------------|----------|
+| `false` (default) | News count ↓ → Config position ↑ | Focus on popularity trends |
+| `true` | Config position ↑ → News count ↓ | Focus on personal priority |
+
+**Example:** Config order A, B, C, news count A(3), B(10), C(5)
+- `false`: B(10) → C(5) → A(3)
+- `true`: A(3) → B(10) → C(5)
+
+##### Global Display Count Limit
+
+```yaml
+report:
+  max_news_per_keyword: 10  # Max 10 per keyword (0=unlimited)
+```
+
+**Docker Environment Variables:**
+```bash
+SORT_BY_POSITION_FIRST=true
+MAX_NEWS_PER_KEYWORD=10
+```
+
+**Combined Example:**
+```yaml
+# config.yaml
+report:
+  sort_by_position_first: true   # Config order priority
+  max_news_per_keyword: 10       # Global default max 10 per keyword
+```
+
+```txt
+# frequency_words.txt
+Tesla
+Musk
+@20              # Key focus, show 20 (override global)
+
+Huawei           # Use global config, show 10
+
+BYD
+@5               # Limit to 5
+```
+
+**Final Effect:** Display in config order: Tesla(20) → Huawei(10) → BYD(5)
 
 </details>
 

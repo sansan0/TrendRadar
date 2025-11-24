@@ -20,7 +20,7 @@ import requests
 import yaml
 
 
-VERSION = "3.2.0"
+VERSION = "3.3.0"
 
 
 # === SMTP邮件配置 ===
@@ -50,6 +50,8 @@ SMTP_CONFIGS = {
     "sohu.com": {"server": "smtp.sohu.com", "port": 465, "encryption": "SSL"},
     # 天翼邮箱（使用 SSL）
     "189.cn": {"server": "smtp.189.cn", "port": 465, "encryption": "SSL"},
+    # 阿里云邮箱（使用 TLS）
+    "aliyun.com": {"server": "smtp.aliyun.com", "port": 465, "encryption": "TLS"},
 }
 
 
@@ -97,6 +99,7 @@ def load_config():
             "dingtalk_batch_size", 20000
         ),
         "FEISHU_BATCH_SIZE": config_data["notification"].get("feishu_batch_size", 29000),
+        "BARK_BATCH_SIZE": config_data["notification"].get("bark_batch_size", 3600),
         "BATCH_SEND_INTERVAL": config_data["notification"]["batch_send_interval"],
         "FEISHU_MESSAGE_SEPARATOR": config_data["notification"][
             "feishu_message_separator"
@@ -182,14 +185,21 @@ def load_config():
     ).strip() or webhooks.get("email_smtp_port", "")
 
     # ntfy配置
-    config["NTFY_SERVER_URL"] = os.environ.get(
-        "NTFY_SERVER_URL", "https://ntfy.sh"
-    ).strip() or webhooks.get("ntfy_server_url", "https://ntfy.sh")
+    config["NTFY_SERVER_URL"] = (
+        os.environ.get("NTFY_SERVER_URL", "").strip()
+        or webhooks.get("ntfy_server_url")
+        or "https://ntfy.sh"
+    )
     config["NTFY_TOPIC"] = os.environ.get("NTFY_TOPIC", "").strip() or webhooks.get(
         "ntfy_topic", ""
     )
     config["NTFY_TOKEN"] = os.environ.get("NTFY_TOKEN", "").strip() or webhooks.get(
         "ntfy_token", ""
+    )
+
+    # Bark配置
+    config["BARK_URL"] = os.environ.get("BARK_URL", "").strip() or webhooks.get(
+        "bark_url", ""
     )
 
     # 输出配置来源信息
@@ -216,6 +226,10 @@ def load_config():
     if config["NTFY_SERVER_URL"] and config["NTFY_TOPIC"]:
         server_source = "环境变量" if os.environ.get("NTFY_SERVER_URL") else "配置文件"
         notification_sources.append(f"ntfy({server_source})")
+
+    if config["BARK_URL"]:
+        bark_source = "环境变量" if os.environ.get("BARK_URL") else "配置文件"
+        notification_sources.append(f"Bark({bark_source})")
 
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
@@ -412,34 +426,34 @@ class PushRecordManager:
         """检查当前时间是否在指定时间范围内"""
         now = get_beijing_time()
         current_time = now.strftime("%H:%M")
-    
+    
         def normalize_time(time_str: str) -> str:
             """将时间字符串标准化为 HH:MM 格式"""
             try:
                 parts = time_str.strip().split(":")
                 if len(parts) != 2:
                     raise ValueError(f"时间格式错误: {time_str}")
-            
+            
                 hour = int(parts[0])
                 minute = int(parts[1])
-            
+            
                 if not (0 <= hour <= 23 and 0 <= minute <= 59):
                     raise ValueError(f"时间范围错误: {time_str}")
-            
+            
                 return f"{hour:02d}:{minute:02d}"
             except Exception as e:
                 print(f"时间格式化错误 '{time_str}': {e}")
                 return time_str
-    
+    
         normalized_start = normalize_time(start_time)
         normalized_end = normalize_time(end_time)
         normalized_current = normalize_time(current_time)
-    
+    
         result = normalized_start <= normalized_current <= normalized_end
-    
+    
         if not result:
             print(f"时间窗口判断：当前 {normalized_current}，窗口 {normalized_start}-{normalized_end}")
-    
+    
         return result
 
 
@@ -1711,15 +1725,15 @@ def render_html_content(
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <style>
             * { box-sizing: border-box; }
-            body { 
+            body { 
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-                margin: 0; 
-                padding: 16px; 
+                margin: 0; 
+                padding: 16px; 
                 background: #fafafa;
                 color: #333;
                 line-height: 1.5;
             }
-            
+            
             .container {
                 max-width: 600px;
                 margin: 0 auto;
@@ -1728,7 +1742,7 @@ def render_html_content(
                 overflow: hidden;
                 box-shadow: 0 2px 16px rgba(0,0,0,0.06);
             }
-            
+            
             .header {
                 background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
                 color: white;
@@ -1736,7 +1750,7 @@ def render_html_content(
                 text-align: center;
                 position: relative;
             }
-            
+            
             .save-buttons {
                 position: absolute;
                 top: 16px;
@@ -1744,7 +1758,7 @@ def render_html_content(
                 display: flex;
                 gap: 8px;
             }
-            
+            
             .save-btn {
                 background: rgba(255, 255, 255, 0.2);
                 border: 1px solid rgba(255, 255, 255, 0.3);
@@ -1758,28 +1772,28 @@ def render_html_content(
                 backdrop-filter: blur(10px);
                 white-space: nowrap;
             }
-            
+            
             .save-btn:hover {
                 background: rgba(255, 255, 255, 0.3);
                 border-color: rgba(255, 255, 255, 0.5);
                 transform: translateY(-1px);
             }
-            
+            
             .save-btn:active {
                 transform: translateY(0);
             }
-            
+            
             .save-btn:disabled {
                 opacity: 0.6;
                 cursor: not-allowed;
             }
-            
+            
             .header-title {
                 font-size: 22px;
                 font-weight: 700;
                 margin: 0 0 20px 0;
             }
-            
+            
             .header-info {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -1787,35 +1801,35 @@ def render_html_content(
                 font-size: 14px;
                 opacity: 0.95;
             }
-            
+            
             .info-item {
                 text-align: center;
             }
-            
+            
             .info-label {
                 display: block;
                 font-size: 12px;
                 opacity: 0.8;
                 margin-bottom: 4px;
             }
-            
+            
             .info-value {
                 font-weight: 600;
                 font-size: 16px;
             }
-            
+            
             .content {
                 padding: 24px;
             }
-            
+            
             .word-group {
                 margin-bottom: 40px;
             }
-            
+            
             .word-group:first-child {
                 margin-top: 0;
             }
-            
+            
             .word-header {
                 display: flex;
                 align-items: center;
@@ -1824,33 +1838,33 @@ def render_html_content(
                 padding-bottom: 8px;
                 border-bottom: 1px solid #f0f0f0;
             }
-            
+            
             .word-info {
                 display: flex;
                 align-items: center;
                 gap: 12px;
             }
-            
+            
             .word-name {
                 font-size: 17px;
                 font-weight: 600;
                 color: #1a1a1a;
             }
-            
+            
             .word-count {
                 color: #666;
                 font-size: 13px;
                 font-weight: 500;
             }
-            
+            
             .word-count.hot { color: #dc2626; font-weight: 600; }
             .word-count.warm { color: #ea580c; font-weight: 600; }
-            
+            
             .word-index {
                 color: #999;
                 font-size: 12px;
             }
-            
+            
             .news-item {
                 margin-bottom: 20px;
                 padding: 16px 0;
@@ -1860,11 +1874,11 @@ def render_html_content(
                 gap: 12px;
                 align-items: center;
             }
-            
+            
             .news-item:last-child {
                 border-bottom: none;
             }
-            
+            
             .news-item.new::after {
                 content: "NEW";
                 position: absolute;
@@ -1878,7 +1892,7 @@ def render_html_content(
                 border-radius: 4px;
                 letter-spacing: 0.5px;
             }
-            
+            
             .news-number {
                 color: #999;
                 font-size: 13px;
@@ -1896,17 +1910,17 @@ def render_html_content(
                 align-self: flex-start;
                 margin-top: 8px;
             }
-            
+            
             .news-content {
                 flex: 1;
                 min-width: 0;
                 padding-right: 40px;
             }
-            
+            
             .news-item.new .news-content {
                 padding-right: 50px;
             }
-            
+            
             .news-header {
                 display: flex;
                 align-items: center;
@@ -1914,13 +1928,13 @@ def render_html_content(
                 margin-bottom: 8px;
                 flex-wrap: wrap;
             }
-            
+            
             .source-name {
                 color: #666;
                 font-size: 12px;
                 font-weight: 500;
             }
-            
+            
             .rank-num {
                 color: #fff;
                 background: #6b7280;
@@ -1931,58 +1945,58 @@ def render_html_content(
                 min-width: 18px;
                 text-align: center;
             }
-            
+            
             .rank-num.top { background: #dc2626; }
             .rank-num.high { background: #ea580c; }
-            
+            
             .time-info {
                 color: #999;
                 font-size: 11px;
             }
-            
+            
             .count-info {
                 color: #059669;
                 font-size: 11px;
                 font-weight: 500;
             }
-            
+            
             .news-title {
                 font-size: 15px;
                 line-height: 1.4;
                 color: #1a1a1a;
                 margin: 0;
             }
-            
+            
             .news-link {
                 color: #2563eb;
                 text-decoration: none;
             }
-            
+            
             .news-link:hover {
                 text-decoration: underline;
             }
-            
+            
             .news-link:visited {
                 color: #7c3aed;
             }
-            
+            
             .new-section {
                 margin-top: 40px;
                 padding-top: 24px;
                 border-top: 2px solid #f0f0f0;
             }
-            
+            
             .new-section-title {
                 color: #1a1a1a;
                 font-size: 16px;
                 font-weight: 600;
                 margin: 0 0 20px 0;
             }
-            
+            
             .new-source-group {
                 margin-bottom: 24px;
             }
-            
+            
             .new-source-title {
                 color: #666;
                 font-size: 13px;
@@ -1991,7 +2005,7 @@ def render_html_content(
                 padding-bottom: 6px;
                 border-bottom: 1px solid #f5f5f5;
             }
-            
+            
             .new-item {
                 display: flex;
                 align-items: center;
@@ -1999,11 +2013,11 @@ def render_html_content(
                 padding: 8px 0;
                 border-bottom: 1px solid #f9f9f9;
             }
-            
+            
             .new-item:last-child {
                 border-bottom: none;
             }
-            
+            
             .new-item-number {
                 color: #999;
                 font-size: 12px;
@@ -2019,7 +2033,7 @@ def render_html_content(
                 align-items: center;
                 justify-content: center;
             }
-            
+            
             .new-item-rank {
                 color: #fff;
                 background: #6b7280;
@@ -2031,22 +2045,22 @@ def render_html_content(
                 text-align: center;
                 flex-shrink: 0;
             }
-            
+            
             .new-item-rank.top { background: #dc2626; }
             .new-item-rank.high { background: #ea580c; }
-            
+            
             .new-item-content {
                 flex: 1;
                 min-width: 0;
             }
-            
+            
             .new-item-title {
                 font-size: 14px;
                 line-height: 1.4;
                 color: #1a1a1a;
                 margin: 0;
             }
-            
+            
             .error-section {
                 background: #fef2f2;
                 border: 1px solid #fecaca;
@@ -2054,27 +2068,27 @@ def render_html_content(
                 padding: 16px;
                 margin-bottom: 24px;
             }
-            
+            
             .error-title {
                 color: #dc2626;
                 font-size: 14px;
                 font-weight: 600;
                 margin: 0 0 8px 0;
             }
-            
+            
             .error-list {
                 list-style: none;
                 padding: 0;
                 margin: 0;
             }
-            
+            
             .error-item {
                 color: #991b1b;
                 font-size: 13px;
                 padding: 2px 0;
                 font-family: 'SF Mono', Consolas, monospace;
             }
-            
+            
             .footer {
                 margin-top: 32px;
                 padding: 20px 24px;
@@ -2082,30 +2096,30 @@ def render_html_content(
                 border-top: 1px solid #e5e7eb;
                 text-align: center;
             }
-            
+            
             .footer-content {
                 font-size: 13px;
                 color: #6b7280;
                 line-height: 1.6;
             }
-            
+            
             .footer-link {
                 color: #4f46e5;
                 text-decoration: none;
                 font-weight: 500;
                 transition: color 0.2s ease;
             }
-            
+            
             .footer-link:hover {
                 color: #7c3aed;
                 text-decoration: underline;
             }
-            
+            
             .project-name {
                 font-weight: 600;
                 color: #374151;
             }
-            
+            
             @media (max-width: 480px) {
                 body { padding: 12px; }
                 .header { padding: 24px 20px; }
@@ -2188,7 +2202,7 @@ def render_html_content(
                     </div>
                 </div>
             </div>
-            
+            
             <div class="content">"""
 
     # 处理失败ID错误信息
@@ -2368,10 +2382,10 @@ def render_html_content(
 
     html += """
             </div>
-            
+            
             <div class="footer">
                 <div class="footer-content">
-                    由 <span class="project-name">TrendRadar</span> 生成 · 
+                    由 <span class="project-name">TrendRadar</span> 生成 · 
                     <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="footer-link">
                         GitHub 开源项目
                     </a>"""
@@ -2387,29 +2401,29 @@ def render_html_content(
                 </div>
             </div>
         </div>
-        
+        
         <script>
             async function saveAsImage() {
                 const button = event.target;
                 const originalText = button.textContent;
-                
+                
                 try {
                     button.textContent = '生成中...';
                     button.disabled = true;
                     window.scrollTo(0, 0);
-                    
+                    
                     // 等待页面稳定
                     await new Promise(resolve => setTimeout(resolve, 200));
-                    
+                    
                     // 截图前隐藏按钮
                     const buttons = document.querySelector('.save-buttons');
                     buttons.style.visibility = 'hidden';
-                    
+                    
                     // 再次等待确保按钮完全隐藏
                     await new Promise(resolve => setTimeout(resolve, 100));
-                    
+                    
                     const container = document.querySelector('.container');
-                    
+                    
                     const canvas = await html2canvas(container, {
                         backgroundColor: '#ffffff',
                         scale: 1.5,
@@ -2428,27 +2442,27 @@ def render_html_content(
                         windowWidth: window.innerWidth,
                         windowHeight: window.innerHeight
                     });
-                    
+                    
                     buttons.style.visibility = 'visible';
-                    
+                    
                     const link = document.createElement('a');
                     const now = new Date();
                     const filename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
-                    
+                    
                     link.download = filename;
                     link.href = canvas.toDataURL('image/png', 1.0);
-                    
+                    
                     // 触发下载
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-                    
+                    
                     button.textContent = '保存成功!';
                     setTimeout(() => {
                         button.textContent = originalText;
                         button.disabled = false;
                     }, 2000);
-                    
+                    
                 } catch (error) {
                     const buttons = document.querySelector('.save-buttons');
                     buttons.style.visibility = 'visible';
@@ -2459,18 +2473,18 @@ def render_html_content(
                     }, 2000);
                 }
             }
-            
+            
             async function saveAsMultipleImages() {
                 const button = event.target;
                 const originalText = button.textContent;
                 const container = document.querySelector('.container');
-                const scale = 1.5; 
+                const scale = 1.5; 
                 const maxHeight = 5000 / scale;
-                
+                
                 try {
                     button.textContent = '分析中...';
                     button.disabled = true;
-                    
+                    
                     // 获取所有可能的分割元素
                     const newsItems = Array.from(container.querySelectorAll('.news-item'));
                     const wordGroups = Array.from(container.querySelectorAll('.word-group'));
@@ -2478,11 +2492,11 @@ def render_html_content(
                     const errorSection = container.querySelector('.error-section');
                     const header = container.querySelector('.header');
                     const footer = container.querySelector('.footer');
-                    
+                    
                     // 计算元素位置和高度
                     const containerRect = container.getBoundingClientRect();
                     const elements = [];
-                    
+                    
                     // 添加header作为必须包含的元素
                     elements.push({
                         type: 'header',
@@ -2491,7 +2505,7 @@ def render_html_content(
                         bottom: header.offsetHeight,
                         height: header.offsetHeight
                     });
-                    
+                    
                     // 添加错误信息（如果存在）
                     if (errorSection) {
                         const rect = errorSection.getBoundingClientRect();
@@ -2503,12 +2517,12 @@ def render_html_content(
                             height: rect.height
                         });
                     }
-                    
+                    
                     // 按word-group分组处理news-item
                     wordGroups.forEach(group => {
                         const groupRect = group.getBoundingClientRect();
                         const groupNewsItems = group.querySelectorAll('.news-item');
-                        
+                        
                         // 添加word-group的header部分
                         const wordHeader = group.querySelector('.word-header');
                         if (wordHeader) {
@@ -2522,7 +2536,7 @@ def render_html_content(
                                 height: headerRect.height
                             });
                         }
-                        
+                        
                         // 添加每个news-item
                         groupNewsItems.forEach(item => {
                             const rect = item.getBoundingClientRect();
@@ -2536,7 +2550,7 @@ def render_html_content(
                             });
                         });
                     });
-                    
+                    
                     // 添加新增新闻部分
                     if (newSection) {
                         const rect = newSection.getBoundingClientRect();
@@ -2548,7 +2562,7 @@ def render_html_content(
                             height: rect.height
                         });
                     }
-                    
+                    
                     // 添加footer
                     const footerRect = footer.getBoundingClientRect();
                     elements.push({
@@ -2558,23 +2572,23 @@ def render_html_content(
                         bottom: footerRect.bottom - containerRect.top,
                         height: footer.offsetHeight
                     });
-                    
+                    
                     // 计算分割点
                     const segments = [];
                     let currentSegment = { start: 0, end: 0, height: 0, includeHeader: true };
                     let headerHeight = header.offsetHeight;
                     currentSegment.height = headerHeight;
-                    
+                    
                     for (let i = 1; i < elements.length; i++) {
                         const element = elements[i];
                         const potentialHeight = element.bottom - currentSegment.start;
-                        
+                        
                         // 检查是否需要创建新分段
                         if (potentialHeight > maxHeight && currentSegment.height > headerHeight) {
                             // 在前一个元素结束处分割
                             currentSegment.end = elements[i - 1].bottom;
                             segments.push(currentSegment);
-                            
+                            
                             // 开始新分段
                             currentSegment = {
                                 start: currentSegment.end,
@@ -2587,25 +2601,25 @@ def render_html_content(
                             currentSegment.end = element.bottom;
                         }
                     }
-                    
+                    
                     // 添加最后一个分段
                     if (currentSegment.height > 0) {
                         currentSegment.end = container.offsetHeight;
                         segments.push(currentSegment);
                     }
-                    
+                    
                     button.textContent = `生成中 (0/${segments.length})...`;
-                    
+                    
                     // 隐藏保存按钮
                     const buttons = document.querySelector('.save-buttons');
                     buttons.style.visibility = 'hidden';
-                    
+                    
                     // 为每个分段生成图片
                     const images = [];
                     for (let i = 0; i < segments.length; i++) {
                         const segment = segments[i];
                         button.textContent = `生成中 (${i + 1}/${segments.length})...`;
-                        
+                        
                         // 创建临时容器用于截图
                         const tempContainer = document.createElement('div');
                         tempContainer.style.cssText = `
@@ -2616,22 +2630,22 @@ def render_html_content(
                             background: white;
                         `;
                         tempContainer.className = 'container';
-                        
+                        
                         // 克隆容器内容
                         const clonedContainer = container.cloneNode(true);
-                        
+                        
                         // 移除克隆内容中的保存按钮
                         const clonedButtons = clonedContainer.querySelector('.save-buttons');
                         if (clonedButtons) {
                             clonedButtons.style.display = 'none';
                         }
-                        
+                        
                         tempContainer.appendChild(clonedContainer);
                         document.body.appendChild(tempContainer);
-                        
+                        
                         // 等待DOM更新
                         await new Promise(resolve => setTimeout(resolve, 100));
-                        
+                        
                         // 使用html2canvas截取特定区域
                         const canvas = await html2canvas(clonedContainer, {
                             backgroundColor: '#ffffff',
@@ -2647,20 +2661,20 @@ def render_html_content(
                             windowWidth: window.innerWidth,
                             windowHeight: window.innerHeight
                         });
-                        
+                        
                         images.push(canvas.toDataURL('image/png', 1.0));
-                        
+                        
                         // 清理临时容器
                         document.body.removeChild(tempContainer);
                     }
-                    
+                    
                     // 恢复按钮显示
                     buttons.style.visibility = 'visible';
-                    
+                    
                     // 下载所有图片
                     const now = new Date();
                     const baseFilename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-                    
+                    
                     for (let i = 0; i < images.length; i++) {
                         const link = document.createElement('a');
                         link.download = `${baseFilename}_part${i + 1}.png`;
@@ -2668,17 +2682,17 @@ def render_html_content(
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        
+                        
                         // 延迟一下避免浏览器阻止多个下载
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
-                    
+                    
                     button.textContent = `已保存 ${segments.length} 张图片!`;
                     setTimeout(() => {
                         button.textContent = originalText;
                         button.disabled = false;
                     }, 2000);
-                    
+                    
                 } catch (error) {
                     console.error('分段保存失败:', error);
                     const buttons = document.querySelector('.save-buttons');
@@ -2690,7 +2704,7 @@ def render_html_content(
                     }, 2000);
                 }
             }
-            
+            
             document.addEventListener('DOMContentLoaded', function() {
                 window.scrollTo(0, 0);
             });
@@ -3397,6 +3411,7 @@ def send_to_notifications(
     ntfy_server_url = CONFIG["NTFY_SERVER_URL"]
     ntfy_topic = CONFIG["NTFY_TOPIC"]
     ntfy_token = CONFIG.get("NTFY_TOKEN", "")
+    bark_url = CONFIG["BARK_URL"]
 
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
@@ -3436,6 +3451,17 @@ def send_to_notifications(
             ntfy_server_url,
             ntfy_topic,
             ntfy_token,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+        )
+
+    # 发送到 Bark
+    if bark_url:
+        results["bark"] = send_to_bark(
+            bark_url,
             report_data,
             report_type,
             update_info_to_send,
@@ -3995,10 +4021,10 @@ def send_to_ntfy(
         "当日汇总": "Daily Summary",
         "当前榜单汇总": "Current Ranking",
         "增量更新": "Incremental Update",
-        "实时增量": "Realtime Incremental", 
-        "实时当前榜单": "Realtime Current Ranking",  
+        "实时增量": "Realtime Incremental", 
+        "实时当前榜单": "Realtime Current Ranking",  
     }
-    report_type_en = report_type_en_map.get(report_type, "News Report") 
+    report_type_en = report_type_en_map.get(report_type, "News Report") 
 
     headers = {
         "Content-Type": "text/plain; charset=utf-8",
@@ -4010,7 +4036,7 @@ def send_to_ntfy(
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    
+    
     # 构建完整URL，确保格式正确
     base_url = server_url.rstrip("/")
     if not base_url.startswith(("http://", "https://")):
@@ -4032,7 +4058,7 @@ def send_to_ntfy(
     # 反转批次顺序，使得在ntfy客户端显示时顺序正确
     # ntfy显示最新消息在上面，所以我们从最后一批开始推送
     reversed_batches = list(reversed(batches))
-    
+    
     print(f"ntfy将按反向顺序推送（最后批次先推送），确保客户端显示顺序正确")
 
     # 逐批发送（反向顺序）
@@ -4040,7 +4066,7 @@ def send_to_ntfy(
     for idx, batch_content in enumerate(reversed_batches, 1):
         # 计算正确的批次编号（用户视角的编号）
         actual_batch_num = total_batches - idx + 1
-        
+        
         batch_size = len(batch_content.encode("utf-8"))
         print(
             f"发送ntfy第 {actual_batch_num}/{total_batches} 批次（推送顺序: {idx}/{total_batches}），大小：{batch_size} 字节 [{report_type}]"
@@ -4126,6 +4152,116 @@ def send_to_ntfy(
         return True  # 部分成功也视为成功
     else:
         print(f"ntfy发送完全失败 [{report_type}]")
+        return False
+
+
+def send_to_bark(
+    bark_url: str,
+    report_data: Dict,
+    report_type: str,
+    update_info: Optional[Dict] = None,
+    proxy_url: Optional[str] = None,
+    mode: str = "daily",
+) -> bool:
+    """发送到Bark（支持分批发送，使用纯文本格式）"""
+    proxies = None
+    if proxy_url:
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 获取分批内容（Bark 限制为 3600 字节以避免 413 错误）
+    batches = split_content_into_batches(
+        report_data, "wework", update_info, max_bytes=CONFIG["BARK_BATCH_SIZE"], mode=mode
+    )
+
+    total_batches = len(batches)
+    print(f"Bark消息分为 {total_batches} 批次发送 [{report_type}]")
+
+    # 反转批次顺序，使得在Bark客户端显示时顺序正确
+    # Bark显示最新消息在上面，所以我们从最后一批开始推送
+    reversed_batches = list(reversed(batches))
+
+    print(f"Bark将按反向顺序推送（最后批次先推送），确保客户端显示顺序正确")
+
+    # 逐批发送（反向顺序）
+    success_count = 0
+    for idx, batch_content in enumerate(reversed_batches, 1):
+        # 计算正确的批次编号（用户视角的编号）
+        actual_batch_num = total_batches - idx + 1
+
+        # 添加批次标识（使用正确的批次编号）
+        if total_batches > 1:
+            batch_header = f"[第 {actual_batch_num}/{total_batches} 批次]\n\n"
+            batch_content = batch_header + batch_content
+
+        # 清理 markdown 语法（Bark 不支持 markdown）
+        plain_content = strip_markdown(batch_content)
+
+        batch_size = len(plain_content.encode("utf-8"))
+        print(
+            f"发送Bark第 {actual_batch_num}/{total_batches} 批次（推送顺序: {idx}/{total_batches}），大小：{batch_size} 字节 [{report_type}]"
+        )
+
+        # 检查消息大小（Bark使用APNs，限制4KB）
+        if batch_size > 4096:
+            print(
+                f"警告：Bark第 {actual_batch_num}/{total_batches} 批次消息过大（{batch_size} 字节），可能被拒绝"
+            )
+
+        # 构建JSON payload
+        payload = {
+            "title": report_type,
+            "body": plain_content,
+            "sound": "default",
+            "group": "TrendRadar",
+        }
+
+        try:
+            response = requests.post(
+                bark_url,
+                json=payload,
+                proxies=proxies,
+                timeout=30,
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("code") == 200:
+                    print(f"Bark第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]")
+                    success_count += 1
+                    # 批次间间隔
+                    if idx < total_batches:
+                        time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
+                else:
+                    print(
+                        f"Bark第 {actual_batch_num}/{total_batches} 批次发送失败 [{report_type}]，错误：{result.get('message', '未知错误')}"
+                    )
+            else:
+                print(
+                    f"Bark第 {actual_batch_num}/{total_batches} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
+                )
+                try:
+                    print(f"错误详情：{response.text}")
+                except:
+                    pass
+
+        except requests.exceptions.ConnectTimeout:
+            print(f"Bark第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]")
+        except requests.exceptions.ReadTimeout:
+            print(f"Bark第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]")
+        except requests.exceptions.ConnectionError as e:
+            print(f"Bark第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}")
+        except Exception as e:
+            print(f"Bark第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}")
+
+    # 判断整体发送是否成功
+    if success_count == total_batches:
+        print(f"Bark所有 {total_batches} 批次发送完成 [{report_type}]")
+        return True
+    elif success_count > 0:
+        print(f"Bark部分发送成功：{success_count}/{total_batches} 批次 [{report_type}]")
+        return True  # 部分成功也视为成功
+    else:
+        print(f"Bark发送完全失败 [{report_type}]")
         return False
 
 
@@ -4241,6 +4377,7 @@ class NewsAnalyzer:
                     and CONFIG["EMAIL_TO"]
                 ),
                 (CONFIG["NTFY_SERVER_URL"] and CONFIG["NTFY_TOPIC"]),
+                CONFIG["BARK_URL"],
             ]
         )
 

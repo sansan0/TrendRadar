@@ -19,6 +19,9 @@ import pytz
 import requests
 import yaml
 
+# AI分析器导入
+from ai_analyzer import create_ai_analyzer
+
 
 VERSION = "3.3.0"
 
@@ -1500,6 +1503,45 @@ def prepare_report_data(
             }
         )
 
+    # 调用AI分析器进行新闻分析
+    ai_analysis = None
+    try:
+        # 创建AI分析器实例
+        ai_analyzer = create_ai_analyzer()
+        if ai_analyzer:
+            # 准备新闻数据用于AI分析
+            news_data = []
+            
+            # 从统计数据中提取新闻标题
+            for stat_item in processed_stats:
+                for title_data in stat_item["titles"]:
+                    news_data.append({
+                        "title": title_data["title"],
+                        "source": title_data["source_name"],
+                        "count": title_data["count"],
+                        "ranks": title_data["ranks"]
+                    })
+            
+            # 从新增新闻中提取新闻标题
+            for new_source in processed_new_titles:
+                for title_data in new_source["titles"]:
+                    news_data.append({
+                        "title": title_data["title"],
+                        "source": title_data["source_name"],
+                        "count": title_data["count"],
+                        "ranks": title_data["ranks"]
+                    })
+            
+            # 如果有新闻数据，调用AI分析器
+            if news_data:
+                ai_analysis = ai_analyzer.analyze_news(news_data)
+                logger.info(f"AI分析完成，结果长度: {len(ai_analysis) if ai_analysis else 0}")
+            else:
+                logger.info("没有新闻数据可供AI分析")
+    except Exception as e:
+        logger.error(f"AI分析器调用失败: {e}")
+        ai_analysis = None
+
     return {
         "stats": processed_stats,
         "new_titles": processed_new_titles,
@@ -1507,6 +1549,7 @@ def prepare_report_data(
         "total_new_count": sum(
             len(source["titles"]) for source in processed_new_titles
         ),
+        "ai_analysis": ai_analysis,  # 添加AI分析结果
     }
 
 
@@ -2921,6 +2964,9 @@ def split_content_into_batches(
     )
     now = get_beijing_time()
 
+    # AI分析结果（如果有）
+    ai_analysis = report_data.get("ai_analysis", "")
+
     base_header = ""
     if format_type == "wework":
         base_header = f"**总新闻数：** {total_titles}\n\n\n\n"
@@ -2935,6 +2981,21 @@ def split_content_into_batches(
         base_header += f"**时间：** {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
         base_header += f"**类型：** 热点分析报告\n\n"
         base_header += "---\n\n"
+
+    # 添加AI分析结果到基础头部
+    if ai_analysis:
+        if format_type == "wework":
+            ai_header = f"🤖 **AI分析摘要**\n{ai_analysis}\n\n---\n\n"
+        elif format_type == "telegram":
+            ai_header = f"🤖 AI分析摘要\n{ai_analysis}\n\n---\n\n"
+        elif format_type == "ntfy":
+            ai_header = f"🤖 **AI分析摘要**\n{ai_analysis}\n\n---\n\n"
+        elif format_type == "feishu":
+            ai_header = f"🤖 **AI分析摘要**\n{ai_analysis}\n\n---\n\n"
+        elif format_type == "dingtalk":
+            ai_header = f"🤖 **AI分析摘要**\n{ai_analysis}\n\n---\n\n"
+        
+        base_header = ai_header + base_header
 
     base_footer = ""
     if format_type == "wework":

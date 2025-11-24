@@ -17,29 +17,29 @@ class AIAnalyzer:
     def __init__(self, config_path: str = "config/ai_config.yaml"):
         """初始化AI分析器"""
         self.config = self._load_config(config_path)
-        self.api_url = self.config["api"]["endpoint"]
-        self.model = self.config["api"]["model"]
-        self.timeout = self.config["api"]["timeout"]
-        self.max_retries = self.config["api"]["max_retries"]
-        self.retry_delay = self.config["api"]["retry_delay"]
+        self.api_url = self.config["ai"]["api"]["endpoint"]
+        self.model = self.config["ai"]["api"]["model"]
+        self.timeout = self.config["ai"]["api"]["timeout"]
+        self.max_retries = self.config["ai"]["api"]["max_retries"]
+        self.retry_delay = self.config["ai"]["api"]["retry_delay"]
         
         # 认证配置
-        self.auth_token = self.config["auth"]["token"]
+        self.auth_token = self.config["ai"]["auth"]["authorization_token"]
         self.headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.auth_token}"
         }
         
         # 分析参数
-        self.max_news_count = self.config["analysis"]["max_news_count"]
-        self.max_content_length = self.config["analysis"]["max_content_length"]
+        self.max_news_count = self.config["ai"]["analysis"]["max_news_count"]
+        self.max_content_length = self.config["ai"]["analysis"]["max_content_length"]
         
         # 输出格式
-        self.max_output_length = self.config["output"]["max_length"]
+        self.max_output_length = self.config["ai"]["output"]["max_analysis_length"]
         
         # 错误处理
-        self.enable_fallback = self.config["error_handling"]["enable_fallback"]
-        self.enable_logging = self.config["error_handling"]["enable_logging"]
+        self.enable_fallback = self.config["ai"]["error_handling"]["fallback_to_original"]
+        self.enable_logging = self.config["ai"]["error_handling"]["log_errors"]
         
         # 加载系统提示词
         self.system_prompt = self._load_system_prompt()
@@ -50,10 +50,10 @@ class AIAnalyzer:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
             
-            # 验证必要配置项
+            # 验证必要配置项 - 与实际配置文件结构匹配
             required_fields = [
-                "api.endpoint", "api.model", "api.timeout", 
-                "auth.token", "analysis.max_news_count"
+                "ai.api.endpoint", "ai.api.model", "ai.api.timeout", 
+                "ai.auth.authorization_token", "ai.analysis.max_news_count"
             ]
             
             for field in required_fields:
@@ -165,9 +165,15 @@ class AIAnalyzer:
         """分析新闻数据"""
         try:
             # 检查是否启用AI分析
-            if not self.config["enabled"]:
+            if not self.config["ai"]["enable_ai_analysis"]:
                 if self.enable_logging:
                     print("AI分析功能未启用，跳过分析")
+                return None
+            
+            # 检查API配置是否有效
+            if not self.auth_token or self.auth_token.strip() == "":
+                if self.enable_logging:
+                    print("AI API token未配置，跳过分析")
                 return None
             
             # 准备新闻数据

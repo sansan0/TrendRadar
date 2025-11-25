@@ -8,12 +8,13 @@
 
 <a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-<a href="https://share.302.ai/mEOUzG" target="_blank"><img src="_image/302ai.png" alt="302.AI logo" height="60"/></a>
+<a href="https://share.302.ai/mEOUzG" target="_blank" title="One-stop AI Models & APIs Platform"><img src="_image/302ai.png" alt="302.AI logo" height="50"/></a>
+<a href="https://shandianshuo.cn" target="_blank" title="AI Voice Input, 4x Faster Than Typing ⚡"><img src="_image/shandianshuo.png" alt="FlashSpeak logo" height="51"/></a>
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.3.0-blue.svg)](https://github.com/sansan0/TrendRadar)
 [![MCP](https://img.shields.io/badge/MCP-v1.0.2-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![WeWork](https://img.shields.io/badge/WeWork-Notification-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
@@ -23,6 +24,7 @@
 [![Feishu](https://img.shields.io/badge/Feishu-Notification-00D4AA?style=flat-square)](https://www.feishu.cn/)
 [![Email](https://img.shields.io/badge/Email-Notification-00D4AA?style=flat-square)](#)
 [![ntfy](https://img.shields.io/badge/ntfy-Notification-00D4AA?style=flat-square)](https://github.com/binwiederhier/ntfy)
+[![Bark](https://img.shields.io/badge/Bark-Notification-00D4AA?style=flat-square)](https://github.com/Finb/Bark)
 
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Automation-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/sansan0/TrendRadar)
@@ -41,14 +43,15 @@
 
 > This project is designed to be lightweight and easy to deploy
 
+<br>
+
 ## 📑 Quick Navigation
 
 <div align="center">
 
-| [🎯 Core Features](#-core-features) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration Guide](#-configuration-guide) | [🐳 Docker Deployment](#-docker-deployment) |
-|:---:|:---:|:---:|:---:|
-| [🤖 AI Analysis](#-ai-analysis) | [🔌 MCP Clients](#-mcp-clients) | [📝 Changelog](#-changelog) | [❓ FAQ & Support](#-faq--support) |
-| [⭐ Related Projects](#-related-projects) | [🪄 Sponsors](#-sponsors) | | |
+| [🚀 Quick Start](#-quick-start) | [🤖 AI Analysis](#-ai-analysis) | [⚙️ Configuration Guide](#configuration-guide) | [📝 Changelog](#-changelog) | [❓ FAQ & Support](#-faq--support) |
+|:---:|:---:|:---:|:---:|:---:|
+| [🐳 Docker Deployment](#6-docker-deployment) | [🔌 MCP Clients](#-mcp-clients) | [📚 Related Projects](#-related-projects) | [🪄 Sponsors](#-sponsors) | |
 
 </div>
 
@@ -112,6 +115,7 @@ After communication, the author indicated no concerns about server pressure, but
 
 </details>
 
+<br>
 
 ## ✨ Core Features
 
@@ -162,10 +166,23 @@ Default monitoring of 11 mainstream platforms, with support for adding custom pl
 
 Set personal keywords (e.g., AI, BYD, Education Policy) to receive only relevant trending news, filtering out noise.
 
-- Supports normal words, required words (+), and filter words (!)
-- Group-based management with independent statistics for different topics
+**Basic Syntax** (4 types):
+- Normal words: Basic matching
+- Required words `+`: Narrow scope
+- Filter words `!`: Exclude noise
+- Count limit `@`: Control display count (v3.2.0 new)
 
-> 💡 Keyword configuration tutorial: [Configuration Guide - Keyword Configuration](#2-keyword-configuration)
+**Advanced Features** (v3.2.0 new):
+- 🔢 **Keyword Sorting Control**: Sort by popularity or config order
+- 📊 **Display Count Limit**: Global config + individual override for flexible control
+
+**Group-based Management**:
+- Separate with blank lines, independent statistics for different topics
+
+> 💡 **Basic Configuration**: [Keyword Configuration - Basic Syntax](#keyword-basic-syntax)
+>
+> 💡 **Advanced Configuration**: [Keyword Configuration - Advanced Settings](#keyword-advanced-settings)
+>
 > 💡 You can also skip filtering and receive all trending news (leave frequency_words.txt empty)
 
 
@@ -242,14 +259,83 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 |:---:|:---:|
 | ![Github Pages Effect](_image/github-pages.png) | ![Feishu Push Effect](_image/feishu.jpg) |
 
+<br>
 
 ## 📝 Changelog
 
 >**Upgrade Instructions**:
-- **Tip**: Do NOT update this project via **Sync fork**. Check [Changelog](#changelog) to understand specific [Upgrade Methods] and [Features]
+- **📌 Check Latest Updates**: **[Original Repository Changelog](https://github.com/sansan0/TrendRadar?tab=readme-ov-file#-changelog)**
+- **Tip**: Do NOT update this project via **Sync fork**. Check [Changelog] to understand specific [Upgrade Methods] and [Features]
 - **Minor Version Update**: Upgrading from v2.x to v2.y, replace `main.py` in your forked repo with the latest version
 - **Major Version Upgrade**: Upgrading from v1.x to v2.y, recommend deleting existing fork and re-forking to save effort and avoid config conflicts
 
+
+### 2025/11/24 - v3.3.0
+
+**🎉 Added Bark Push Support**
+
+1. **iOS Exclusive Push Channel**
+   - Supports Bark push (based on APNs, iOS platform)
+   - Free, open-source, clean, efficient, ad-free
+   - Supports both official server and self-hosted server
+
+2. **Multiple Deployment Methods**
+   - GitHub Actions: Configure `BARK_URL` Secret
+   - Docker: Environment variable `BARK_URL`
+   - Local: `config/config.yaml` configuration file
+
+> 📖 **Detailed Configuration Tutorial**: [Quick Start - Bark Push](#-quick-start)
+
+**🐛 Bug Fix**
+- Fixed issue where `ntfy_server_url` in `config.yaml` was ignored ([#345](https://github.com/sansan0/TrendRadar/issues/345))
+
+**🔧 Upgrade Instructions**:
+- **GitHub Fork Users**: Update `main.py`, `config/config.yaml`, `.github/workflows/crawler.yml`
+
+
+### 2025/11/23 - v3.2.0
+
+**🎯 New Advanced Customization Features**
+
+1. **Keyword Sorting Priority Configuration**
+   - Two sorting strategies: Popularity first vs Config order first
+   - For different use cases: Hot topic tracking or personalized focus
+
+2. **Display Count Precise Control**
+   - Global config: Unified limit for all keywords
+   - Individual config: Use `@number` syntax to set specific limits
+   - Effectively control push length, highlight key content
+
+> 📖 **Detailed Tutorial**: [Keyword Configuration - Advanced Settings](#keyword-advanced-settings)
+
+**🔧 Upgrade Instructions**:
+- **GitHub Fork Users**: Update `main.py`, `config/config.yaml`
+
+### 2025/11/18 - mcp-v1.0.2
+
+  **MCP Module Update:**
+  - Fix issue where today's news query may return articles from past dates
+
+
+### 2025/11/22 - v3.1.1
+
+- **Fixed data anomaly crash issue**: Resolved `'float' object has no attribute 'lower'` error encountered by some users in GitHub Actions environment
+- Added dual protection mechanism: Filter invalid titles (None, float, empty strings) at data acquisition stage, with type checking at function call sites
+- Enhanced system stability to ensure normal operation even when data sources return abnormal formats
+
+**Upgrade Instructions** (GitHub Fork Users):
+- Required update: `main.py`
+- Recommended: Use minor version upgrade method - copy and replace the file above
+
+
+### 2025/11/18 - mcp-v1.0.2
+
+  **MCP Module Update:**
+  - Fix issue where today's news query may return articles from past dates
+
+
+<details>
+<summary><strong>👉 Click to expand: Historical Updates</strong></summary>
 
 ### 2025/11/20 - v3.1.0
 
@@ -263,17 +349,6 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 - Required updates: `main.py`, `config/config.yaml`
 - Optional update: `.github/workflows/crawler.yml` (if using GitHub Actions)
 - Recommended: Use minor version upgrade method - copy and replace the files above
-
-
-
-### 2025/11/18 - mcp-v1.0.2
-
-  **MCP Module Update:**
-  - Fix issue where today's news query may return articles from past dates
-
-
-<details>
-<summary><strong>👉 Click to expand: Historical Updates</strong></summary>
 
 ### 2025/11/12 - v3.0.5
 
@@ -558,6 +633,7 @@ frequency_words.txt file added **required word** feature, using + sign
 
 </details>
 
+<br>
 
 ## 🚀 Quick Start
 
@@ -1035,8 +1111,8 @@ frequency_words.txt file added **required word** feature, using + sign
 
     > 💡 Default configuration works normally, only adjust if you need personalization
 
-    - **Push Settings**: Configure push mode and notification options in [config/config.yaml](config/config.yaml)
-    - **Keyword Settings**: Add your interested keywords in [config/frequency_words.txt](config/frequency_words.txt)
+    - **Push Settings**: Configure push mode and notification options in [config/config.yaml](config/config.yaml) → [Push Mode Details](#3-push-mode-details)
+    - **Keyword Settings**: Add your interested keywords in [config/frequency_words.txt](config/frequency_words.txt) → [Keyword Configuration Tutorial](#2-keyword-configuration)
     - **Push Frequency Adjustment**: In [.github/workflows/crawler.yml](.github/workflows/crawler.yml) adjust carefully, don't be greedy
 
     **Note**: Suggest only adjusting explicitly documented config items, other options mainly for author's development testing
@@ -1066,6 +1142,9 @@ frequency_words.txt file added **required word** feature, using + sign
 
    👉 **Learn More**: [AI Analysis](#-ai-analysis) — Unlock hidden capabilities and make trend tracking more efficient!
 
+<br>
+
+<a name="configuration-guide"></a>
 
 ## ⚙️ Configuration Guide
 
@@ -1097,21 +1176,22 @@ If you don't know how to look, you can directly copy the partially organized [Pl
 
 ### 2. Keyword Configuration
 
-<details id="frequencywordstxt-configuration-tutorial">
-<summary>👉 Click to expand: <strong>frequency_words.txt Configuration Tutorial</strong></summary>
-<br>
-
-Configure monitoring keywords in `frequency_words.txt` with three syntax types and grouping features.
-
-Keywords at the top have higher priority. Adjust keyword order based on your interests.
+Configure monitoring keywords in `frequency_words.txt` with four syntax types and grouping features.
 
 | Syntax Type | Symbol | Purpose | Example | Matching Logic |
 |------------|--------|---------|---------|----------------|
 | **Normal** | None | Basic matching | `Huawei` | Match any one |
 | **Required** | `+` | Scope limiting | `+phone` | Must include both |
 | **Filter** | `!` | Noise exclusion | `!ad` | Exclude if included |
+| **Count Limit** | `@` | Control display count | `@10` | Max 10 news (v3.2.0 new) |
 
-#### 📋 Basic Syntax
+#### 2.1 Basic Syntax
+
+<a name="keyword-basic-syntax"></a>
+
+<details>
+<summary>👉 Click to expand: <strong>Basic Syntax Tutorial</strong></summary>
+<br>
 
 ##### 1. **Normal Keywords** - Basic Matching
 ```txt
@@ -1137,6 +1217,18 @@ Huawei
 !price
 ```
 **Effect:** News containing filter words will be **excluded**, even if it contains keywords
+
+##### 4. **Count Limit** `@number` - Control Display Count (v3.2.0 new)
+```txt
+Tesla
+Musk
+@5
+```
+**Effect:** Limit maximum news count for this keyword group
+
+**Priority:** `@number` > Global config > Unlimited
+
+---
 
 #### 🔗 Group Feature - Importance of Empty Lines
 
@@ -1255,6 +1347,69 @@ sales
 
 </details>
 
+#### 2.2 Advanced Settings (v3.2.0 new)
+
+<a name="keyword-advanced-settings"></a>
+
+<details>
+<summary>👉 Click to expand: <strong>Advanced Settings Tutorial</strong></summary>
+<br>
+
+##### Keyword Sorting Priority
+
+**Config Location:** `config/config.yaml`
+
+```yaml
+report:
+  sort_by_position_first: false  # Sorting priority config
+```
+
+| Value | Sorting Rule | Use Case |
+|-------|-------------|----------|
+| `false` (default) | News count ↓ → Config position ↑ | Focus on popularity trends |
+| `true` | Config position ↑ → News count ↓ | Focus on personal priority |
+
+**Example:** Config order A, B, C, news count A(3), B(10), C(5)
+- `false`: B(10) → C(5) → A(3)
+- `true`: A(3) → B(10) → C(5)
+
+##### Global Display Count Limit
+
+```yaml
+report:
+  max_news_per_keyword: 10  # Max 10 per keyword (0=unlimited)
+```
+
+**Docker Environment Variables:**
+```bash
+SORT_BY_POSITION_FIRST=true
+MAX_NEWS_PER_KEYWORD=10
+```
+
+**Combined Example:**
+```yaml
+# config.yaml
+report:
+  sort_by_position_first: true   # Config order priority
+  max_news_per_keyword: 10       # Global default max 10 per keyword
+```
+
+```txt
+# frequency_words.txt
+Tesla
+Musk
+@20              # Key focus, show 20 (override global)
+
+Huawei           # Use global config, show 10
+
+BYD
+@5               # Limit to 5
+```
+
+**Final Effect:** Display in config order: Tesla(20) → Huawei(10) → BYD(5)
+
+</details>
+
 ### 3. Push Mode Details
 
 <details>
@@ -1289,6 +1444,22 @@ Assume you monitor "Apple" keyword, execute once per hour:
 > **💡 Encountered this problem?** 👉 "Execute once per hour, news output in first execution still appears in next hour execution"
 > - **Reason**: You might have selected `daily` (Daily Summary) or `current` (Current Rankings) mode
 > - **Solution**: Change to `incremental` (Incremental Monitor) mode, only push new content
+
+#### ⚠️ Incremental Mode Important Notice
+
+> **Users who selected `incremental` (Incremental Monitor) mode, please note:**
+>
+> 📌 **Incremental mode only pushes when there are new matching news**
+>
+> **If you haven't received push notifications for a long time, it may be because:**
+> 1. No new hot topics matching your keywords in current time period
+> 2. Keyword configuration is too strict or too broad
+> 3. Too few monitoring platforms
+>
+> **Solutions:**
+> - Solution 1: 👉 [Optimize Keyword Configuration](#2-keyword-configuration) - Adjust keyword precision, add or modify monitoring keywords
+> - Solution 2: Switch push mode - Change to `current` or `daily` mode for scheduled push notifications
+> - Solution 3: 👉 [Add More Platforms](#1-platform-configuration) - Add more news platforms to expand information sources
 
 </details>
 
@@ -1389,7 +1560,11 @@ Updated: 2025-01-15 12:30:15
 </details>
 
 
-## 🐳 Docker Deployment
+### 6. Docker Deployment
+
+<details>
+<summary>👉 Click to expand: <strong>Complete Docker Deployment Guide</strong></summary>
+<br>
 
 #### Method 1: Quick Experience (One-Line Command)
 
@@ -1589,6 +1764,9 @@ docker exec -it trend-radar /bin/bash
 docker exec -it trend-radar ls -la /app/config/
 ```
 
+</details>
+
+<br>
 
 ## 🤖 AI Analysis
 
@@ -1632,10 +1810,17 @@ Cherry Studio provides GUI config interface, 5-minute quick deployment, complex 
 
 **Question Effect**:
 
-> Actually not recommended to ask multiple questions at once. If your chosen AI model cannot even sequentially call as shown below, suggest switching models.
+<details>
+<summary>👉 Click to expand: <strong>View AI Conversation Example</strong></summary>
+<br>
+
+> 💡 **Tip**: Actually not recommended to ask multiple questions at once. If your chosen AI model cannot even sequentially call as shown below, suggest switching models.
 
 <img src="/_image/ai3.png" alt="MCP usage effect" width="600">
 
+</details>
+
+<br>
 
 ## 🔌 MCP Clients
 
@@ -1929,6 +2114,7 @@ Any client supporting Model Context Protocol can connect to TrendRadar:
 
 </details>
 
+<br>
 
 ## ☕ FAQ & Support
 
@@ -1955,23 +2141,19 @@ Any client supporting Model Context Protocol can connect to TrendRadar:
 
 ## 🪄 Sponsors
 
+### 🤖 302.AI - Enterprise AI Resource Platform
+
 > **302.AI** is a pay-as-you-go enterprise-level AI resource platform
 > Providing the latest and most comprehensive **AI models** and **APIs** on the market, plus various ready-to-use online AI applications
 
-
 <div align="center">
 
+[![Register & Claim](https://img.shields.io/badge/Register_302.AI-Claim_$1_Credit-8B5CF6?style=for-the-badge&logo=openai&logoColor=white)](https://share.302.ai/mEOUzG)
 <a href="https://share.302.ai/mEOUzG" target="_blank">
-  <img src="_image/banner-302ai-en.jpg" alt="302.AI" width="800"/>
+  <img src="_image/banner-302ai-en.jpg" alt="302.AI" width="700"/>
 </a>
 </div>
 
-### 💰 302.AI New User Benefits
-
-> The $1 credit can be used to call various AI models (such as Claude, GPT, etc.)   
-> This project's AI analysis features require AI model integration. See [AI Analysis Deployment](#-ai-analysis-deployment) for configuration tutorial
-
-[![Register & Claim](https://img.shields.io/badge/Register_302.AI-Claim_$1_Free_Credit-FF6B6B?style=for-the-badge&logo=openai&logoColor=white)](https://share.302.ai/mEOUzG)
 
 <details id="sponsor-tutorial">
 <summary><b>👉 Click to expand: 302.AI Usage Tutorial</b></summary>
@@ -2003,7 +2185,24 @@ A: You can top up as needed, pay-as-you-go. Major AI model prices are now relati
 
 </details>
 
-<br>
+
+> Tracking so many trending topics daily, writing reports, replying messages making your wrists tired?
+>
+> Try「FlashSpeak」AI Voice Input - Speak instead of type, 4x faster ⚡
+>
+> On-device Model • Lightning Fast • Absolute Privacy • Mac/Win Support
+>
+> From reading trends to content output, double your efficiency 👇
+
+<div align="center">
+
+[![Mac Download](https://img.shields.io/badge/Mac-Free_Download-FF6B6B?style=for-the-badge&logo=apple&logoColor=white)](https://shandianshuo.cn) [![Windows Download](https://img.shields.io/badge/Windows-Free_Download-FF6B6B?style=for-the-badge&logo=lightning&logoColor=white)](https://shandianshuo.cn)
+<a href="https://shandianshuo.cn" target="_blank">
+  <img src="_image/banner-shandianshuo.png" alt="FlashSpeak" width="700"/>
+</a>
+</div>
+
+
 
 ---
 
@@ -2088,7 +2287,9 @@ A: You can top up as needed, pay-as-you-go. Major AI model prices are now relati
 
 </details>
 
-### Project Articles
+<br>
+
+## 📚 Related Projects
 
 > **4 Related Articles** (Chinese):
 
@@ -2167,6 +2368,7 @@ flowchart TD
 
 [![Star History Chart](https://api.star-history.com/svg?repos=sansan0/TrendRadar&type=Date)](https://www.star-history.com/#sansan0/TrendRadar&Date)
 
+<br>
 
 ## 📄 License
 

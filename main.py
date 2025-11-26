@@ -4589,7 +4589,7 @@ def send_to_onebot_group(
         ]
         
         payload = {
-            "user_id": group_id,
+            "group_id": group_id,
             "message": message
         }
         

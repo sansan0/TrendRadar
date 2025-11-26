@@ -1,0 +1,60 @@
+name: 🧪 Test 163 Email
+on:
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  send-test-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send email via 163 SMTP
+        env:
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_SMTP_SERVER: ${{ secrets.EMAIL_SMTP_SERVER }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+        run: |
+          python3 - <<'EOF'
+import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# 获取环境变量
+FROM = os.environ['EMAIL_FROM']
+PASSWORD = os.environ['EMAIL_PASSWORD']
+TO = os.environ['EMAIL_TO']
+SMTP_SERVER = os.environ['EMAIL_SMTP_SERVER']
+SMTP_PORT = int(os.environ['EMAIL_SMTP_PORT'])
+
+# 创建邮件
+msg = MIMEMultipart()
+msg['From'] = FROM
+msg['To'] = TO
+msg['Subject'] = "[Test] GitHub Actions 邮件测试成功！"
+
+body = f"""
+✅ 恭喜！您已成功通过 GitHub Actions 发送 163 邮箱测试邮件。
+
+- 发件人: {FROM}
+- 收件人: {TO}
+- 仓库: {os.environ.get('GITHUB_REPOSITORY', 'unknown')}
+- 运行ID: {os.environ.get('GITHUB_RUN_ID', 'N/A')}
+
+此邮件由自动化工作流发送，仅用于测试。
+"""
+msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+# 发送邮件（支持 465 SSL 或 25/587 STARTTLS）
+if SMTP_PORT == 465:
+    server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+else:
+    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+    server.starttls()
+
+server.login(FROM, PASSWORD)
+server.sendmail(FROM, TO, msg.as_string())
+server.quit()
+
+print("📧 163 测试邮件发送成功！")
+EOF

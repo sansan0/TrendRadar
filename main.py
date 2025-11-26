@@ -209,6 +209,9 @@ def load_config():
     config["ONEBOT11_USER_ID"] = os.environ.get("ONEBOT11_USER_ID", "").strip() or webhooks.get(
         "onebot11_user_id", ""
     )
+    config["ONEBOT11_GROUP_ID"] = os.environ.get("ONEBOT11_GROUP_ID", "").strip() or webhooks.get(
+        "onebot11_group_id", ""
+    )
     config["ONEBOT11_TOKEN"] = os.environ.get("ONEBOT11_TOKEN", "").strip() or webhooks.get(
         "onebot11_token", ""
     )
@@ -246,7 +249,13 @@ def load_config():
         url_source = "环境变量" if os.environ.get("ONEBOT11_URL") else "配置文件"
         user_source = "环境变量" if os.environ.get("ONEBOT11_USER_ID") else "配置文件"
         token_source = "环境变量" if os.environ.get("ONEBOT11_TOKEN") else "配置文件"
-        notification_sources.append(f"OneBot({url_source}/{user_source}/{token_source})")
+        notification_sources.append(f"OneBot私聊({url_source}/{user_source}/{token_source})")    
+        
+    if config["ONEBOT11_URL"] and config["ONEBOT11_GROUP_ID"] and config["ONEBOT11_TOKEN"]:
+        url_source = "环境变量" if os.environ.get("ONEBOT11_URL") else "配置文件"
+        user_source = "环境变量" if os.environ.get("ONEBOT11_GROUP_ID") else "配置文件"
+        token_source = "环境变量" if os.environ.get("ONEBOT11_TOKEN") else "配置文件"
+        notification_sources.append(f"OneBot群聊({url_source}/{user_source}/{token_source})")
 
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
@@ -3431,6 +3440,7 @@ def send_to_notifications(
     bark_url = CONFIG["BARK_URL"]
     onebot_url = CONFIG["ONEBOT11_URL"]
     onebot_user_id = CONFIG["ONEBOT11_USER_ID"]
+    onebot_group_id = CONFIG["ONEBOT11_GROUP_ID"]
     onebot_token = CONFIG["ONEBOT11_TOKEN"]
 
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
@@ -3489,11 +3499,24 @@ def send_to_notifications(
             mode,
         )
 
-    # 发送到 OneBot
+    # 发送到 OneBot私聊
     if onebot_url and onebot_user_id and onebot_token:
-        results["onebot"] = send_to_onebot(
+        results["onebot"] = send_to_onebot_user(
             onebot_url,
             onebot_user_id,
+            onebot_token,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+        )
+
+    # 发送到 OneBot群聊
+    if onebot_url and onebot_group_id and onebot_token:
+        results["onebot"] = send_to_onebot_group(
+            onebot_url,
+            onebot_group_id,
             onebot_token,
             report_data,
             report_type,
@@ -4297,7 +4320,7 @@ def send_to_bark(
         print(f"Bark发送完全失败 [{report_type}]")
         return False
 
-def send_to_onebot(
+def send_to_onebot_user(
     onebot_url: str,
     user_id: str,
     access_token: str,
@@ -4454,6 +4477,165 @@ def send_to_onebot(
         print(f"OneBot发送完全失败 [{report_type}]")
         return False
 
+def send_to_onebot_group(
+    onebot_url: str,
+    group_id: str,
+    access_token: str,
+    report_data: Dict,
+    report_type: str,
+    update_info: Optional[Dict] = None,
+    proxy_url: Optional[str] = None,
+    mode: str = "daily",
+) -> bool:
+    """发送到OneBot（支持分批发送）"""
+    headers = {
+        "Authorization": "Bearer " + access_token,
+        "Content-Type": "application/json"
+    }
+    
+    # 构建消息内容
+    message_content = f"📊 TrendRadar 热点分析报告 - {report_type}\n\n"
+    
+    if report_data["stats"]:
+        for i, stat in enumerate(report_data["stats"]):
+            word = stat["word"]
+            count = stat["count"]
+            message_content += f"🔥 {word}: {count} 条\n"
+            
+            # 添加前几条新闻标题
+            for j, title_data in enumerate(stat["titles"][:3]):  # 只取前3条新闻
+                title = clean_title(title_data["title"])
+                source = title_data["source_name"]
+                message_content += f"  {j+1}. [{source}] {title}\n"
+            
+            if len(stat["titles"]) > 3:
+                message_content += f"  ... 还有 {len(stat['titles']) - 3} 条\n"
+            
+            if i < len(report_data["stats"]) - 1:
+                message_content += "\n"
+    
+    if not report_data["stats"]:
+        if mode == "incremental":
+            mode_text = "增量模式下暂无新增匹配的热点词汇"
+        elif mode == "current":
+            mode_text = "当前榜单模式下暂无匹配的热点词汇"
+        else:
+            mode_text = "暂无匹配的热点词汇"
+        message_content += f"📭 {mode_text}\n"
+    
+    # 添加新增新闻部分
+    if report_data["new_titles"]:
+        message_content += f"\n🆕 本次新增热点新闻 (共 {report_data['total_new_count']} 条):\n"
+        for source_data in report_data["new_titles"]:
+            message_content += f"  {source_data['source_name']} ({len(source_data['titles'])} 条):\n"
+            for j, title_data in enumerate(source_data["titles"][:3]):  # 只取前3条
+                title = clean_title(title_data["title"])
+                message_content += f"    {j+1}. {title}\n"
+            if len(source_data["titles"]) > 3:
+                message_content += f"    ... 还有 {len(source_data['titles']) - 3} 条\n"
+    
+    # 添加失败的平台信息
+    if report_data["failed_ids"]:
+        message_content += f"\n⚠️ 数据获取失败的平台：\n"
+        for id_value in report_data["failed_ids"]:
+            message_content += f"  • {id_value}\n"
+    
+    # 添加时间信息
+    now = get_beijing_time()
+    message_content += f"\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
+    
+    if update_info:
+        message_content += f"\nTrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}"
+    
+    # 分批处理消息内容，避免单条消息过长
+    message_batches = []
+    batch_size_limit = 3000  # OneBot消息长度限制
+    
+    if len(message_content.encode('utf-8')) <= batch_size_limit:
+        message_batches = [message_content]
+    else:
+        # 按行分割内容并分批
+        lines = message_content.split('\n')
+        current_batch = ""
+        
+        for line in lines:
+            test_batch = current_batch + line + "\n"
+            if len(test_batch.encode('utf-8')) <= batch_size_limit:
+                current_batch = test_batch
+            else:
+                if current_batch:
+                    message_batches.append(current_batch.rstrip('\n'))
+                current_batch = line + "\n"
+        
+        if current_batch:
+            message_batches.append(current_batch.rstrip('\n'))
+    
+    print(f"OneBot消息分为 {len(message_batches)} 批次发送 [{report_type}]")
+    
+    # 逐批发送
+    success_count = 0
+    for i, batch_content in enumerate(message_batches, 1):
+        if len(message_batches) > 1:
+            batch_header = f"[第 {i}/{len(message_batches)} 批次]\n\n"
+            batch_content = batch_header + batch_content
+        
+        message = [
+            {
+                "type": "text",
+                "data": {
+                    "text": batch_content
+                }
+            }
+        ]
+        
+        payload = {
+            "user_id": group_id,
+            "message": message
+        }
+        
+        try:
+            proxies = None
+            if proxy_url:
+                proxies = {"http": proxy_url, "https": proxy_url}
+                
+            response = requests.post(onebot_url, json=payload, headers=headers, proxies=proxies, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("retcode") == 0 or result.get("status") == "ok":
+                    print(f"OneBot第 {i}/{len(message_batches)} 批次发送成功 [{report_type}]")
+                    success_count += 1
+                    # 批次间间隔
+                    if i < len(message_batches):
+                        time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
+                else:
+                    error_msg = result.get("message", result.get("msg", "未知错误"))
+                    print(f"OneBot第 {i}/{len(message_batches)} 批次发送失败 [{report_type}]，错误：{error_msg}")
+            else:
+                print(f"OneBot第 {i}/{len(message_batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}")
+                try:
+                    print(f"响应内容：{response.text}")
+                except:
+                    pass
+                
+        except requests.exceptions.RequestException as e:
+            print(f"OneBot第 {i}/{len(message_batches)} 批次发送请求异常 [{report_type}]：{e}")
+        except Exception as e:
+            print(f"OneBot第 {i}/{len(message_batches)} 批次发送出错 [{report_type}]：{e}")
+    
+    # 判断整体发送是否成功
+    if success_count == len(message_batches):
+        print(f"OneBot所有 {len(message_batches)} 批次发送完成 [{report_type}]")
+        return True
+    elif success_count > 0:
+        print(f"OneBot部分发送成功：{success_count}/{len(message_batches)} 批次 [{report_type}]")
+        return True  # 部分成功也视为成功
+    else:
+        print(f"OneBot发送完全失败 [{report_type}]")
+        return False
+
+
+
 
 # === 主分析器 ===
 class NewsAnalyzer:
@@ -4568,7 +4750,8 @@ class NewsAnalyzer:
                 ),
                 (CONFIG["NTFY_SERVER_URL"] and CONFIG["NTFY_TOPIC"]),
                 CONFIG["BARK_URL"],
-                (CONFIG["ONEBOT11_TOKEN"] and CONFIG["ONEBOT11_USER_ID"] and CONFIG["ONEBOT11_URL"])
+                (CONFIG["ONEBOT11_TOKEN"] and CONFIG["ONEBOT11_USER_ID"] and CONFIG["ONEBOT11_URL"]),
+                (CONFIG["ONEBOT11_TOKEN"] and CONFIG["ONEBOT11_GROUP_ID"] and CONFIG["ONEBOT11_URL"])
             ]
         )
 

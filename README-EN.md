@@ -8,13 +8,13 @@
 
 <a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-<a href="https://share.302.ai/mEOUzG" target="_blank" title="One-stop AI Models & APIs Platform"><img src="_image/302ai.png" alt="302.AI logo" height="52"/></a>
-<a href="https://shandianshuo.cn" target="_blank" title="AI Voice Input, 4x Faster Than Typing ⚡"><img src="_image/shandianshuo.png" alt="FlashSpeak logo" height="53"/></a>
+<a href="https://share.302.ai/mEOUzG" target="_blank" title="One-stop AI Models & APIs Platform"><img src="_image/302ai.png" alt="302.AI logo" height="50"/></a>
+<a href="https://shandianshuo.cn" target="_blank" title="AI Voice Input, 4x Faster Than Typing ⚡"><img src="_image/shandianshuo.png" alt="FlashSpeak logo" height="51"/></a>
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v3.3.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](https://github.com/sansan0/TrendRadar)
 [![MCP](https://img.shields.io/badge/MCP-v1.0.2-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![WeWork](https://img.shields.io/badge/WeWork-Notification-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
@@ -25,6 +25,7 @@
 [![Email](https://img.shields.io/badge/Email-Notification-00D4AA?style=flat-square)](#)
 [![ntfy](https://img.shields.io/badge/ntfy-Notification-00D4AA?style=flat-square)](https://github.com/binwiederhier/ntfy)
 [![Bark](https://img.shields.io/badge/Bark-Notification-00D4AA?style=flat-square)](https://github.com/Finb/Bark)
+[![Slack](https://img.shields.io/badge/Slack-Notification-00D4AA?style=flat-square)](https://slack.com/)
 
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Automation-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/sansan0/TrendRadar)
@@ -43,13 +44,15 @@
 
 > This project is designed to be lightweight and easy to deploy
 
+<br>
+
 ## 📑 Quick Navigation
 
 <div align="center">
 
 | [🚀 Quick Start](#-quick-start) | [🤖 AI Analysis](#-ai-analysis) | [⚙️ Configuration Guide](#configuration-guide) | [📝 Changelog](#-changelog) | [❓ FAQ & Support](#-faq--support) |
 |:---:|:---:|:---:|:---:|:---:|
-| [🐳 Docker Deployment](#-docker-deployment) | [🔌 MCP Clients](#-mcp-clients) | [⭐ Related Projects](#-related-projects) | [🪄 Sponsors](#-sponsors) | |
+| [🐳 Docker Deployment](#6-docker-deployment) | [🔌 MCP Clients](#-mcp-clients) | [📚 Related Projects](#-related-projects) | [🪄 Sponsors](#-sponsors) | |
 
 </div>
 
@@ -58,7 +61,7 @@
 - Thanks to **followers**, your interactions make the content more meaningful 😎
 
 <details>
-<summary>👉 Click to view <strong>Acknowledgments</strong> (Current <strong>🔥72🔥</strong> supporters)</summary>
+<summary>👉 Click to view <strong>Acknowledgments</strong> (Current <strong>🔥73🔥</strong> supporters)</summary>
 
 ### Infrastructure Support
 
@@ -88,6 +91,7 @@ After communication, the author indicated no concerns about server pressure, but
 
 | Supporter | Amount (CNY) | Date | Note |
 | :-------: | :----------: | :--: | :--: |
+| D*5 | 1.8 * 3 | 2025.11.24 | |
 | *鬼 | 1 | 2025.11.17 | |
 | *超 | 10 | 2025.11.17 | |
 | R*w | 10 | 2025.11.17 | Great agent work! |
@@ -113,6 +117,7 @@ After communication, the author indicated no concerns about server pressure, but
 
 </details>
 
+<br>
 
 ## ✨ Core Features
 
@@ -256,6 +261,7 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 |:---:|:---:|
 | ![Github Pages Effect](_image/github-pages.png) | ![Feishu Push Effect](_image/feishu.jpg) |
 
+<br>
 
 ## 📝 Changelog
 
@@ -264,6 +270,33 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 - **Tip**: Do NOT update this project via **Sync fork**. Check [Changelog] to understand specific [Upgrade Methods] and [Features]
 - **Minor Version Update**: Upgrading from v2.x to v2.y, replace `main.py` in your forked repo with the latest version
 - **Major Version Upgrade**: Upgrading from v1.x to v2.y, recommend deleting existing fork and re-forking to save effort and avoid config conflicts
+
+
+### 2025/11/25 - v3.4.0
+
+**🎉 Added Slack Push Support**
+
+1. **Team Collaboration Push Channel**
+   - Supports Slack Incoming Webhooks (globally popular team collaboration tool)
+   - Centralized message management, suitable for team-shared trending news
+   - Supports mrkdwn format (bold, links, etc.)
+
+2. **Multiple Deployment Methods**
+   - GitHub Actions: Configure `SLACK_WEBHOOK_URL` Secret
+   - Docker: Environment variable `SLACK_WEBHOOK_URL`
+   - Local: `config/config.yaml` configuration file
+
+
+> 📖 **Detailed Configuration Tutorial**: [Quick Start - Slack Push](#-quick-start)
+
+- Optimized the one-click installation experience for setup-windows.bat and setup-windows-en.bat
+
+**🔧 Upgrade Instructions**:
+- **GitHub Fork Users**: Update `main.py`, `config/config.yaml`, `.github/workflows/crawler.yml`
+
+
+<details>
+<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
 
 
 ### 2025/11/24 - v3.3.0
@@ -329,9 +362,6 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
   **MCP Module Update:**
   - Fix issue where today's news query may return articles from past dates
 
-
-<details>
-<summary><strong>👉 Click to expand: Historical Updates</strong></summary>
 
 ### 2025/11/20 - v3.1.0
 
@@ -629,6 +659,7 @@ frequency_words.txt file added **required word** feature, using + sign
 
 </details>
 
+<br>
 
 ## 🚀 Quick Start
 
@@ -913,6 +944,7 @@ frequency_words.txt file added **required word** feature, using + sign
    | **Sina Mail** | sina.com | smtp.sina.com | 465 | SSL |
    | **Sohu Mail** | sohu.com | smtp.sohu.com | 465 | SSL |
    | **189 Mail** | 189.cn | smtp.189.cn | 465 | SSL |
+   | **Aliyun Mail** | aliyun.com | smtp.aliyun.com | 465 | TLS |
 
    > **Auto-detect**: When using above emails, no need to manually configure `EMAIL_SMTP_SERVER` and `EMAIL_SMTP_PORT`, system auto-detects.
    >
@@ -922,6 +954,7 @@ frequency_words.txt file added **required word** feature, using + sign
    >
    > **Special Thanks**:
    > - Thanks to [@DYZYD](https://github.com/DYZYD) for contributing 189 Mail (189.cn) configuration and completing self-send-receive testing ([#291](https://github.com/sansan0/TrendRadar/issues/291))
+   > - Thanks to [@longzhenren](https://github.com/longzhenren) for contributing Aliyun Mail (aliyun.com) configuration and completing testing ([#344](https://github.com/sansan0/TrendRadar/issues/344))
 
    **Common Email Settings:**
 
@@ -1073,6 +1106,162 @@ frequency_words.txt file added **required word** feature, using + sign
 
    </details>
 
+   <details>
+   <summary>👉 Click to expand: <strong>Bark Push</strong> (iOS exclusive, clean & efficient)</summary>
+   <br>
+
+   **GitHub Secret Configuration (⚠️ Name must be exact):**
+   - **Name**: `BARK_URL` (copy and paste this name, don't type manually)
+   - **Secret**: Your Bark push URL
+
+   <br>
+
+   **Bark Introduction:**
+
+   Bark is a free open-source push tool for iOS platform, featuring simplicity, speed, and no ads.
+
+   **Usage Methods:**
+
+   ### Method 1: Use Official Server (Recommended for beginners) 🆓
+
+   1. **Download Bark App**:
+      - iOS: [App Store](https://apps.apple.com/us/app/bark-customed-notifications/id1403753865)
+
+   2. **Get Push URL**:
+      - Open Bark App
+      - Copy the push URL displayed on the home page (format: `https://api.day.app/your_device_key`)
+      - Configure the URL to GitHub Secrets as `BARK_URL`
+
+   ### Method 2: Self-Hosted Server (Complete Privacy Control) 🔒
+
+   **Suitable for**: Users with servers, pursuing complete privacy, strong technical skills
+
+   **Docker One-Click Deployment**:
+   ```bash
+   docker run -d \
+     --name bark-server \
+     -p 8080:8080 \
+     finab/bark-server
+   ```
+
+   **Configure TrendRadar**:
+   ```yaml
+   BARK_URL: http://your-server-ip:8080/your_device_key
+   ```
+
+   ---
+
+   **Notes:**
+   - ✅ Bark uses APNs push, max 4KB per message
+   - ✅ Supports automatic batch sending, no worry about long messages
+   - ✅ Push format is plain text (automatically removes Markdown syntax)
+   - ⚠️ Only supports iOS platform
+
+   **Related Links:**
+   - [Bark Official Website](https://bark.day.app/)
+   - [Bark GitHub Repository](https://github.com/Finb/Bark)
+   - [Bark Server Self-Hosting Tutorial](https://github.com/Finb/bark-server)
+
+   </details>
+
+   <details>
+   <summary>👉 Click to expand: <strong>Slack Push</strong></summary>
+   <br>
+
+   **GitHub Secret Configuration (⚠️ Name must be exact):**
+   - **Name**: `SLACK_WEBHOOK_URL` (copy and paste this name, don't type manually)
+   - **Secret**: Your Slack Incoming Webhook URL
+
+   <br>
+
+   **Slack Introduction:**
+
+   Slack is a team collaboration tool, Incoming Webhooks can push messages to Slack channels.
+
+   **Setup Steps:**
+
+   ### Step 1: Create Slack App
+
+   1. **Visit Slack API Page**:
+      - Open https://api.slack.com/apps?new_app=1
+      - Login to your Slack workspace if not logged in
+
+   2. **Choose Creation Method**:
+      - Click **"From scratch"**
+
+   3. **Fill in App Information**:
+      - **App Name**: Enter app name (e.g., `TrendRadar` or `Hot News Monitor`)
+      - **Workspace**: Select your workspace from dropdown
+      - Click **"Create App"** button
+
+   ### Step 2: Enable Incoming Webhooks
+
+   1. **Navigate to Incoming Webhooks**:
+      - Find and click **"Incoming Webhooks"** in left menu
+
+   2. **Enable Feature**:
+      - Find **"Activate Incoming Webhooks"** toggle
+      - Switch from `OFF` to `ON`
+      - Page will auto-refresh showing new configuration options
+
+   ### Step 3: Generate Webhook URL
+
+   1. **Add New Webhook**:
+      - Scroll to page bottom
+      - Click **"Add New Webhook to Workspace"** button
+
+   2. **Select Target Channel**:
+      - System will show authorization page
+      - Select channel to receive messages from dropdown (e.g., `#hot-news`)
+      - ⚠️ For private channels, must join the channel first
+
+   3. **Authorize App**:
+      - Click **"Allow"** button to complete authorization
+      - System will auto-redirect back to config page
+
+   ### Step 4: Copy and Save Webhook URL
+
+   1. **View Generated URL**:
+      - In "Webhook URLs for Your Workspace" section
+      - You'll see the newly generated Webhook URL
+      - Format: `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX`
+
+   2. **Copy URL**:
+      - Click **"Copy"** button on the right of URL
+      - Or manually select and copy URL
+
+   3. **Configure to TrendRadar**:
+      - **GitHub Actions**: Add URL to GitHub Secrets as `SLACK_WEBHOOK_URL`
+      - **Local Testing**: Fill URL in `config/config.yaml` `slack_webhook_url` field
+      - **Docker Deployment**: Add URL to `docker/.env` file as `SLACK_WEBHOOK_URL` variable
+
+   ---
+
+   **Notes:**
+   - ✅ Supports Markdown format (auto-converts to Slack mrkdwn)
+   - ✅ Supports automatic batch sending (4KB per batch)
+   - ✅ Suitable for team collaboration, centralized message management
+   - ⚠️ Webhook URL contains secret key, never make it public
+
+   **Message Format Preview:**
+   ```
+   *[Batch 1/2]*
+
+   📊 *Trending Topics Statistics*
+
+   🔥 *[1/3] AI ChatGPT* : 2 articles
+
+     1. [Baidu Hot] 🆕 ChatGPT-5 Official Release *[1]* - 09:15 (1 time)
+
+     2. [Toutiao] AI Chip Stocks Surge *[3]* - [08:30 ~ 10:45] (3 times)
+   ```
+
+   **Related Links:**
+   - [Slack Incoming Webhooks Official Docs](https://api.slack.com/messaging/webhooks)
+   - [Slack API App Management](https://api.slack.com/apps)
+
+   </details>
+
    > **💡 Beginner Quick Start Tip**:
    >
    > For first deployment, suggest completing **GitHub Secrets** configuration first (choose one push platform), then jump to [Step 3] to test push success.
@@ -1106,8 +1295,8 @@ frequency_words.txt file added **required word** feature, using + sign
 
     > 💡 Default configuration works normally, only adjust if you need personalization
 
-    - **Push Settings**: Configure push mode and notification options in [config/config.yaml](config/config.yaml)
-    - **Keyword Settings**: Add your interested keywords in [config/frequency_words.txt](config/frequency_words.txt)
+    - **Push Settings**: Configure push mode and notification options in [config/config.yaml](config/config.yaml) → [Push Mode Details](#3-push-mode-details)
+    - **Keyword Settings**: Add your interested keywords in [config/frequency_words.txt](config/frequency_words.txt) → [Keyword Configuration Tutorial](#2-keyword-configuration)
     - **Push Frequency Adjustment**: In [.github/workflows/crawler.yml](.github/workflows/crawler.yml) adjust carefully, don't be greedy
 
     **Note**: Suggest only adjusting explicitly documented config items, other options mainly for author's development testing
@@ -1137,6 +1326,7 @@ frequency_words.txt file added **required word** feature, using + sign
 
    👉 **Learn More**: [AI Analysis](#-ai-analysis) — Unlock hidden capabilities and make trend tracking more efficient!
 
+<br>
 
 <a name="configuration-guide"></a>
 
@@ -1324,7 +1514,7 @@ Meizu
 !second-hand
 ```
 
-��� **Recommended:** Split into precise groups
+**Recommended:** Split into precise groups
 ```txt
 Huawei
 OPPO
@@ -1439,6 +1629,22 @@ Assume you monitor "Apple" keyword, execute once per hour:
 > - **Reason**: You might have selected `daily` (Daily Summary) or `current` (Current Rankings) mode
 > - **Solution**: Change to `incremental` (Incremental Monitor) mode, only push new content
 
+#### ⚠️ Incremental Mode Important Notice
+
+> **Users who selected `incremental` (Incremental Monitor) mode, please note:**
+>
+> 📌 **Incremental mode only pushes when there are new matching news**
+>
+> **If you haven't received push notifications for a long time, it may be because:**
+> 1. No new hot topics matching your keywords in current time period
+> 2. Keyword configuration is too strict or too broad
+> 3. Too few monitoring platforms
+>
+> **Solutions:**
+> - Solution 1: 👉 [Optimize Keyword Configuration](#2-keyword-configuration) - Adjust keyword precision, add or modify monitoring keywords
+> - Solution 2: Switch push mode - Change to `current` or `daily` mode for scheduled push notifications
+> - Solution 3: 👉 [Add More Platforms](#1-platform-configuration) - Add more news platforms to expand information sources
+
 </details>
 
 ### 4. Advanced Configuration - Hotspot Weight Adjustment
@@ -1538,7 +1744,11 @@ Updated: 2025-01-15 12:30:15
 </details>
 
 
-## 🐳 Docker Deployment
+### 6. Docker Deployment
+
+<details>
+<summary>👉 Click to expand: <strong>Complete Docker Deployment Guide</strong></summary>
+<br>
 
 #### Method 1: Quick Experience (One-Line Command)
 
@@ -1738,6 +1948,9 @@ docker exec -it trend-radar /bin/bash
 docker exec -it trend-radar ls -la /app/config/
 ```
 
+</details>
+
+<br>
 
 ## 🤖 AI Analysis
 
@@ -1775,16 +1988,27 @@ Cherry Studio provides GUI config interface, 5-minute quick deployment, complex 
 
 **Detailed Deployment Tutorial**: [README-Cherry-Studio.md](README-Cherry-Studio.md)
 
+**Deployment Mode Description**:
+- **STDIO Mode (Recommended)**: One-time configuration, no need to reconfigure later. The **illustrated deployment tutorial** only demonstrates this mode's configuration.
+- **HTTP Mode (Alternative)**: If STDIO mode configuration encounters issues, you can use HTTP mode. This mode's configuration is basically the same as STDIO, but only requires copy-pasting one line, less error-prone. The only thing to note is that you need to manually start the service before each use. For details, refer to the HTTP mode section at the bottom of [README-Cherry-Studio.md](README-Cherry-Studio.md).
+
 ### 2. Learning to Talk with AI
 
 **Detailed Conversation Tutorial**: [README-MCP-FAQ.md](README-MCP-FAQ.md)
 
 **Question Effect**:
 
-> Actually not recommended to ask multiple questions at once. If your chosen AI model cannot even sequentially call as shown below, suggest switching models.
+<details>
+<summary>👉 Click to expand: <strong>View AI Conversation Example</strong></summary>
+<br>
+
+> 💡 **Tip**: Actually not recommended to ask multiple questions at once. If your chosen AI model cannot even sequentially call as shown below, suggest switching models.
 
 <img src="/_image/ai3.png" alt="MCP usage effect" width="600">
 
+</details>
+
+<br>
 
 ## 🔌 MCP Clients
 
@@ -2078,6 +2302,7 @@ Any client supporting Model Context Protocol can connect to TrendRadar:
 
 </details>
 
+<br>
 
 ## ☕ FAQ & Support
 
@@ -2250,7 +2475,9 @@ A: You can top up as needed, pay-as-you-go. Major AI model prices are now relati
 
 </details>
 
-### Project Articles
+<br>
+
+## 📚 Related Projects
 
 > **4 Related Articles** (Chinese):
 
@@ -2329,6 +2556,7 @@ flowchart TD
 
 [![Star History Chart](https://api.star-history.com/svg?repos=sansan0/TrendRadar&type=Date)](https://www.star-history.com/#sansan0/TrendRadar&Date)
 
+<br>
 
 ## 📄 License
 

@@ -12,12 +12,14 @@ from email.mime.multipart import MIMEMultipart
 from email.header import Header
 from email.utils import formataddr, formatdate, make_msgid
 from datetime import datetime
+from openai import OpenAI
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
 import pytz
 import requests
 import yaml
+from pydantic import BaseModel, Field
 
 
 VERSION = "3.3.0"
@@ -76,7 +78,9 @@ def load_config():
         "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
         or config_data["report"]["mode"],
         "RANK_THRESHOLD": config_data["report"]["rank_threshold"],
-        "SORT_BY_POSITION_FIRST": os.environ.get("SORT_BY_POSITION_FIRST", "").strip().lower()
+        "SORT_BY_POSITION_FIRST": os.environ.get("SORT_BY_POSITION_FIRST", "")
+        .strip()
+        .lower()
         in ("true", "1")
         if os.environ.get("SORT_BY_POSITION_FIRST", "").strip()
         else config_data["report"].get("sort_by_position_first", False),
@@ -98,7 +102,9 @@ def load_config():
         "DINGTALK_BATCH_SIZE": config_data["notification"].get(
             "dingtalk_batch_size", 20000
         ),
-        "FEISHU_BATCH_SIZE": config_data["notification"].get("feishu_batch_size", 29000),
+        "FEISHU_BATCH_SIZE": config_data["notification"].get(
+            "feishu_batch_size", 29000
+        ),
         "BARK_BATCH_SIZE": config_data["notification"].get("bark_batch_size", 3600),
         "BATCH_SEND_INTERVAL": config_data["notification"]["batch_send_interval"],
         "FEISHU_MESSAGE_SEPARATOR": config_data["notification"][
@@ -123,7 +129,9 @@ def load_config():
                 .get("time_range", {})
                 .get("end", "22:00"),
             },
-            "ONCE_PER_DAY": os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip().lower()
+            "ONCE_PER_DAY": os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "")
+            .strip()
+            .lower()
             in ("true", "1")
             if os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip()
             else config_data["notification"]
@@ -142,6 +150,12 @@ def load_config():
             "HOTNESS_WEIGHT": config_data["weight"]["hotness_weight"],
         },
         "PLATFORMS": config_data["platforms"],
+        "LLM_KEY": os.environ.get("LLM_KEY", "").strip()
+        or config_data["llm"]["api_key"],
+        "LLM_URL": os.environ.get("LLM_URL", "").strip()
+        or config_data["llm"]["base_url"],
+        "LLM_MODEL": os.environ.get("LLM_MODEL", "").strip()
+        or config_data["llm"]["model"],
     }
 
     # 通知渠道配置（环境变量优先）
@@ -426,35 +440,346 @@ class PushRecordManager:
         """检查当前时间是否在指定时间范围内"""
         now = get_beijing_time()
         current_time = now.strftime("%H:%M")
-    
+
         def normalize_time(time_str: str) -> str:
             """将时间字符串标准化为 HH:MM 格式"""
             try:
                 parts = time_str.strip().split(":")
                 if len(parts) != 2:
                     raise ValueError(f"时间格式错误: {time_str}")
-            
+
                 hour = int(parts[0])
                 minute = int(parts[1])
-            
+
                 if not (0 <= hour <= 23 and 0 <= minute <= 59):
                     raise ValueError(f"时间范围错误: {time_str}")
-            
+
                 return f"{hour:02d}:{minute:02d}"
             except Exception as e:
                 print(f"时间格式化错误 '{time_str}': {e}")
                 return time_str
-    
+
         normalized_start = normalize_time(start_time)
         normalized_end = normalize_time(end_time)
         normalized_current = normalize_time(current_time)
-    
+
         result = normalized_start <= normalized_current <= normalized_end
-    
+
         if not result:
-            print(f"时间窗口判断：当前 {normalized_current}，窗口 {normalized_start}-{normalized_end}")
-    
+            print(
+                f"时间窗口判断：当前 {normalized_current}，窗口 {normalized_start}-{normalized_end}"
+            )
+
         return result
+
+
+# === 大模型分析 ===
+# LLM 分析结果的数据模型
+class NewsTitle(BaseModel):
+    rank: Union[int, List[int]]  # 支持单个排名或排名列表
+    source: str
+
+
+class NewsGroup(BaseModel):
+    rank: int = Field(description="按照当前分组的新闻数量和热榜位置给出排名")
+    keywords: List[str] = Field(description="当前分组的新闻关键词，格式为字符串数组")
+    news_title: List[NewsTitle] = Field(description="当前分组的所有新闻标题")
+
+
+class LLMAnalyzer:
+    client: OpenAI
+    system_prompt: str
+
+    def __init__(self) -> None:
+        self.client = OpenAI(
+            api_key=CONFIG["LLM_KEY"],
+            base_url=CONFIG["LLM_URL"],
+        )
+        self.system_prompt = self._load_llm_system_prompt()
+
+    def _load_llm_system_prompt(self) -> str:
+        """加载大模型系统提示词"""
+        prompt_file = os.environ.get(
+            "LLM_SYSTEM_PROMPT_PATH", "config/llm_system_prompt.md"
+        )
+
+        prompt_path = Path(prompt_file)
+        if not prompt_path.exists():
+            raise FileNotFoundError(f"大模型系统提示词文件 {prompt_file} 不存在")
+
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+
+        print(f"大模型系统提示词加载成功: {prompt_file}")
+        return content
+
+    def _extract_and_validate_json(
+        self, llm_response: str
+    ) -> Optional[List[NewsGroup]]:
+        """从 LLM 响应中提取 JSON 并进行类型验证"""
+        try:
+            # 使用正则表达式提取 JSON 内容
+            json_pattern = r"```json\s*\n(.*?)\n\s*```"
+            matches = re.findall(json_pattern, llm_response, re.DOTALL)
+
+            if not matches:
+                # 如果没有找到代码块，尝试直接解析整个响应
+                json_content = llm_response.strip()
+            else:
+                json_content = matches[0].strip()
+
+            # 解析 JSON
+            try:
+                data = json.loads(json_content)
+            except json.JSONDecodeError as e:
+                print(f"JSON 解析失败: {e}")
+                print(f"原始内容: {json_content}")
+                return None
+
+            # 使用 Pydantic 进行类型验证
+            try:
+                news_groups = [NewsGroup(**group) for group in data]
+                print(f"LLM JSON 验证成功，共 {len(news_groups)} 个新闻分组")
+                return news_groups
+            except Exception as e:
+                print(f"Pydantic 类型验证失败: {e}")
+                print(f"解析的数据: {data}")
+                return None
+
+        except Exception as e:
+            print(f"提取 JSON 时发生错误: {e}")
+            return None
+
+    def _prepare_news_title(self, news_title: List[Dict[str, str | List[str]]]) -> str:
+        """将新闻数据转换为大模型可读的 Markdown 格式文本"""
+        if not news_title:
+            return ""
+
+        content = "> 以下是新闻来源及相应的热榜内容和热榜排名\n\n"
+
+        for source_data in news_title:
+            platform_name = source_data.get("platform", "未知来源")
+            articles = source_data.get("articles", [])
+
+            if not articles:
+                continue
+
+            content += f"## {platform_name}\n\n"
+
+            for idx, article in enumerate(articles, 1):
+                content += f"{idx}. {article}\n"
+
+            content += "\n"
+
+        return content.rstrip()
+
+    def _convert_llm_groups_to_stats(
+        self, validated_groups: List[NewsGroup], data_source: Dict
+    ) -> List[Dict]:
+        """将LLM分析结果转换为stats数据格式"""
+        stats = []
+        total_titles = sum(len(group.news_title) for group in validated_groups)
+
+        for group in validated_groups:
+            # 构建关键词字符串
+            keywords_str = " ".join(group.keywords)
+
+            # 构建titles数据
+            titles = []
+            for news_title in group.news_title:
+                # 获取rank值（如果是列表取第一个）
+                rank_value = (
+                    news_title.rank[0]
+                    if isinstance(news_title.rank, list)
+                    else news_title.rank
+                )
+
+                # 从data_source中根据rank查找对应的新闻详细信息
+                news_detail = self._find_news_detail(
+                    rank_value, news_title.source, data_source
+                )
+
+                first_time = news_detail.get("first_time", "")
+                last_time = news_detail.get("last_time", "")
+
+                # 根据rank查找原始标题
+                original_title = self._find_original_title_by_rank(
+                    rank_value, news_title.source, data_source
+                )
+
+                title_data = {
+                    "title": original_title,
+                    "source_name": news_title.source,
+                    "first_time": first_time,
+                    "last_time": last_time,
+                    "time_display": format_time_display(
+                        news_detail.get("first_time", ""),
+                        news_detail.get("last_time", ""),
+                    ),
+                    "count": news_detail.get("count", 1),
+                    "ranks": news_title.rank
+                    if isinstance(news_title.rank, list)
+                    else [news_title.rank],
+                    "rank_threshold": CONFIG["RANK_THRESHOLD"],
+                    "url": news_detail.get("url", ""),
+                    "mobile_url": news_detail.get("mobile_url", ""),
+                    "is_new": news_detail.get("is_new", False),
+                }
+                titles.append(title_data)
+
+            # 计算百分比
+            percentage = (
+                round(len(group.news_title) / total_titles * 100, 2)
+                if total_titles > 0
+                else 0
+            )
+
+            stats.append(
+                {
+                    "word": keywords_str,
+                    "count": len(group.news_title),
+                    "percentage": percentage,
+                    "titles": titles,
+                }
+            )
+
+        return stats
+
+    def _find_news_detail(self, rank: int, source: str, data_source: Dict) -> Dict:
+        """从data_source中根据rank查找新闻的详细信息"""
+        # 根据source查找对应的platform_id
+        platform_id = None
+        for platform in CONFIG["PLATFORMS"]:
+            if platform.get("name") == source or platform["id"] == source:
+                platform_id = platform["id"]
+                break
+
+        if not platform_id or platform_id not in data_source:
+            return {}
+
+        # 在该平台的数据中根据rank查找对应的新闻
+        for stored_title, title_data in data_source[platform_id].items():
+            ranks = title_data.get("ranks", [])
+            if rank in ranks:
+                return {
+                    "first_time": "",
+                    "last_time": "",
+                    "count": title_data.get("count", len(ranks)),
+                    "url": title_data.get("url", ""),
+                    "mobile_url": title_data.get("mobileUrl", ""),
+                    "is_new": False,
+                }
+
+        return {}
+
+    def _find_original_title_by_rank(
+        self, rank: int, source: str, data_source: Dict
+    ) -> str:
+        """从data_source中根据rank查找原始新闻标题"""
+        # 根据source查找对应的platform_id
+        platform_id = None
+        for platform in CONFIG["PLATFORMS"]:
+            if platform.get("name") == source or platform["id"] == source:
+                platform_id = platform["id"]
+                break
+
+        if not platform_id or platform_id not in data_source:
+            return ""
+
+        # 在该平台的数据中根据rank查找对应的原始标题
+        for stored_title, title_data in data_source[platform_id].items():
+            ranks = title_data.get("ranks", [])
+            if rank in ranks:
+                return stored_title
+
+        return ""
+
+    def _generate_llm_html_report(
+        self, stats: List[Dict], validated_groups: List[NewsGroup], data_source: Dict
+    ) -> str:
+        """生成基于LLM分析结果的HTML报告"""
+        total_titles = sum(len(group.news_title) for group in validated_groups)
+
+        # 构建report_data
+        report_data = {
+            "stats": stats,
+            "new_titles": [],  # LLM分析模式下暂不处理新增新闻
+            "failed_ids": [],
+            "total_new_count": 0,
+        }
+
+        # 生成HTML文件
+        html_file = generate_html_report(
+            stats=stats,
+            total_titles=total_titles,
+            failed_ids=[],
+            new_titles=None,
+            id_to_name=self._build_id_to_name_mapping(data_source),
+            mode="llm_analysis",
+            is_daily_summary=False,
+            update_info=None,
+        )
+
+        return html_file
+
+    def _build_id_to_name_mapping(self, data_source: Dict) -> Dict:
+        """构建platform_id到name的映射"""
+        id_to_name = {}
+        for platform in CONFIG["PLATFORMS"]:
+            platform_id = platform["id"]
+            platform_name = platform.get("name", platform_id)
+            id_to_name[platform_id] = platform_name
+        return id_to_name
+
+    def news_analyze(self, data_source: Dict):
+        news_titles: List[Dict[str, str | List[str]]] = []
+        for platform, articles in data_source.items():
+            platform_name = next(
+                (
+                    p.get("name", p["id"])
+                    for p in CONFIG["PLATFORMS"]
+                    if p["id"] == platform
+                ),
+                platform,
+            )
+            news_titles.append(
+                {
+                    "platform": platform_name,
+                    "articles": list(articles.keys()),
+                }
+            )
+
+        print(f"LLM 分析中，模型：{CONFIG['LLM_MODEL']}")
+        response = self.client.chat.completions.create(
+            model=CONFIG["LLM_MODEL"],
+            messages=[
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": self._prepare_news_title(news_titles)},
+            ],
+            stream=False,
+        )
+
+        llm_summary = response.choices[0].message.content
+        print("LLM 分析完成")
+
+        if llm_summary is None:
+            print("LLM 返回的结果为空")
+            return None
+        # 提取并验证 JSON 格式
+        validated_groups = self._extract_and_validate_json(llm_summary)
+        if validated_groups is None:
+            print("LLM 分析结果格式验证失败，跳过此步骤")
+            return None
+        else:
+            print(f"LLM 分析结果验证成功，共 {len(validated_groups)} 个新闻分组")
+
+        # 将LLM分析结果转换为stats数据
+        stats = self._convert_llm_groups_to_stats(validated_groups, data_source)
+
+        # 生成HTML文件
+        html_file = self._generate_llm_html_report(stats, validated_groups, data_source)
+
+        return stats, html_file
 
 
 # === 数据获取 ===
@@ -501,6 +826,7 @@ class DataFetcher:
                 response.raise_for_status()
 
                 data_text = response.text
+
                 data_json = json.loads(data_text)
 
                 status = data_json.get("status", "未知")
@@ -551,7 +877,11 @@ class DataFetcher:
                     for index, item in enumerate(data.get("items", []), 1):
                         title = item.get("title")
                         # 跳过无效标题（None、float、空字符串）
-                        if title is None or isinstance(title, float) or not str(title).strip():
+                        if (
+                            title is None
+                            or isinstance(title, float)
+                            or not str(title).strip()
+                        ):
                             continue
                         title = str(title).strip()
                         url = item.get("url", "")
@@ -1195,7 +1525,9 @@ def count_word_frequency(
             source_mobile_url = title_data.get("mobileUrl", "")
 
             # 找到匹配的词组（防御性转换确保类型安全）
-            title_lower = str(title).lower() if not isinstance(title, str) else title.lower()
+            title_lower = (
+                str(title).lower() if not isinstance(title, str) else title.lower()
+            )
             for group in word_groups:
                 required_words = group["required"]
                 normal_words = group["normal"]
@@ -1683,10 +2015,15 @@ def generate_html_report(
             filename = "当前榜单汇总.html"
         elif mode == "incremental":
             filename = "当日增量.html"
+        elif mode == "llm_analysis":
+            filename = "LLM分析报告.html"
         else:
             filename = "当日汇总.html"
     else:
-        filename = f"{format_time_filename()}.html"
+        if mode == "llm_analysis":
+            filename = "LLM分析报告.html"
+        else:
+            filename = f"{format_time_filename()}.html"
 
     file_path = get_output_path("html", filename)
 
@@ -2165,10 +2502,15 @@ def render_html_content(
             html += "当前榜单"
         elif mode == "incremental":
             html += "增量模式"
+        elif mode == "llm_analysis":
+            html += "LLM分析"
         else:
             html += "当日汇总"
     else:
-        html += "实时分析"
+        if mode == "llm_analysis":
+            html += "LLM分析"
+        else:
+            html += "实时分析"
 
     html += """</span>
                     </div>
@@ -2322,7 +2664,7 @@ def render_html_content(
     if report_data["new_titles"]:
         html += f"""
                 <div class="new-section">
-                    <div class="new-section-title">本次新增热点 (共 {report_data['total_new_count']} 条)</div>"""
+                    <div class="new-section-title">本次新增热点 (共 {report_data["total_new_count"]} 条)</div>"""
 
         for source_data in report_data["new_titles"]:
             escaped_source = html_escape(source_data["source_name"])
@@ -2394,7 +2736,7 @@ def render_html_content(
         html += f"""
                     <br>
                     <span style="color: #ea580c; font-weight: 500;">
-                        发现新版本 {update_info['remote_version']}，当前版本 {update_info['current_version']}
+                        发现新版本 {update_info["remote_version"]}，当前版本 {update_info["current_version"]}
                     </span>"""
 
     html += """
@@ -3568,7 +3910,9 @@ def send_to_feishu(
                     if i < len(batches):
                         time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
                 else:
-                    error_msg = result.get("msg") or result.get("StatusMessage", "未知错误")
+                    error_msg = result.get("msg") or result.get(
+                        "StatusMessage", "未知错误"
+                    )
                     print(
                         f"飞书第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{error_msg}"
                     )
@@ -3671,42 +4015,42 @@ def strip_markdown(text: str) -> str:
     """去除文本中的 markdown 语法格式，用于个人微信推送"""
 
     # 去除粗体 **text** 或 __text__
-    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-    text = re.sub(r'__(.+?)__', r'\1', text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"__(.+?)__", r"\1", text)
 
     # 去除斜体 *text* 或 _text_
-    text = re.sub(r'\*(.+?)\*', r'\1', text)
-    text = re.sub(r'_(.+?)_', r'\1', text)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    text = re.sub(r"_(.+?)_", r"\1", text)
 
     # 去除删除线 ~~text~~
-    text = re.sub(r'~~(.+?)~~', r'\1', text)
+    text = re.sub(r"~~(.+?)~~", r"\1", text)
 
     # 转换链接 [text](url) -> text url（保留 URL）
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\1 \2', text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 \2", text)
     # 如果不需要保留 URL，可以使用下面这行（只保留标题文本）：
     # text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
 
     # 去除图片 ![alt](url) -> alt
-    text = re.sub(r'!\[(.+?)\]\(.+?\)', r'\1', text)
+    text = re.sub(r"!\[(.+?)\]\(.+?\)", r"\1", text)
 
     # 去除行内代码 `code`
-    text = re.sub(r'`(.+?)`', r'\1', text)
+    text = re.sub(r"`(.+?)`", r"\1", text)
 
     # 去除引用符号 >
-    text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^>\s*", "", text, flags=re.MULTILINE)
 
     # 去除标题符号 # ## ### 等
-    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^#+\s*", "", text, flags=re.MULTILINE)
 
     # 去除水平分割线 --- 或 ***
-    text = re.sub(r'^[\-\*]{3,}\s*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^[\-\*]{3,}\s*$", "", text, flags=re.MULTILINE)
 
     # 去除 HTML 标签 <font color='xxx'>text</font> -> text
-    text = re.sub(r'<font[^>]*>(.+?)</font>', r'\1', text)
-    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r"<font[^>]*>(.+?)</font>", r"\1", text)
+    text = re.sub(r"<[^>]+>", "", text)
 
     # 清理多余的空行（保留最多两个连续空行）
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
 
     return text.strip()
 
@@ -3894,7 +4238,7 @@ def send_to_email(
             if smtp_port == 465:
                 use_tls = False  # SSL 模式（SMTP_SSL）
             elif smtp_port == 587:
-                use_tls = True   # TLS 模式（STARTTLS）
+                use_tls = True  # TLS 模式（STARTTLS）
             else:
                 # 其他端口优先尝试 TLS（更安全，更广泛支持）
                 use_tls = True
@@ -3938,7 +4282,7 @@ def send_to_email(
 TrendRadar 热点分析报告
 ========================
 报告类型：{report_type}
-生成时间：{now.strftime('%Y-%m-%d %H:%M:%S')}
+生成时间：{now.strftime("%Y-%m-%d %H:%M:%S")}
 
 请使用支持HTML的邮件客户端查看完整报告内容。
         """
@@ -4021,10 +4365,10 @@ def send_to_ntfy(
         "当日汇总": "Daily Summary",
         "当前榜单汇总": "Current Ranking",
         "增量更新": "Incremental Update",
-        "实时增量": "Realtime Incremental", 
-        "实时当前榜单": "Realtime Current Ranking",  
+        "实时增量": "Realtime Incremental",
+        "实时当前榜单": "Realtime Current Ranking",
     }
-    report_type_en = report_type_en_map.get(report_type, "News Report") 
+    report_type_en = report_type_en_map.get(report_type, "News Report")
 
     headers = {
         "Content-Type": "text/plain; charset=utf-8",
@@ -4036,7 +4380,7 @@ def send_to_ntfy(
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    
+
     # 构建完整URL，确保格式正确
     base_url = server_url.rstrip("/")
     if not base_url.startswith(("http://", "https://")):
@@ -4058,7 +4402,7 @@ def send_to_ntfy(
     # 反转批次顺序，使得在ntfy客户端显示时顺序正确
     # ntfy显示最新消息在上面，所以我们从最后一批开始推送
     reversed_batches = list(reversed(batches))
-    
+
     print(f"ntfy将按反向顺序推送（最后批次先推送），确保客户端显示顺序正确")
 
     # 逐批发送（反向顺序）
@@ -4066,7 +4410,7 @@ def send_to_ntfy(
     for idx, batch_content in enumerate(reversed_batches, 1):
         # 计算正确的批次编号（用户视角的编号）
         actual_batch_num = total_batches - idx + 1
-        
+
         batch_size = len(batch_content.encode("utf-8"))
         print(
             f"发送ntfy第 {actual_batch_num}/{total_batches} 批次（推送顺序: {idx}/{total_batches}），大小：{batch_size} 字节 [{report_type}]"
@@ -4074,7 +4418,9 @@ def send_to_ntfy(
 
         # 检查消息大小，确保不超过4KB
         if batch_size > 4096:
-            print(f"警告：ntfy第 {actual_batch_num} 批次消息过大（{batch_size} 字节），可能被拒绝")
+            print(
+                f"警告：ntfy第 {actual_batch_num} 批次消息过大（{batch_size} 字节），可能被拒绝"
+            )
 
         # 添加批次标识（使用正确的批次编号）
         current_headers = headers.copy()
@@ -4095,7 +4441,9 @@ def send_to_ntfy(
             )
 
             if response.status_code == 200:
-                print(f"ntfy第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]")
+                print(
+                    f"ntfy第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]"
+                )
                 success_count += 1
                 if idx < total_batches:
                     # 公共服务器建议 2-3 秒，自托管可以更短
@@ -4115,7 +4463,9 @@ def send_to_ntfy(
                     timeout=30,
                 )
                 if retry_response.status_code == 200:
-                    print(f"ntfy第 {actual_batch_num}/{total_batches} 批次重试成功 [{report_type}]")
+                    print(
+                        f"ntfy第 {actual_batch_num}/{total_batches} 批次重试成功 [{report_type}]"
+                    )
                     success_count += 1
                 else:
                     print(
@@ -4135,13 +4485,21 @@ def send_to_ntfy(
                     pass
 
         except requests.exceptions.ConnectTimeout:
-            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]")
+            print(
+                f"ntfy第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]"
+            )
         except requests.exceptions.ReadTimeout:
-            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]")
+            print(
+                f"ntfy第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]"
+            )
         except requests.exceptions.ConnectionError as e:
-            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}")
+            print(
+                f"ntfy第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}"
+            )
         except Exception as e:
-            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}")
+            print(
+                f"ntfy第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}"
+            )
 
     # 判断整体发送是否成功
     if success_count == total_batches:
@@ -4170,7 +4528,11 @@ def send_to_bark(
 
     # 获取分批内容（Bark 限制为 3600 字节以避免 413 错误）
     batches = split_content_into_batches(
-        report_data, "wework", update_info, max_bytes=CONFIG["BARK_BATCH_SIZE"], mode=mode
+        report_data,
+        "wework",
+        update_info,
+        max_bytes=CONFIG["BARK_BATCH_SIZE"],
+        mode=mode,
     )
 
     total_batches = len(batches)
@@ -4226,7 +4588,9 @@ def send_to_bark(
             if response.status_code == 200:
                 result = response.json()
                 if result.get("code") == 200:
-                    print(f"Bark第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]")
+                    print(
+                        f"Bark第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]"
+                    )
                     success_count += 1
                     # 批次间间隔
                     if idx < total_batches:
@@ -4245,13 +4609,21 @@ def send_to_bark(
                     pass
 
         except requests.exceptions.ConnectTimeout:
-            print(f"Bark第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]")
+            print(
+                f"Bark第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]"
+            )
         except requests.exceptions.ReadTimeout:
-            print(f"Bark第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]")
+            print(
+                f"Bark第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]"
+            )
         except requests.exceptions.ConnectionError as e:
-            print(f"Bark第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}")
+            print(
+                f"Bark第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}"
+            )
         except Exception as e:
-            print(f"Bark第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}")
+            print(
+                f"Bark第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}"
+            )
 
     # 判断整体发送是否成功
     if success_count == total_batches:
@@ -4298,6 +4670,15 @@ class NewsAnalyzer:
             "should_generate_summary": True,
             "summary_mode": "daily",
         },
+        "llm_analysis": {
+            "mode_name": "大模型汇总模式",
+            "description": "大模型汇总模式（总结所有匹配新闻 + 按时推送）",
+            "realtime_report_type": "",
+            "summary_report_type": "大模型总结",
+            "should_send_realtime": False,
+            "should_generate_summary": True,
+            "summary_mode": "llm_analysis",
+        },
     }
 
     def __init__(self):
@@ -4310,6 +4691,7 @@ class NewsAnalyzer:
         self.proxy_url = None
         self._setup_proxy()
         self.data_fetcher = DataFetcher(self.proxy_url)
+        self.llm_analyzer = LLMAnalyzer() if CONFIG["LLM_KEY"] else None
 
         if self.is_github_actions:
             self._check_version_update()
@@ -4467,6 +4849,11 @@ class NewsAnalyzer:
         is_daily_summary: bool = False,
     ) -> Tuple[List[Dict], str]:
         """统一的分析流水线：数据处理 → 统计计算 → HTML生成"""
+
+        if self.llm_analyzer and mode == "llm_analysis":
+            result = self.llm_analyzer.news_analyze(data_source)
+            if result is not None:
+                return result
 
         # 统计计算
         stats, total_titles = count_word_frequency(

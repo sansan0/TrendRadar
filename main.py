@@ -4568,6 +4568,7 @@ class NewsAnalyzer:
                 ),
                 (CONFIG["NTFY_SERVER_URL"] and CONFIG["NTFY_TOPIC"]),
                 CONFIG["BARK_URL"],
+                (CONFIG["ONEBOT11_TOKEN"] and CONFIG["ONEBOT11_USER_ID"] and CONFIG["ONEBOT11_URL"])
             ]
         )
 

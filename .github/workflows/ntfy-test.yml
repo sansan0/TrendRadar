@@ -1,0 +1,40 @@
+name: ntfy test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  send-ntfy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify secret exists (no value printed)
+        run: |
+          if [ -z "${{ secrets.NTFY_TOPIC }}" ]; then
+            echo "NTFY_TOPIC is empty or not set"
+            exit 1
+          else
+            echo "NTFY_TOPIC is set"
+          fi
+
+      - name: Send test message to ntfy (debug)
+        env:
+          TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          echo "sending test message to ntfy (topic not printed)"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST \
+            -H "Title: GitHub Actions test" \
+            --data-binary "Hello from GitHub Actions (debug)" \
+            "https://ntfy.sh/${TOPIC}")
+          echo "---- ntfy response start ----"
+          echo "$RESPONSE"
+          echo "---- ntfy response end ----"
+          HTTP_STATUS=$(echo "$RESPONSE" | sed -n 's/.*HTTP_STATUS:\([0-9]*\)$/\1/p')
+          echo "ntfy returned HTTP status: $HTTP_STATUS"
+          if [ -z "$HTTP_STATUS" ]; then
+            echo "No HTTP status found — network or curl error"
+            exit 1
+          fi
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+            echo "failed to send to ntfy (status $HTTP_STATUS)"
+            exit 1
+          fi

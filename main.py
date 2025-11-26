@@ -4676,7 +4676,7 @@ class NewsAnalyzer:
             "realtime_report_type": "",
             "summary_report_type": "大模型总结",
             "should_send_realtime": False,
-            "should_generate_summary": True,
+            "should_generate_summary": False,
             "summary_mode": "llm_analysis",
         },
     }

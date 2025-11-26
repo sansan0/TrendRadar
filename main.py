@@ -76,29 +76,35 @@ def load_config():
         "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
         or config_data["report"]["mode"],
         "RANK_THRESHOLD": config_data["report"]["rank_threshold"],
-        "SORT_BY_POSITION_FIRST": os.environ.get("SORT_BY_POSITION_FIRST", "").strip().lower()
-        in ("true", "1")
-        if os.environ.get("SORT_BY_POSITION_FIRST", "").strip()
-        else config_data["report"].get("sort_by_position_first", False),
+        "SORT_BY_POSITION_FIRST": (
+            os.environ.get("SORT_BY_POSITION_FIRST", "").strip().lower()
+            in ("true", "1")
+            if os.environ.get("SORT_BY_POSITION_FIRST", "").strip()
+            else config_data["report"].get("sort_by_position_first", False)
+        ),
         "MAX_NEWS_PER_KEYWORD": int(
             os.environ.get("MAX_NEWS_PER_KEYWORD", "").strip() or "0"
         )
         or config_data["report"].get("max_news_per_keyword", 0),
         "USE_PROXY": config_data["crawler"]["use_proxy"],
         "DEFAULT_PROXY": config_data["crawler"]["default_proxy"],
-        "ENABLE_CRAWLER": os.environ.get("ENABLE_CRAWLER", "").strip().lower()
-        in ("true", "1")
-        if os.environ.get("ENABLE_CRAWLER", "").strip()
-        else config_data["crawler"]["enable_crawler"],
-        "ENABLE_NOTIFICATION": os.environ.get("ENABLE_NOTIFICATION", "").strip().lower()
-        in ("true", "1")
-        if os.environ.get("ENABLE_NOTIFICATION", "").strip()
-        else config_data["notification"]["enable_notification"],
+        "ENABLE_CRAWLER": (
+            os.environ.get("ENABLE_CRAWLER", "").strip().lower() in ("true", "1")
+            if os.environ.get("ENABLE_CRAWLER", "").strip()
+            else config_data["crawler"]["enable_crawler"]
+        ),
+        "ENABLE_NOTIFICATION": (
+            os.environ.get("ENABLE_NOTIFICATION", "").strip().lower() in ("true", "1")
+            if os.environ.get("ENABLE_NOTIFICATION", "").strip()
+            else config_data["notification"]["enable_notification"]
+        ),
         "MESSAGE_BATCH_SIZE": config_data["notification"]["message_batch_size"],
         "DINGTALK_BATCH_SIZE": config_data["notification"].get(
             "dingtalk_batch_size", 20000
         ),
-        "FEISHU_BATCH_SIZE": config_data["notification"].get("feishu_batch_size", 29000),
+        "FEISHU_BATCH_SIZE": config_data["notification"].get(
+            "feishu_batch_size", 29000
+        ),
         "BARK_BATCH_SIZE": config_data["notification"].get("bark_batch_size", 3600),
         "SLACK_BATCH_SIZE": config_data["notification"].get("slack_batch_size", 4000),
         "BATCH_SEND_INTERVAL": config_data["notification"]["batch_send_interval"],
@@ -106,12 +112,14 @@ def load_config():
             "feishu_message_separator"
         ],
         "PUSH_WINDOW": {
-            "ENABLED": os.environ.get("PUSH_WINDOW_ENABLED", "").strip().lower()
-            in ("true", "1")
-            if os.environ.get("PUSH_WINDOW_ENABLED", "").strip()
-            else config_data["notification"]
-            .get("push_window", {})
-            .get("enabled", False),
+            "ENABLED": (
+                os.environ.get("PUSH_WINDOW_ENABLED", "").strip().lower()
+                in ("true", "1")
+                if os.environ.get("PUSH_WINDOW_ENABLED", "").strip()
+                else config_data["notification"]
+                .get("push_window", {})
+                .get("enabled", False)
+            ),
             "TIME_RANGE": {
                 "START": os.environ.get("PUSH_WINDOW_START", "").strip()
                 or config_data["notification"]
@@ -124,12 +132,14 @@ def load_config():
                 .get("time_range", {})
                 .get("end", "22:00"),
             },
-            "ONCE_PER_DAY": os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip().lower()
-            in ("true", "1")
-            if os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip()
-            else config_data["notification"]
-            .get("push_window", {})
-            .get("once_per_day", True),
+            "ONCE_PER_DAY": (
+                os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip().lower()
+                in ("true", "1")
+                if os.environ.get("PUSH_WINDOW_ONCE_PER_DAY", "").strip()
+                else config_data["notification"]
+                .get("push_window", {})
+                .get("once_per_day", True)
+            ),
             "RECORD_RETENTION_DAYS": int(
                 os.environ.get("PUSH_WINDOW_RETENTION_DAYS", "").strip() or "0"
             )
@@ -204,9 +214,9 @@ def load_config():
     )
 
     # Slack配置
-    config["SLACK_WEBHOOK_URL"] = os.environ.get("SLACK_WEBHOOK_URL", "").strip() or webhooks.get(
-        "slack_webhook_url", ""
-    )
+    config["SLACK_WEBHOOK_URL"] = os.environ.get(
+        "SLACK_WEBHOOK_URL", ""
+    ).strip() or webhooks.get("slack_webhook_url", "")
 
     # 输出配置来源信息
     notification_sources = []
@@ -436,34 +446,36 @@ class PushRecordManager:
         """检查当前时间是否在指定时间范围内"""
         now = get_beijing_time()
         current_time = now.strftime("%H:%M")
-    
+
         def normalize_time(time_str: str) -> str:
             """将时间字符串标准化为 HH:MM 格式"""
             try:
                 parts = time_str.strip().split(":")
                 if len(parts) != 2:
                     raise ValueError(f"时间格式错误: {time_str}")
-            
+
                 hour = int(parts[0])
                 minute = int(parts[1])
-            
+
                 if not (0 <= hour <= 23 and 0 <= minute <= 59):
                     raise ValueError(f"时间范围错误: {time_str}")
-            
+
                 return f"{hour:02d}:{minute:02d}"
             except Exception as e:
                 print(f"时间格式化错误 '{time_str}': {e}")
                 return time_str
-    
+
         normalized_start = normalize_time(start_time)
         normalized_end = normalize_time(end_time)
         normalized_current = normalize_time(current_time)
-    
+
         result = normalized_start <= normalized_current <= normalized_end
-    
+
         if not result:
-            print(f"时间窗口判断：当前 {normalized_current}，窗口 {normalized_start}-{normalized_end}")
-    
+            print(
+                f"时间窗口判断：当前 {normalized_current}，窗口 {normalized_start}-{normalized_end}"
+            )
+
         return result
 
 
@@ -561,7 +573,11 @@ class DataFetcher:
                     for index, item in enumerate(data.get("items", []), 1):
                         title = item.get("title")
                         # 跳过无效标题（None、float、空字符串）
-                        if title is None or isinstance(title, float) or not str(title).strip():
+                        if (
+                            title is None
+                            or isinstance(title, float)
+                            or not str(title).strip()
+                        ):
                             continue
                         title = str(title).strip()
                         url = item.get("url", "")
@@ -1208,7 +1224,9 @@ def count_word_frequency(
             source_mobile_url = title_data.get("mobileUrl", "")
 
             # 找到匹配的词组（防御性转换确保类型安全）
-            title_lower = str(title).lower() if not isinstance(title, str) else title.lower()
+            title_lower = (
+                str(title).lower() if not isinstance(title, str) else title.lower()
+            )
             for group in word_groups:
                 required_words = group["required"]
                 normal_words = group["normal"]
@@ -3199,13 +3217,9 @@ def split_content_into_batches(
                     word_header = f"📌 {sequence_display} **{word}** : {count} 条\n\n"
             elif format_type == "slack":
                 if count >= 10:
-                    word_header = (
-                        f"🔥 {sequence_display} *{word}* : *{count}* 条\n\n"
-                    )
+                    word_header = f"🔥 {sequence_display} *{word}* : *{count}* 条\n\n"
                 elif count >= 5:
-                    word_header = (
-                        f"📈 {sequence_display} *{word}* : *{count}* 条\n\n"
-                    )
+                    word_header = f"📈 {sequence_display} *{word}* : *{count}* 条\n\n"
                 else:
                     word_header = f"📌 {sequence_display} *{word}* : {count} 条\n\n"
 
@@ -3741,7 +3755,9 @@ def send_to_feishu(
                     if i < len(batches):
                         time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
                 else:
-                    error_msg = result.get("msg") or result.get("StatusMessage", "未知错误")
+                    error_msg = result.get("msg") or result.get(
+                        "StatusMessage", "未知错误"
+                    )
                     print(
                         f"飞书第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{error_msg}"
                     )
@@ -3838,42 +3854,42 @@ def strip_markdown(text: str) -> str:
     """去除文本中的 markdown 语法格式，用于个人微信推送"""
 
     # 去除粗体 **text** 或 __text__
-    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-    text = re.sub(r'__(.+?)__', r'\1', text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"__(.+?)__", r"\1", text)
 
     # 去除斜体 *text* 或 _text_
-    text = re.sub(r'\*(.+?)\*', r'\1', text)
-    text = re.sub(r'_(.+?)_', r'\1', text)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    text = re.sub(r"_(.+?)_", r"\1", text)
 
     # 去除删除线 ~~text~~
-    text = re.sub(r'~~(.+?)~~', r'\1', text)
+    text = re.sub(r"~~(.+?)~~", r"\1", text)
 
     # 转换链接 [text](url) -> text url（保留 URL）
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\1 \2', text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 \2", text)
     # 如果不需要保留 URL，可以使用下面这行（只保留标题文本）：
     # text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
 
     # 去除图片 ![alt](url) -> alt
-    text = re.sub(r'!\[(.+?)\]\(.+?\)', r'\1', text)
+    text = re.sub(r"!\[(.+?)\]\(.+?\)", r"\1", text)
 
     # 去除行内代码 `code`
-    text = re.sub(r'`(.+?)`', r'\1', text)
+    text = re.sub(r"`(.+?)`", r"\1", text)
 
     # 去除引用符号 >
-    text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^>\s*", "", text, flags=re.MULTILINE)
 
     # 去除标题符号 # ## ### 等
-    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^#+\s*", "", text, flags=re.MULTILINE)
 
     # 去除水平分割线 --- 或 ***
-    text = re.sub(r'^[\-\*]{3,}\s*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^[\-\*]{3,}\s*$", "", text, flags=re.MULTILINE)
 
     # 去除 HTML 标签 <font color='xxx'>text</font> -> text
-    text = re.sub(r'<font[^>]*>(.+?)</font>', r'\1', text)
-    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r"<font[^>]*>(.+?)</font>", r"\1", text)
+    text = re.sub(r"<[^>]+>", "", text)
 
     # 清理多余的空行（保留最多两个连续空行）
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
 
     return text.strip()
 
@@ -3908,7 +3924,11 @@ def send_to_wework(
     wework_batch_size = CONFIG.get("MESSAGE_BATCH_SIZE", 4000)
     header_reserve = _get_max_batch_header_size(header_format_type)
     batches = split_content_into_batches(
-        report_data, "wework", update_info, max_bytes=wework_batch_size - header_reserve, mode=mode
+        report_data,
+        "wework",
+        update_info,
+        max_bytes=wework_batch_size - header_reserve,
+        mode=mode,
     )
 
     # 统一添加批次头部（已预留空间，不会超限）
@@ -3983,7 +4003,11 @@ def send_to_telegram(
     telegram_batch_size = CONFIG.get("MESSAGE_BATCH_SIZE", 4000)
     header_reserve = _get_max_batch_header_size("telegram")
     batches = split_content_into_batches(
-        report_data, "telegram", update_info, max_bytes=telegram_batch_size - header_reserve, mode=mode
+        report_data,
+        "telegram",
+        update_info,
+        max_bytes=telegram_batch_size - header_reserve,
+        mode=mode,
     )
 
     # 统一添加批次头部（已预留空间，不会超限）
@@ -4063,7 +4087,7 @@ def send_to_email(
             if smtp_port == 465:
                 use_tls = False  # SSL 模式（SMTP_SSL）
             elif smtp_port == 587:
-                use_tls = True   # TLS 模式（STARTTLS）
+                use_tls = True  # TLS 模式（STARTTLS）
             else:
                 # 其他端口优先尝试 TLS（更安全，更广泛支持）
                 use_tls = True
@@ -4190,10 +4214,10 @@ def send_to_ntfy(
         "当日汇总": "Daily Summary",
         "当前榜单汇总": "Current Ranking",
         "增量更新": "Incremental Update",
-        "实时增量": "Realtime Incremental", 
-        "实时当前榜单": "Realtime Current Ranking",  
+        "实时增量": "Realtime Incremental",
+        "实时当前榜单": "Realtime Current Ranking",
     }
-    report_type_en = report_type_en_map.get(report_type, "News Report") 
+    report_type_en = report_type_en_map.get(report_type, "News Report")
 
     headers = {
         "Content-Type": "text/plain; charset=utf-8",
@@ -4220,7 +4244,11 @@ def send_to_ntfy(
     ntfy_batch_size = 3800
     header_reserve = _get_max_batch_header_size("ntfy")
     batches = split_content_into_batches(
-        report_data, "ntfy", update_info, max_bytes=ntfy_batch_size - header_reserve, mode=mode
+        report_data,
+        "ntfy",
+        update_info,
+        max_bytes=ntfy_batch_size - header_reserve,
+        mode=mode,
     )
 
     # 统一添加批次头部（已预留空间，不会超限）
@@ -4248,7 +4276,9 @@ def send_to_ntfy(
 
         # 检查消息大小，确保不超过4KB
         if batch_size > 4096:
-            print(f"警告：ntfy第 {actual_batch_num} 批次消息过大（{batch_size} 字节），可能被拒绝")
+            print(
+                f"警告：ntfy第 {actual_batch_num} 批次消息过大（{batch_size} 字节），可能被拒绝"
+            )
 
         # 更新 headers 的批次标识
         current_headers = headers.copy()
@@ -4267,7 +4297,9 @@ def send_to_ntfy(
             )
 
             if response.status_code == 200:
-                print(f"ntfy第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]")
+                print(
+                    f"ntfy第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]"
+                )
                 success_count += 1
                 if idx < total_batches:
                     # 公共服务器建议 2-3 秒，自托管可以更短
@@ -4287,7 +4319,9 @@ def send_to_ntfy(
                     timeout=30,
                 )
                 if retry_response.status_code == 200:
-                    print(f"ntfy第 {actual_batch_num}/{total_batches} 批次重试成功 [{report_type}]")
+                    print(
+                        f"ntfy第 {actual_batch_num}/{total_batches} 批次重试成功 [{report_type}]"
+                    )
                     success_count += 1
                 else:
                     print(
@@ -4307,13 +4341,21 @@ def send_to_ntfy(
                     pass
 
         except requests.exceptions.ConnectTimeout:
-            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]")
+            print(
+                f"ntfy第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]"
+            )
         except requests.exceptions.ReadTimeout:
-            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]")
+            print(
+                f"ntfy第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]"
+            )
         except requests.exceptions.ConnectionError as e:
-            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}")
+            print(
+                f"ntfy第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}"
+            )
         except Exception as e:
-            print(f"ntfy第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}")
+            print(
+                f"ntfy第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}"
+            )
 
     # 判断整体发送是否成功
     if success_count == total_batches:
@@ -4345,7 +4387,7 @@ def send_to_bark(
     from urllib.parse import urlparse
 
     parsed_url = urlparse(bark_url)
-    device_key = parsed_url.path.strip('/').split('/')[0] if parsed_url.path else None
+    device_key = parsed_url.path.strip("/").split("/")[0] if parsed_url.path else None
 
     if not device_key:
         print(f"Bark URL 格式错误，无法提取 device_key: {bark_url}")
@@ -4358,7 +4400,11 @@ def send_to_bark(
     bark_batch_size = CONFIG["BARK_BATCH_SIZE"]
     header_reserve = _get_max_batch_header_size("bark")
     batches = split_content_into_batches(
-        report_data, "bark", update_info, max_bytes=bark_batch_size - header_reserve, mode=mode
+        report_data,
+        "bark",
+        update_info,
+        max_bytes=bark_batch_size - header_reserve,
+        mode=mode,
     )
 
     # 统一添加批次头部（已预留空间，不会超限）
@@ -4411,7 +4457,9 @@ def send_to_bark(
             if response.status_code == 200:
                 result = response.json()
                 if result.get("code") == 200:
-                    print(f"Bark第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]")
+                    print(
+                        f"Bark第 {actual_batch_num}/{total_batches} 批次发送成功 [{report_type}]"
+                    )
                     success_count += 1
                     # 批次间间隔
                     if idx < total_batches:
@@ -4430,13 +4478,21 @@ def send_to_bark(
                     pass
 
         except requests.exceptions.ConnectTimeout:
-            print(f"Bark第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]")
+            print(
+                f"Bark第 {actual_batch_num}/{total_batches} 批次连接超时 [{report_type}]"
+            )
         except requests.exceptions.ReadTimeout:
-            print(f"Bark第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]")
+            print(
+                f"Bark第 {actual_batch_num}/{total_batches} 批次读取超时 [{report_type}]"
+            )
         except requests.exceptions.ConnectionError as e:
-            print(f"Bark第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}")
+            print(
+                f"Bark第 {actual_batch_num}/{total_batches} 批次连接错误 [{report_type}]：{e}"
+            )
         except Exception as e:
-            print(f"Bark第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}")
+            print(
+                f"Bark第 {actual_batch_num}/{total_batches} 批次发送异常 [{report_type}]：{e}"
+            )
 
     # 判断整体发送是否成功
     if success_count == total_batches:
@@ -4460,10 +4516,10 @@ def convert_markdown_to_mrkdwn(content: str) -> str:
     - 保留其他格式（代码块、列表等）
     """
     # 1. 转换链接格式: [文本](url) → <url|文本>
-    content = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<\2|\1>', content)
+    content = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"<\2|\1>", content)
 
     # 2. 转换粗体: **文本** → *文本*
-    content = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', content)
+    content = re.sub(r"\*\*([^*]+)\*\*", r"*\1*", content)
 
     return content
 
@@ -4486,7 +4542,11 @@ def send_to_slack(
     slack_batch_size = CONFIG["SLACK_BATCH_SIZE"]
     header_reserve = _get_max_batch_header_size("slack")
     batches = split_content_into_batches(
-        report_data, "slack", update_info, max_bytes=slack_batch_size - header_reserve, mode=mode
+        report_data,
+        "slack",
+        update_info,
+        max_bytes=slack_batch_size - header_reserve,
+        mode=mode,
     )
 
     # 统一添加批次头部（已预留空间，不会超限）
@@ -4505,9 +4565,7 @@ def send_to_slack(
         )
 
         # 构建 Slack payload（使用简单的 text 字段，支持 mrkdwn）
-        payload = {
-            "text": mrkdwn_content
-        }
+        payload = {"text": mrkdwn_content}
 
         try:
             response = requests.post(
@@ -4521,7 +4579,11 @@ def send_to_slack(
                 if i < len(batches):
                     time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
             else:
-                error_msg = response.text if response.text else f"状态码：{response.status_code}"
+                error_msg = (
+                    response.text
+                    if response.text
+                    else f"状态码：{response.status_code}"
+                )
                 print(
                     f"Slack第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{error_msg}"
                 )

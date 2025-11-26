@@ -4441,7 +4441,7 @@ def send_to_onebot_user(
             if proxy_url:
                 proxies = {"http": proxy_url, "https": proxy_url}
                 
-            response = requests.post(onebot_url, json=payload, headers=headers, proxies=proxies, timeout=30)
+            response = requests.post(onebot_url+"/send_private_msg", json=payload, headers=headers, proxies=proxies, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
@@ -4598,7 +4598,7 @@ def send_to_onebot_group(
             if proxy_url:
                 proxies = {"http": proxy_url, "https": proxy_url}
                 
-            response = requests.post(onebot_url, json=payload, headers=headers, proxies=proxies, timeout=30)
+            response = requests.post(onebot_url+"/send_group_msg", json=payload, headers=headers, proxies=proxies, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()

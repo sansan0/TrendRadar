@@ -15,7 +15,7 @@
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
 [![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](https://github.com/sansan0/TrendRadar)
-[![MCP](https://img.shields.io/badge/MCP-v1.0.2-green.svg)](https://github.com/sansan0/TrendRadar)
+[![MCP](https://img.shields.io/badge/MCP-v1.0.3-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![WeWork](https://img.shields.io/badge/WeWork-Notification-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
 [![WeChat](https://img.shields.io/badge/WeChat-Notification-00D4AA?style=flat-square)](https://weixin.qq.com/)
@@ -212,7 +212,7 @@ No longer controlled by platform algorithms, TrendRadar reorganizes all trending
 
 ### **Multi-Channel Real-Time Push**
 
-Supports **WeWork** (+ WeChat push solution), **Feishu**, **DingTalk**, **Telegram**, **Email**, **ntfy** — messages delivered directly to phone and email.
+Supports **WeWork** (+ WeChat push solution), **Feishu**, **DingTalk**, **Telegram**, **Email**, **ntfy**, **Bark**, **Slack** — messages delivered directly to phone and email.
 
 ### **Multi-Platform Support**
 - **GitHub Pages**: Auto-generate beautiful web reports, PC/mobile adapted
@@ -225,7 +225,7 @@ Supports **WeWork** (+ WeChat push solution), **Feishu**, **DingTalk**, **Telegr
 AI conversational analysis system based on MCP (Model Context Protocol), enabling deep data mining with natural language.
 
 - **Conversational Query**: Ask in natural language, like "Query yesterday's Zhihu trending" or "Analyze recent Bitcoin popularity trends"
-- **13 Analysis Tools**: Basic query, smart search, trend analysis, data insights, sentiment analysis, etc.
+- **14 Analysis Tools**: Date parsing, basic query, smart search, trend analysis, data insights, sentiment analysis, etc.
 - **Multi-Client Support**: Cherry Studio (GUI config), Claude Desktop, Cursor, Cline, etc.
 - **Deep Analysis Capabilities**:
   - Topic trend tracking (popularity changes, lifecycle, viral detection, trend prediction)
@@ -294,6 +294,13 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 **🔧 Upgrade Instructions**:
 - **GitHub Fork Users**: Update `main.py`, `config/config.yaml`, `.github/workflows/crawler.yml`
 
+### 2025/11/26 - mcp-v1.0.3
+
+  **MCP Module Update:**
+  - Added date parsing tool resolve_date_range to resolve AI model date calculation inconsistencies
+  - Support natural language date expression parsing (this week, last 7 days, last month, etc.)
+  - Tool count increased from 13 to 14
+
 
 <details>
 <summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
@@ -340,12 +347,6 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 **🔧 Upgrade Instructions**:
 - **GitHub Fork Users**: Update `main.py`, `config/config.yaml`
 
-### 2025/11/18 - mcp-v1.0.2
-
-  **MCP Module Update:**
-  - Fix issue where today's news query may return articles from past dates
-
-
 ### 2025/11/22 - v3.1.1
 
 - **Fixed data anomaly crash issue**: Resolved `'float' object has no attribute 'lower'` error encountered by some users in GitHub Actions environment
@@ -375,6 +376,7 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 - Required updates: `main.py`, `config/config.yaml`
 - Optional update: `.github/workflows/crawler.yml` (if using GitHub Actions)
 - Recommended: Use minor version upgrade method - copy and replace the files above
+
 
 ### 2025/11/12 - v3.0.5
 
@@ -2248,7 +2250,8 @@ MCP Inspector is the official debug tool for testing MCP connections:
 3. **Connect in Browser**:
    - Visit: `http://localhost:3333/mcp`
    - Test "Ping Server" function to verify connection
-   - Check "List Tools" returns 13 tools:
+   - Check "List Tools" returns 14 tools:
+     - Date Parsing: resolve_date_range
      - Basic Query: get_latest_news, get_news_by_date, get_trending_topics
      - Smart Search: search_news, search_related_news_history
      - Advanced Analysis: analyze_topic_trend, analyze_data_insights, analyze_sentiment, find_similar_news, generate_summary_report

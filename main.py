@@ -4675,7 +4675,7 @@ class NewsAnalyzer:
             "description": "大模型汇总模式（总结所有匹配新闻 + 按时推送）",
             "realtime_report_type": "",
             "summary_report_type": "大模型总结",
-            "should_send_realtime": False,
+            "should_send_realtime": True,
             "should_generate_summary": False,
             "summary_mode": "llm_analysis",
         },

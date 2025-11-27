@@ -1,27 +1,31 @@
 <div align="center" id="trendradar">
 
 <a href="https://github.com/sansan0/TrendRadar" title="TrendRadar">
-  <img src="/_image/banner.jpg" alt="TrendRadar Banner" width="50%">
+  <img src="/_image/banner.webp" alt="TrendRadar Banner" width="80%">
 </a>
 
 🚀 **30秒**でデプロイ — あなたのスマートトレンドニュースアシスタント
 
 <a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-<a href="https://share.302.ai/mEOUzG" target="_blank"><img src="_image/302ai.png" alt="302.AI logo" height="60"/></a>
+<a href="https://share.302.ai/mEOUzG" target="_blank" title="オールインワンAIモデルおよびAPIプラットフォーム"><img src="_image/302ai.png" alt="302.AI logo" height="50"/></a>
+<a href="https://shandianshuo.cn" target="_blank" title="AI音声入力、タイピングより4倍速 ⚡"><img src="_image/shandianshuo.png" alt="闪电说 logo" height="51"/></a>
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v3.0.5-blue.svg)](https://github.com/sansan0/TrendRadar)
-[![MCP](https://img.shields.io/badge/MCP-v1.0.2-green.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![MCP](https://img.shields.io/badge/MCP-v1.0.3-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![WeWork](https://img.shields.io/badge/WeWork-Notification-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
+[![WeChat](https://img.shields.io/badge/WeChat-Notification-00D4AA?style=flat-square)](https://weixin.qq.com/)
 [![Telegram](https://img.shields.io/badge/Telegram-Notification-00D4AA?style=flat-square)](https://telegram.org/)
 [![DingTalk](https://img.shields.io/badge/DingTalk-Notification-00D4AA?style=flat-square)](#)
 [![Feishu](https://img.shields.io/badge/Feishu-Notification-00D4AA?style=flat-square)](https://www.feishu.cn/)
 [![Email](https://img.shields.io/badge/Email-Notification-00D4AA?style=flat-square)](#)
 [![ntfy](https://img.shields.io/badge/ntfy-Notification-00D4AA?style=flat-square)](https://github.com/binwiederhier/ntfy)
+[![Bark](https://img.shields.io/badge/Bark-Notification-00D4AA?style=flat-square)](https://github.com/Finb/Bark)
+[![Slack](https://img.shields.io/badge/Slack-Notification-00D4AA?style=flat-square)](https://slack.com/)
 
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Automation-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/sansan0/TrendRadar)
@@ -56,7 +60,7 @@
 - **フォロワー**の皆様に感謝します。皆様のインタラクションがコンテンツをより意義深くしています 😎
 
 <details>
-<summary>👉 クリックして<strong>謝辞</strong>を表示 (現在<strong>🔥71🔥</strong>名のサポーター)</summary>
+<summary>👉 クリックして<strong>謝辞</strong>を表示 (現在<strong>🔥73🔥</strong>名のサポーター)</summary>
 
 ### データサポート
 
@@ -76,6 +80,7 @@
 
 | サポーター | 金額 (CNY) | 日付 | 備考 |
 | :-------: | :----------: | :--: | :--: |
+| D*5 | 1.8 * 3 | 2025.11.24 | |
 | *鬼 | 1 | 2025.11.17 | |
 | *超 | 10 | 2025.11.17 | |
 | R*w | 10 | 2025.11.17 | Great agent work! |
@@ -174,7 +179,7 @@ platforms:
 
 個人キーワード（例：AI、BYD、教育政策）を設定して、関連するトレンドニュースのみを受信し、ノイズをフィルタリングします。
 
-- 通常単語、必須単語（+）、フィルター単語（!）をサポート
+- 通常単語、必須単語（+）、フィルター単語（!）、数量限制（@）をサポート
 - グループベースの管理で、異なるトピックごとに独立した統計
 
 > フィルタリングをスキップしてすべてのトレンドニュースを受信することもできます。[更新履歴](#-更新履歴)のv2.0.1を参照してください
@@ -192,6 +197,7 @@ platforms:
 | **通常** | なし | 基本マッチング | `Huawei` | いずれか1つにマッチ |
 | **必須** | `+` | スコープ制限 | `+phone` | 両方を含む必要がある |
 | **フィルター** | `!` | ノイズ除外 | `!ad` | 含まれている場合は除外 |
+| **数量限制** | `@` | 表示数量制御 | `@10` | 最大10件表示（v3.2.0 新機能） |
 
 ### 📋 基本構文
 
@@ -334,6 +340,67 @@ phone
 sales
 +market
 ```
+
+</details>
+
+<a name="キーワード高度設定"></a>
+
+<details>
+<summary><strong>👉 クリックして展開: 高度な設定チュートリアル（v3.2.0 新機能）</strong></summary>
+<br>
+
+##### キーワードソート優先度
+
+**設定場所:** `config/config.yaml`
+
+```yaml
+report:
+  sort_by_position_first: false  # ソート優先度設定
+```
+
+| 設定値 | ソートルール | 適用シナリオ |
+|--------|-------------|-------------|
+| `false`（デフォルト） | トレンド記事数 ↓ → 設定位置 ↑ | 人気度トレンドに注目 |
+| `true` | 設定位置 ↑ → トレンド記事数 ↓ | 個人の優先度に注目 |
+
+**例:** 設定順序 A、B、C、トレンド記事数 A(3件)、B(10件)、C(5件)
+- `false`: B(10件) → C(5件) → A(3件)
+- `true`: A(3件) → B(10件) → C(5件)
+
+##### グローバル表示数量制限
+
+```yaml
+report:
+  max_news_per_keyword: 10  # 各キーワードの最大表示数10件（0=制限なし）
+```
+
+**Docker環境変数:**
+```bash
+SORT_BY_POSITION_FIRST=true
+MAX_NEWS_PER_KEYWORD=10
+```
+
+**総合例:**
+```yaml
+# config.yaml
+report:
+  sort_by_position_first: true   # 設定順序優先
+  max_news_per_keyword: 10       # グローバルデフォルト各キーワード最大10件
+```
+
+```txt
+# frequency_words.txt
+Tesla
+Musk
+@20              # 重点フォーカス、20件表示（グローバル設定を上書き）
+
+Huawei            # グローバル設定を使用、10件表示
+
+BYD
+@5               # 5件に制限
+```
+
+**最終結果:** 設定順序に従って表示 Tesla(20件) → Huawei(10件) → BYD(5件)
 
 </details>
 
@@ -508,18 +575,113 @@ MCP（Model Context Protocol）ベースのAI会話分析システムで、自�
 - **メジャーバージョンアップグレード**: v1.xからv2.yへのアップグレード、既存のフォークを削除して再フォークすることを推奨（手間を省き、設定の競合を回避）
 
 
-### 2025/11/12 - v3.0.5
+### 2025/11/26 - mcp-v1.0.3
 
-- メール送信SSL/TLSポート設定ロジックエラーを修正
-- メールサービスプロバイダー（QQ/163/126）がデフォルトでポート465（SSL）を使用するように最適化
-- **Docker環境変数サポートを追加**: コア設定項目（`enable_crawler`、`report_mode`、`push_window`など）が環境変数による上書きをサポートし、NASユーザーの設定ファイル変更問題を解決（[🐳 Dockerデプロイ](#-dockerデプロイ)章を参照）
+  **MCPモジュール更新:**
+  - 日付解析ツール resolve_date_range を新規追加、AIモデルの日付計算不整合問題を解決
+  - 自然言語日付表現の解析をサポート（今週、最近7日間、先月など）
+  - ツール総数が13から14に増加
 
+### 2025/11/25 - v3.4.0
+
+**🎉 Slackプッシュサポートを新規追加**
+
+1. **チームコラボレーションプッシュチャネル**
+   - Slack Incoming Webhooksをサポート（世界的に人気のあるチームコラボレーションツール）
+   - メッセージの一元管理、チームでのトレンドニュース共有に適している
+   - mrkdwn形式をサポート（太字、リンクなど）
+
+2. **複数のデプロイ方法**
+   - GitHub Actions: `SLACK_WEBHOOK_URL` Secretを設定
+   - Docker: 環境変数 `SLACK_WEBHOOK_URL`
+   - ローカル実行: `config/config.yaml`設定ファイル
+
+> 📖 **詳細設定チュートリアル**: [クイックスタート - Slackプッシュ](#-クイックスタート)
+
+- setup-windows.batとsetup-windows-en.batのMCPワンクリックインストール体験を最適化
+
+**🔧 アップグレード説明**:
+- **GitHub Forkユーザー**: `main.py`、`config/config.yaml`、`.github/workflows/crawler.yml`を更新
+
+
+### 2025/11/24 - v3.3.0
+
+**🎉 Barkプッシュサポートを新規追加**
+
+1. **iOS専用プッシュチャネル**
+   - Barkプッシュをサポート（APNsベース、iOSプラットフォーム）
+   - 無料オープンソース、シンプルで効率的、広告なし
+   - 公式サーバーと自己ホストサーバーの両方をサポート
+
+2. **複数のデプロイ方法**
+   - GitHub Actions: `BARK_URL` Secretを設定
+   - Docker: 環境変数 `BARK_URL`
+   - ローカル実行: `config/config.yaml`設定ファイル
+
+> 📖 **詳細設定チュートリアル**: [クイックスタート - Barkプッシュ](#-クイックスタート)
+
+**🐛 バグ修正**
+- `config.yaml`の`ntfy_server_url`設定が機能しない問題を修正（[#345](https://github.com/sansan0/TrendRadar/issues/345)）
+
+**🔧 アップグレード説明**:
+- **GitHub Forkユーザー**: `main.py`、`config/config.yaml`、`.github/workflows/crawler.yml`を更新
+
+
+### 2025/11/23 - v3.2.0
+
+**🎯 高度なカスタマイズ機能を新規追加**
+
+1. **キーワードソート優先度設定**
+   - 2つのソート戦略をサポート: 人気度優先 vs 設定順序優先
+   - 様々な使用シナリオに対応: トレンド追跡 or パーソナライズフォーカス
+
+2. **表示数量の精密制御**
+   - グローバル設定: すべてのキーワードの表示数を統一制限
+   - 個別設定: `@数字`構文を使用して特定のキーワードに制限を設定
+   - プッシュ長さを効果的に制御し、重要なコンテンツを強調
+
+> 📖 **詳細設定チュートリアル**: [キーワード設定 - 高度な設定](#キーワード高度設定)
+
+**🔧 アップグレード説明**:
+- **GitHub Forkユーザー**: `main.py`、`config/config.yaml`を更新
+
+
+### 2025/11/22 - v3.1.1
+
+- **データ異常によるクラッシュ問題を修正**: 一部のユーザーがGitHub Actions環境で遭遇した`'float' object has no attribute 'lower'`エラーを解決
+- 二重防護メカニズムを追加: データ取得段階で無効なタイトル（None、float、空文字列）をフィルタリングし、関数呼び出し時に型チェックを追加
+- システムの安定性を向上、データソースが異常な形式を返しても正常に動作することを保証
+
+**アップグレード説明**（GitHub Forkユーザー）:
+- 必須更新: `main.py`
+- マイナーバージョンアップグレード方式を推奨: 上記ファイルをコピー置換
+
+
+### 2025/11/20 - v3.1.0
+
+- **個人WeChatプッシュサポートを新規追加**: 企業微信アプリは個人WeChatにプッシュ可能、企業微信APPのインストール不要
+- 2つのメッセージ形式をサポート: `markdown`（企業微信グループロボット）と`text`（個人WeChatアプリ）
+- `WEWORK_MSG_TYPE`環境変数設定を追加、GitHub Actions、Docker、docker-composeなど複数のデプロイ方法をサポート
+- `text`モードは自動的にMarkdown構文をクリアし、プレーンテキストプッシュ効果を提供
+- 詳細はクイックスタートの「個人WeChatプッシュ」設定説明を参照
+
+**アップグレード説明**（GitHub Forkユーザー）:
+- 必須更新: `main.py`、`config/config.yaml`
+- オプション更新: `.github/workflows/crawler.yml`（GitHub Actionsデプロイを使用している場合）
+- マイナーバージョンアップグレード方式を推奨: 上記ファイルをコピー置換
 
 
 ### 2025/11/18 - mcp-v1.0.2
 
   **MCPモジュール更新:**
   - 今日のニュースクエリが過去の日付の記事を返す可能性がある問題を修正
+
+
+### 2025/11/12 - v3.0.5
+
+- メール送信SSL/TLSポート設定ロジックエラーを修正
+- メールサービスプロバイダー（QQ/163/126）がデフォルトでポート465（SSL）を使用するように最適化
+- **Docker環境変数サポートを追加**: コア設定項目（`enable_crawler`、`report_mode`、`push_window`など）が環境変数による上書きをサポートし、NASユーザーの設定ファイル変更問題を解決（[🐳 Dockerデプロイ](#-dockerデプロイ)章を参照）
 
 
 <details>
@@ -851,6 +1013,37 @@ frequency_words.txtファイルに**必須単語**機能を追加、+記号を�
    4. Webhookアドレスをコピーし、保存をクリック、コピーしたコンテンツを上記のGitHub Secretに貼り付け
 
    #### PC設定プロセスも同様
+   </details>
+
+   <details>
+   <summary> <strong>👉 クリックして展開: 個人WeChatプッシュ</strong>（企業微信アプリ経由、個人WeChatにプッシュ）</summary>
+   <br>
+
+   > このソリューションは企業微信のプラグインメカニズムに基づいているため、プッシュスタイルはプレーンテキスト（Markdown形式なし）ですが、個人WeChatに直接プッシュでき、企業微信APPのインストールは不要です。
+
+   **GitHub Secret設定（⚠️ 名前は正確に一致する必要があります）:**
+   - **Name**: `WEWORK_WEBHOOK_URL`（この名前をコピー＆ペーストしてください。手動入力しないでください）
+   - **Secret（値）**: あなたの企業微信アプリWebhookアドレス
+
+   - **Name**: `WEWORK_MSG_TYPE`（この名前をコピー＆ペーストしてください。手動入力しないでください）
+   - **Secret（値）**: `text`
+
+   <br>
+
+   **設定手順:**
+
+   1. 上記の企業微信ロボットWebhook設定を完了
+   2. `WEWORK_MSG_TYPE` Secretを追加、値を`text`に設定
+   3. 下記の画像に従って、個人WeChatを関連付け
+   4. 設定完了後、スマホの企業微信APPは削除可能
+
+   <img src="_image/wework.png" title="個人WeChatプッシュ設定"/>
+
+   **説明**:
+   - 企業微信ロボットと同じWebhookアドレスを使用
+   - 違いはメッセージ形式: `text`はプレーンテキスト、`markdown`はリッチテキスト（デフォルト）
+   - プレーンテキスト形式は自動的にすべてのMarkdown構文を削除（太字、リンクなど）
+
    </details>
 
    <details>
@@ -1207,6 +1400,162 @@ frequency_words.txtファイルに**必須単語**機能を追加、+記号を�
    - [ntfy公式ドキュメント](https://docs.ntfy.sh/)
    - [自己ホストチュートリアル](https://docs.ntfy.sh/install/)
    - [GitHubリポジトリ](https://github.com/binwiederhier/ntfy)
+
+   </details>
+
+   <details>
+   <summary> <strong>👉 クリックして展開: Barkプッシュ</strong>（iOS専用、シンプルで効率的）</summary>
+   <br>
+
+   **GitHub Secret設定（⚠️ 名前は正確に一致する必要があります）:**
+   - **Name**: `BARK_URL`（この名前をコピー＆ペーストしてください。手動入力しないでください）
+   - **Secret（値）**: あなたのBarkプッシュURL
+
+   <br>
+
+   **Bark紹介:**
+
+   BarkはiOSプラットフォーム用の無料オープンソースプッシュツールで、シンプル、高速、広告なしが特徴です。
+
+   **使用方法:**
+
+   ### 方法1: 公式サーバーを使用（初心者に推奨）🆓
+
+   1. **Bark Appをダウンロード**:
+      - iOS: [App Store](https://apps.apple.com/cn/app/bark-给你的手机发推送/id1403753865)
+
+   2. **プッシュURLを取得**:
+      - Bark Appを開く
+      - ホーム画面に表示されるプッシュURLをコピー（形式: `https://api.day.app/your_device_key`）
+      - URLをGitHub Secretsの`BARK_URL`に設定
+
+   ### 方法2: 自己ホストサーバー（完全なプライバシー制御）🔒
+
+   **対象ユーザー**: サーバーを持っている、完全なプライバシーを追求、高い技術能力
+
+   **Dockerワンクリックデプロイ**:
+   ```bash
+   docker run -d \
+     --name bark-server \
+     -p 8080:8080 \
+     finab/bark-server
+   ```
+
+   **TrendRadarを設定**:
+   ```yaml
+   BARK_URL: http://your-server-ip:8080/your_device_key
+   ```
+
+   ---
+
+   **注意事項:**
+   - ✅ BarkはAPNsプッシュを使用、単一メッセージの最大4KB
+   - ✅ 自動バッチプッシュをサポート、メッセージ長を気にする必要なし
+   - ✅ プッシュ形式はプレーンテキスト（Markdown構文は自動削除）
+   - ⚠️ iOSプラットフォームのみサポート
+
+   **関連リンク:**
+   - [Bark公式ウェブサイト](https://bark.day.app/)
+   - [Bark GitHubリポジトリ](https://github.com/Finb/Bark)
+   - [Bark Server自己ホストチュートリアル](https://github.com/Finb/bark-server)
+
+   </details>
+
+   <details>
+   <summary> <strong>👉 クリックして展開: Slackプッシュ</strong></summary>
+   <br>
+
+   **GitHub Secret設定（⚠️ 名前は正確に一致する必要があります）:**
+   - **Name**: `SLACK_WEBHOOK_URL`（この名前をコピー＆ペーストしてください。手動入力しないでください）
+   - **Secret（値）**: あなたのSlack Incoming Webhook URL
+
+   <br>
+
+   **Slack紹介:**
+
+   Slackはチームコラボレーションツールで、Incoming WebhooksはSlackチャンネルにメッセージをプッシュできます。
+
+   **設定手順:**
+
+   ### ステップ1: Slack Appを作成
+
+   1. **Slack APIページにアクセス**:
+      - https://api.slack.com/apps?new_app=1 を開く
+      - ログインしていない場合は、まずSlackワークスペースにログイン
+
+   2. **作成方法を選択**:
+      - **「From scratch」**（ゼロから作成）をクリック
+
+   3. **App情報を入力**:
+      - **App Name**: アプリ名を入力（例: `TrendRadar`または`トレンドニュースモニター`）
+      - **Workspace**: ドロップダウンリストからワークスペースを選択
+      - **「Create App」**ボタンをクリック
+
+   ### ステップ2: Incoming Webhooksを有効化
+
+   1. **Incoming Webhooksに移動**:
+      - 左側メニューで**「Incoming Webhooks」**を見つけてクリック
+
+   2. **機能を有効化**:
+      - **「Activate Incoming Webhooks」**スイッチを見つける
+      - スイッチを`OFF`から`ON`に切り替え
+      - ページは自動的に更新され、新しい設定オプションが表示されます
+
+   ### ステップ3: Webhook URLを生成
+
+   1. **新しいWebhookを追加**:
+      - ページ下部にスクロール
+      - **「Add New Webhook to Workspace」**ボタンをクリック
+
+   2. **ターゲットチャンネルを選択**:
+      - システムは認証ページをポップアップ
+      - ドロップダウンリストからメッセージを受信するチャンネルを選択（例: `#トレンドニュース`）
+      - ⚠️ プライベートチャンネルを選択する場合は、まずそのチャンネルに参加する必要があります
+
+   3. **アプリを認証**:
+      - **「Allow」**ボタンをクリックして認証を完了
+      - システムは自動的に設定ページにリダイレクト
+
+   ### ステップ4: Webhook URLをコピーして保存
+
+   1. **生成されたURLを表示**:
+      - 「Webhook URLs for Your Workspace」エリア
+      - 先ほど生成されたWebhook URLが表示されます
+      - 形式: `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX`
+
+   2. **URLをコピー**:
+      - URLの右側にある**「Copy」**ボタンをクリック
+      - または手動でURLを選択してコピー
+
+   3. **TrendRadarに設定**:
+      - **GitHub Actions**: URLをGitHub Secretsの`SLACK_WEBHOOK_URL`に追加
+      - **ローカルテスト**: `config/config.yaml`の`slack_webhook_url`フィールドに入力
+      - **Dockerデプロイ**: `docker/.env`ファイルの`SLACK_WEBHOOK_URL`変数に追加
+
+   ---
+
+   **注意事項:**
+   - ✅ Markdown形式をサポート（自動的にSlack mrkdwnに変換）
+   - ✅ 自動バッチプッシュをサポート（各バッチ4KB）
+   - ✅ チームコラボレーションに適している、メッセージの一元管理
+   - ⚠️ Webhook URLには秘密鍵が含まれています、公開しないでください
+
+   **メッセージ形式プレビュー:**
+   ```
+   *[第1/2バッチ]*
+
+   📊 *トレンドキーワード統計*
+
+   🔥 *[1/3] AI ChatGPT* : 2件
+
+     1. [百度ホット検索] 🆕 ChatGPT-5正式リリース *[1]* - 09時15分 (1回)
+
+     2. [今日のヘッドライン] AIチップコンセプト株急騰 *[3]* - [08時30分 ~ 10時45分] (3回)
+   ```
+
+   **関連リンク:**
+   - [Slack Incoming Webhooks公式ドキュメント](https://api.slack.com/messaging/webhooks)
+   - [Slack APIアプリ管理](https://api.slack.com/apps)
 
    </details>
 

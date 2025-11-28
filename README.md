@@ -959,7 +959,59 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    **GitHub Secret 配置（⚠️ Name 名称必须严格一致）：**
    - **Name（名称）**：`FEISHU_WEBHOOK_URL`（请复制粘贴此名称，不要手打）
-   - **Secret（值）**：你的飞书机器人 Webhook 地址（该链接开头类似 https://www.feishu.cn/flow/api/trigger-webhook/********）
+   - **Secret（值）**：你的飞书机器人 Webhook 地址
+   - **Name（名称）**：`FEISHU_MSG_TYPE`（可选配置，请复制粘贴此名称）
+   - **Secret（值）**：消息格式类型，可选值：`text`（默认）或 `card`
+   <br>
+
+   #### 飞书消息格式配置
+
+   TrendRadar 支持飞书的两种消息格式：文本格式（text）和卡片格式（card）。
+
+   ##### 配置方法
+
+   **1. 通过配置文件**
+
+   修改 `config/config.yaml` 文件中的 `feishu_msg_type` 配置项：
+
+   ```yaml
+   notification:
+     webhooks:
+       feishu_msg_type: "card"  # 可选值："text"（默认）或 "card"
+   ```
+
+   **2. 通过环境变量**
+
+   设置环境变量 `FEISHU_MSG_TYPE`：
+
+   ```bash
+   # Linux/Mac
+   FEISHU_MSG_TYPE=card python main.py
+
+   # Windows PowerShell
+   $env:FEISHU_MSG_TYPE="card"
+   python main.py
+   ```
+
+   **3. 在 GitHub Actions 中**
+
+   在 GitHub 仓库的 Secrets 中添加 `FEISHU_MSG_TYPE`，值为 `card`。
+
+   ##### 格式对比
+
+   | 格式 | 特点 | 适用场景 |
+   |------|------|----------|
+   | **文本格式**<br/>`text` | 简洁明了，支持基本的 Markdown 格式 | 追求简洁，不需要复杂排版的场景 |
+   | **卡片格式**<br/>`card` | 丰富的排版，支持标题、分隔线、彩色文本、链接等 | 追求美观，需要更好阅读体验的场景 |
+
+   ##### 注意事项
+
+   1. **重要提示**：配置 `feishu_msg_type` 为 `card` 后，可以直接使用飞书群聊内的自定义机器人发送消息，无需使用飞书机器人流程编排工具
+   2. 飞书卡片功能需要飞书客户端版本 7.20 及以上支持
+   3. 卡片消息大小不能超过 20 KB
+   4. 飞书机器人的调用频率限制为 100 次/分钟，5 次/秒
+   5. 建议避免在整点或半点发送消息，以免遇到限流问题
+
    <br>
 
    有两个方案，**方案一**配置简单，**方案二**配置复杂(但是稳定推送)

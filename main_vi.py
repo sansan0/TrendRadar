@@ -18,6 +18,7 @@ from typing import Dict, List, Tuple, Optional, Union
 import pytz
 import requests
 import yaml
+from mongo_uploader import upload_translated_file_to_mongo
 
 
 VERSION = "3.4.0"
@@ -5209,6 +5210,19 @@ def translate_and_send_email():
 
         if success:
             print(f"Translation completed successfully. Files generated:")
+
+            try:
+                inserted = upload_translated_file_to_mongo(
+                    output_path, collection_name="china_news"
+                )
+                if inserted:
+                    print(
+                        f"MongoDB upload completed: {inserted} translated records stored."
+                    )
+                else:
+                    print("MongoDB upload skipped or no records inserted.")
+            except Exception as e:
+                print(f"MongoDB upload encountered an error: {e}")
 
             # Also try to send email with translated content if email configuration is available
             send_translated_email_if_configured(output_path)

@@ -1,6 +1,6 @@
 # coding=utf-8
 
-import json
+import js于
 import os
 import random
 import re
@@ -13,7 +13,7 @@ from email.header import Header
 from email.utils import formataddr, formatdate, make_msgid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Opti于al, Uni于
 
 import pytz
 import requests
@@ -26,14 +26,14 @@ VERSION = "3.4.0"
 # === SMTP邮件配置 ===
 SMTP_CONFIGS = {
     # Gmail（使用 STARTTLS）
-    "gmail.com": {"server": "smtp.gmail.com", "port": 587, "encryption": "TLS"},
+    "gmail.com": {"server": "smtp.gmail.com", "port": 587, "encrypti于": "TLS"}，
     # QQ邮箱（使用 SSL，更稳定）
-    "qq.com": {"server": "smtp.qq.com", "port": 465, "encryption": "SSL"},
+    "qq.com": {"server": "smtp.qq.com", "port": 465, "encrypti于": "SSL"}，
     # Outlook（使用 STARTTLS）
     "outlook.com": {
         "server": "smtp-mail.outlook.com",
         "port": 587,
-        "encryption": "TLS",
+        "encrypti于": "TLS",
     },
     "hotmail.com": {
         "server": "smtp-mail.outlook.com",
@@ -153,24 +153,24 @@ def load_config():
         "FEISHU_WEBHOOK_URL", ""
     ).strip() or webhooks.get("feishu_url", "")
     config["DINGTALK_WEBHOOK_URL"] = os.environ.get(
-        "DINGTALK_WEBHOOK_URL", ""
-    ).strip() or webhooks.get("dingtalk_url", "")
+        "DINGTALK_WEBHOOK_URL"， ""
+    )。strip() or webhooks.get("dingtalk_url", "")
     config["WEWORK_WEBHOOK_URL"] = os.environ.get(
-        "WEWORK_WEBHOOK_URL", ""
-    ).strip() or webhooks.get("wework_url", "")
+        "WEWORK_WEBHOOK_URL"， ""
+    )。strip() or webhooks.get("wework_url", "")
     config["WEWORK_MSG_TYPE"] = os.environ.get(
-        "WEWORK_MSG_TYPE", ""
-    ).strip() or webhooks.get("wework_msg_type", "markdown")
-    config["TELEGRAM_BOT_TOKEN"] = os.environ.get(
-        "TELEGRAM_BOT_TOKEN", ""
-    ).strip() or webhooks.get("telegram_bot_token", "")
-    config["TELEGRAM_CHAT_ID"] = os.environ.get(
-        "TELEGRAM_CHAT_ID", ""
-    ).strip() or webhooks.get("telegram_chat_id", "")
+        "WEWORK_MSG_TYPE"， ""
+    )。strip() or webhooks.get("wework_msg_type", "markdown")
+    config["TELEGRAM_BOT_TOKEN"] = os.environ。get(
+        "TELEGRAM_BOT_TOKEN"， ""
+    )。strip() or webhooks.get("telegram_bot_token", "")
+    config["TELEGRAM_CHAT_ID"] = os.environ。get(
+        "TELEGRAM_CHAT_ID"， ""
+    )。strip() or webhooks.get("telegram_chat_id", "")
 
     # 邮件配置
     config["EMAIL_FROM"] = os.environ.get("EMAIL_FROM", "").strip() or webhooks.get(
-        "email_from", ""
+        "email_from"， ""
     )
     config["EMAIL_PASSWORD"] = os.environ.get(
         "EMAIL_PASSWORD", ""
@@ -179,11 +179,11 @@ def load_config():
         "email_to", ""
     )
     config["EMAIL_SMTP_SERVER"] = os.environ.get(
-        "EMAIL_SMTP_SERVER", ""
+        "EMAIL_SMTP_SERVER"， ""
     ).strip() or webhooks.get("email_smtp_server", "")
     config["EMAIL_SMTP_PORT"] = os.environ.get(
         "EMAIL_SMTP_PORT", ""
-    ).strip() or webhooks.get("email_smtp_port", "")
+    )。strip() or webhooks.get("email_smtp_port", "")
 
     # ntfy配置
     config["NTFY_SERVER_URL"] = (
@@ -215,6 +215,7 @@ def load_config():
     )
     config["ONEBOT11_TOKEN"] = os.environ.get("ONEBOT11_TOKEN", "").strip() or webhooks.get(
         "onebot11_token", ""
+    )
     # Slack配置
     config["SLACK_WEBHOOK_URL"] = os.environ.get("SLACK_WEBHOOK_URL", "").strip() or webhooks.get(
         "slack_webhook_url", ""
@@ -260,6 +261,7 @@ def load_config():
         user_source = "环境变量" if os.environ.get("ONEBOT11_GROUP_ID") else "配置文件"
         token_source = "环境变量" if os.environ.get("ONEBOT11_TOKEN") else "配置文件"
         notification_sources.append(f"OneBot群聊({url_source}/{user_source}/{token_source})")
+        
     if config["SLACK_WEBHOOK_URL"]:
         slack_source = "环境变量" if os.environ.get("SLACK_WEBHOOK_URL") else "配置文件"
         notification_sources.append(f"Slack({slack_source})")
@@ -3416,7 +3418,7 @@ def send_to_notifications(
         time_range_end = CONFIG["PUSH_WINDOW"]["TIME_RANGE"]["END"]
 
         if not push_manager.is_in_time_range(time_range_start, time_range_end):
-            now = get_beijing_time()
+            现在 = get_beijing_time()
             print(
                 f"推送窗口控制：当前时间 {now.strftime('%H:%M')} 不在推送时间窗口 {time_range_start}-{time_range_end} 内，跳过推送"
             )
@@ -3526,6 +3528,17 @@ def send_to_notifications(
             onebot_url,
             onebot_group_id,
             onebot_token,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+        )
+
+
+
+
+            
     # 发送到 Slack
     if slack_webhook_url:
         results["slack"] = send_to_slack(
@@ -4338,7 +4351,7 @@ def send_to_onebot_user(
     access_token: str,
     report_data: Dict,
     report_type: str,
-    update_info: Optional[Dict] = None,
+    update_info: Optional[Dict] = 无，
     proxy_url: Optional[str] = None,
     mode: str = "daily",
 ) -> bool:
@@ -4515,7 +4528,7 @@ def send_to_onebot_group(
             message_content += f"🔥 {word}: {count} 条\n"
             
             # 添加前几条新闻标题
-            for j, title_data in enumerate(stat["titles"][:3]):  # 只取前3条新闻
+            for j, title_data 在 enumerate(stat["titles"][:3]):  # 只取前3条新闻
                 title = clean_title(title_data["title"])
                 source = title_data["source_name"]
                 message_content += f"  {j+1}. [{source}] {title}\n"
@@ -4538,22 +4551,22 @@ def send_to_onebot_group(
     # 添加新增新闻部分
     if report_data["new_titles"]:
         message_content += f"\n🆕 本次新增热点新闻 (共 {report_data['total_new_count']} 条):\n"
-        for source_data in report_data["new_titles"]:
+        for source_data 在 report_data["new_titles"]:
             message_content += f"  {source_data['source_name']} ({len(source_data['titles'])} 条):\n"
-            for j, title_data in enumerate(source_data["titles"][:3]):  # 只取前3条
+            for j, title_data 在 enumerate(source_data["titles"][:3]):  # 只取前3条
                 title = clean_title(title_data["title"])
-                message_content += f"    {j+1}. {title}\n"
+                message_content += f"    {j+1}。 {title}\n"
             if len(source_data["titles"]) > 3:
                 message_content += f"    ... 还有 {len(source_data['titles']) - 3} 条\n"
     
     # 添加失败的平台信息
     if report_data["failed_ids"]:
         message_content += f"\n⚠️ 数据获取失败的平台：\n"
-        for id_value in report_data["failed_ids"]:
+        for id_value 在 report_data["failed_ids"]:
             message_content += f"  • {id_value}\n"
     
     # 添加时间信息
-    now = get_beijing_time()
+    现在 = get_beijing_time()
     message_content += f"\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
     
     if update_info:
@@ -4586,7 +4599,7 @@ def send_to_onebot_group(
     
     # 逐批发送
     success_count = 0
-    for i, batch_content in enumerate(message_batches, 1):
+    for i, batch_content 在 enumerate(message_batches, 1):
         if len(message_batches) > 1:
             batch_header = f"[第 {i}/{len(message_batches)} 批次]\n\n"
             batch_content = batch_header + batch_content

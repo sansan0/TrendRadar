@@ -273,6 +273,9 @@ def load_config():
     config["WEWORK_MSG_TYPE"] = os.environ.get(
         "WEWORK_MSG_TYPE", ""
     ).strip() or webhooks.get("wework_msg_type", "markdown")
+    config["FEISHU_MSG_TYPE"] = os.environ.get(
+        "FEISHU_MSG_TYPE", ""
+    ).strip() or webhooks.get("feishu_msg_type", "text")
     config["TELEGRAM_BOT_TOKEN"] = os.environ.get(
         "TELEGRAM_BOT_TOKEN", ""
     ).strip() or webhooks.get("telegram_bot_token", "")
@@ -3065,6 +3068,224 @@ def render_feishu_content(
     return text_content
 
 
+def render_feishu_card_content(
+    report_data: Dict, update_info: Optional[Dict] = None, mode: str = "daily"
+) -> Dict:
+    """渲染飞书卡片内容"""
+    now = get_beijing_time()
+    update_time = now.strftime("%Y-%m-%d %H:%M:%S")
+
+    # 卡片基本结构
+    card = {
+        "config": {
+            "wide_screen_mode": True,
+            "enable_forward": True
+        },
+        "header": {
+            "title": {
+                "tag": "plain_text",
+                "content": "📊 热点词汇统计报告"
+            },
+            "template": "blue"
+        },
+        "elements": []
+    }
+
+    # 添加更新时间
+    card["elements"].append({
+        "tag": "div",
+        "text": {
+            "tag": "plain_text",
+            "content": f"更新时间：{update_time}",
+            "lines": 1
+        },
+        "style": {
+            "color": "#8c8c8c",
+            "font_size": "12px"
+        }
+    })
+
+    # 添加版本信息（如果有）
+    if update_info:
+        card["elements"].append({
+            "tag": "div",
+            "text": {
+                "tag": "plain_text",
+                "content": f"TrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}",
+                "lines": 1
+            },
+            "style": {
+                "color": "#8c8c8c",
+                "font_size": "12px"
+            }
+        })
+
+    # 添加分割线
+    card["elements"].append({
+        "tag": "hr"
+    })
+
+    # 热点词汇统计模块
+    if report_data["stats"]:
+        card["elements"].append({
+            "tag": "div",
+            "text": {
+                "tag": "plain_text",
+                "content": "🔥 热点词汇统计",
+                "lines": 1
+            },
+            "style": {
+                "font_size": "16px",
+                "font_weight": "bold"
+            }
+        })
+
+        for i, stat in enumerate(report_data["stats"]):
+            word = stat["word"]
+            count = stat["count"]
+
+            # 词汇标题
+            card["elements"].append({
+                "tag": "div",
+                "text": {
+                    "tag": "lark_md",
+                    "content": f"**{word}** : <font color='{'#ff4d4f' if count >= 10 else '#fa8c16' if count >= 5 else '#1890ff'}'>{count} 条</font>"
+                }
+            })
+
+            # 新闻列表
+            for j, title_data in enumerate(stat["titles"], 1):
+                source = title_data["source_name"]
+                title = title_data["title"]
+                url = title_data["url"]
+
+                card["elements"].append({
+                    "tag": "div",
+                    "fields": [
+                        {
+                            "is_short": False,
+                            "text": {
+                                "tag": "lark_md",
+                                "content": f"{j}. [{source}] [{title}]({url})"
+                            }
+                        }
+                    ]
+                })
+
+            # 添加模块分割线（如果不是最后一个）
+            if i < len(report_data["stats"]) - 1:
+                card["elements"].append({
+                    "tag": "hr",
+                    "style": {
+                        "width": "80%",
+                        "margin": "10px 0"
+                    }
+                })
+    else:
+        # 暂无数据
+        if mode == "incremental":
+            mode_text = "增量模式下暂无新增匹配的热点词汇"
+        elif mode == "current":
+            mode_text = "当前榜单模式下暂无匹配的热点词汇"
+        else:
+            mode_text = "暂无匹配的热点词汇"
+
+        card["elements"].append({
+            "tag": "div",
+            "text": {
+                "tag": "plain_text",
+                "content": mode_text,
+                "lines": 1
+            },
+            "style": {
+                "color": "#8c8c8c"
+            }
+        })
+
+    # 添加新增热点新闻模块
+    if report_data["new_titles"]:
+        card["elements"].append({
+            "tag": "hr"
+        })
+
+        card["elements"].append({
+            "tag": "div",
+            "text": {
+                "tag": "plain_text",
+                "content": f"🆕 本次新增热点新闻 (共 {report_data['total_new_count']} 条)",
+                "lines": 1
+            },
+            "style": {
+                "font_size": "16px",
+                "font_weight": "bold"
+            }
+        })
+
+        for source_data in report_data["new_titles"]:
+            source_name = source_data["source_name"]
+            titles = source_data["titles"]
+
+            card["elements"].append({
+                "tag": "div",
+                "text": {
+                    "tag": "plain_text",
+                    "content": f"{source_name} ({len(titles)} 条):",
+                    "lines": 1
+                },
+                "style": {
+                    "font_weight": "bold",
+                    "margin_top": "8px"
+                }
+            })
+
+            for j, title_data in enumerate(titles, 1):
+                title = title_data["title"]
+                url = title_data["url"]
+
+                card["elements"].append({
+                    "tag": "div",
+                    "fields": [
+                        {
+                            "is_short": False,
+                            "text": {
+                                "tag": "lark_md",
+                                "content": f"{j}. [{title}]({url})"
+                            }
+                        }
+                    ]
+                })
+
+    # 添加数据获取失败的平台模块
+    if report_data["failed_ids"]:
+        card["elements"].append({
+            "tag": "hr"
+        })
+
+        card["elements"].append({
+            "tag": "div",
+            "text": {
+                "tag": "plain_text",
+                "content": "⚠️ 数据获取失败的平台",
+                "lines": 1
+            },
+            "style": {
+                "font_size": "16px",
+                "font_weight": "bold"
+            }
+        })
+
+        failed_platforms = "、".join(report_data["failed_ids"])
+        card["elements"].append({
+            "tag": "div",
+            "text": {
+                "tag": "lark_md",
+                "content": f"<font color='#ff4d4f'>{failed_platforms}</font>"
+            }
+        })
+
+    return card
+
+
 def render_dingtalk_content(
     report_data: Dict, update_info: Optional[Dict] = None, mode: str = "daily"
 ) -> str:
@@ -3840,12 +4061,13 @@ def send_to_notifications(
     feishu_urls = parse_multi_account_config(CONFIG["FEISHU_WEBHOOK_URL"])
     if feishu_urls:
         feishu_urls = limit_accounts(feishu_urls, max_accounts, "飞书")
+        feishu_msg_type = CONFIG.get("FEISHU_MSG_TYPE", "text")
         feishu_results = []
         for i, url in enumerate(feishu_urls):
             if url:  # 跳过空值
                 account_label = f"账号{i+1}" if len(feishu_urls) > 1 else ""
                 result = send_to_feishu(
-                    url, report_data, report_type, update_info_to_send, proxy_url, mode, account_label
+                    url, report_data, report_type, update_info_to_send, proxy_url, mode, account_label, feishu_msg_type
                 )
                 feishu_results.append(result)
         results["feishu"] = any(feishu_results) if feishu_results else False
@@ -3995,6 +4217,7 @@ def send_to_feishu(
     proxy_url: Optional[str] = None,
     mode: str = "daily",
     account_label: str = "",
+    msg_type: str = "text",  # 添加消息类型参数，支持 "text" 或 "card"
 ) -> bool:
     """发送到飞书（支持分批发送）"""
     headers = {"Content-Type": "application/json"}
@@ -4005,6 +4228,41 @@ def send_to_feishu(
     # 日志前缀
     log_prefix = f"飞书{account_label}" if account_label else "飞书"
 
+    # 对于卡片消息，不需要分批处理，直接发送完整卡片
+    if msg_type == "card":
+        print(f"飞书消息将以卡片形式发送 [{report_type}]")
+
+        # 渲染卡片内容
+        card_content = render_feishu_card_content(report_data, update_info, mode)
+
+        # 构建卡片消息 payload
+        payload = {
+            "msg_type": "interactive",
+            "card": card_content
+        }
+
+        try:
+            response = requests.post(
+                webhook_url, headers=headers, json=payload, proxies=proxies, timeout=30
+            )
+            if response.status_code == 200:
+                result = response.json()
+                # 检查飞书的响应状态
+                if result.get("StatusCode") == 0 or result.get("code") == 0:
+                    print(f"飞书卡片消息发送成功 [{report_type}]")
+                    return True
+                else:
+                    error_msg = result.get("msg") or result.get("StatusMessage", "未知错误")
+                    print(f"飞书卡片消息发送失败 [{report_type}]，错误：{error_msg}")
+                    return False
+            else:
+                print(f"飞书卡片消息发送失败 [{report_type}]，状态码：{response.status_code}")
+                return False
+        except Exception as e:
+            print(f"飞书卡片消息发送出错 [{report_type}]：{e}")
+            return False
+
+    # 文本消息的处理逻辑保持不变
     # 获取分批内容，使用飞书专用的批次大小
     feishu_batch_size = CONFIG.get("FEISHU_BATCH_SIZE", 29000)
     # 预留批次头部空间，避免添加头部后超限

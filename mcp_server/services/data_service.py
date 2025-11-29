@@ -322,68 +322,72 @@ class DataService:
         word_groups = self.parser.parse_frequency_words()
 
         # 根据mode选择要处理的标题数据
-        titles_to_process = {}
-
         if mode == "daily":
-            # daily模式:处理当天所有累计数据
             titles_to_process = all_titles
-
         elif mode == "current":
-            # current模式:只处理最新一批数据(最新时间戳的文件)
-            if timestamps:
-                # 找出最新的时间戳
-                latest_timestamp = max(timestamps.values())
-
-                # 重新读取,只获取最新时间的数据
-                # 这里我们通过timestamps字典反查找最新文件对应的平台
-                latest_titles, _, _ = self.parser.read_all_titles_for_date()
-
-                # 由于read_all_titles_for_date返回所有文件的合并数据,
-                # 我们需要通过timestamps来过滤出最新批次
-                # 简化实现:使用当前所有数据作为最新批次
-                # (更精确的实现需要解析服务支持按时间过滤)
-                titles_to_process = latest_titles
-            else:
-                titles_to_process = all_titles
-
+            # 当前模式: 使用最新一批数据(当前的合并结果作为近似)
+            titles_to_process = all_titles
         else:
             raise ValueError(
                 f"不支持的模式: {mode}。支持的模式: daily, current"
             )
 
-        # 统计词频
-        word_frequency = Counter()
-        keyword_to_news = {}
+        # 计算关键词统计信息
+        keyword_stats = self._calculate_keyword_stats(
+            titles_to_process,
+            word_groups
+        )
 
-        # 遍历要处理的标题
-        for platform_id, titles in titles_to_process.items():
-            for title in titles.keys():
-                # 对每个关键词组进行匹配
-                for group in word_groups:
-                    all_words = group.get("required", []) + group.get("normal", [])
+        if not keyword_stats:
+            raise DataNotFoundError(
+                "未找到匹配的关注词新闻",
+                suggestion="请检查 config/frequency_words.txt 是否包含有效关键词"
+            )
 
-                    for word in all_words:
-                        if word and word in title:
-                            word_frequency[word] += 1
+        # 获取前一天的频次用于趋势计算
+        yesterday_frequency = self._get_historical_keyword_frequency(
+            word_groups,
+            days_back=1
+        )
 
-                            if word not in keyword_to_news:
-                                keyword_to_news[word] = []
-                            keyword_to_news[word].append(title)
+        # 计算权重所需的归一化基准
+        max_frequency = max(stat["frequency"] for stat in keyword_stats.values()) or 1
+        max_news = max(len(stat["titles"]) for stat in keyword_stats.values()) or 1
+        rank_candidates = [
+            stat["best_rank"] for stat in keyword_stats.values()
+            if stat["best_rank"] is not None
+        ]
+        rank_baseline = max(rank_candidates) if rank_candidates else 50
+        weight_config = self._get_weight_config()
 
-        # 获取TOP N关键词
-        top_keywords = word_frequency.most_common(top_n)
+        # 获取TOP N关键词(按出现频次排序)
+        sorted_keywords = sorted(
+            keyword_stats.items(),
+            key=lambda item: item[1]["frequency"],
+            reverse=True
+        )[:top_n]
 
         # 构建话题列表
         topics = []
-        for keyword, frequency in top_keywords:
-            matched_news = keyword_to_news.get(keyword, [])
+        for keyword, stat in sorted_keywords:
+            frequency = stat["frequency"]
+            matched_news_count = len(stat["titles"])
+            previous_freq = yesterday_frequency.get(keyword, 0)
+            trend = self._calculate_trend(frequency, previous_freq)
+            weight_score = self._calculate_weight_score(
+                stat,
+                max_frequency,
+                max_news,
+                rank_baseline,
+                weight_config
+            )
 
             topics.append({
                 "keyword": keyword,
                 "frequency": frequency,
-                "matched_news": len(set(matched_news)),  # 去重后的新闻数量
-                "trend": "stable",  # TODO: 需要历史数据来计算趋势
-                "weight_score": 0.0  # TODO: 需要实现权重计算
+                "matched_news": matched_news_count,
+                "trend": trend,
+                "weight_score": weight_score
             })
 
         # 构建结果
@@ -391,7 +395,7 @@ class DataService:
             "topics": topics,
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "mode": mode,
-            "total_keywords": len(word_frequency),
+            "total_keywords": len(word_groups),
             "description": self._get_mode_description(mode)
         }
 
@@ -399,6 +403,124 @@ class DataService:
         self.cache.set(cache_key, result)
 
         return result
+
+    def _calculate_keyword_stats(
+        self,
+        titles: Dict[str, Dict[str, Dict]],
+        word_groups: List[Dict]
+    ) -> Dict[str, Dict]:
+        """
+        基于标题数据计算每个关键词的统计信息
+        """
+        stats = {}
+
+        for _, platform_titles in titles.items():
+            for title, info in platform_titles.items():
+                for group in word_groups:
+                    all_words = group.get("required", []) + group.get("normal", [])
+
+                    for word in all_words:
+                        if not word or word not in title:
+                            continue
+
+                        stat = stats.setdefault(
+                            word,
+                            {"frequency": 0, "titles": set(), "best_rank": None}
+                        )
+                        stat["frequency"] += 1
+                        stat["titles"].add(title)
+
+                        ranks = [
+                            r for r in info.get("ranks", [])
+                            if isinstance(r, (int, float))
+                        ]
+                        if ranks:
+                            best_rank = min(ranks)
+                            if stat["best_rank"] is None or best_rank < stat["best_rank"]:
+                                stat["best_rank"] = best_rank
+
+        return stats
+
+    def _get_historical_keyword_frequency(
+        self,
+        word_groups: List[Dict],
+        days_back: int = 1
+    ) -> Dict[str, int]:
+        """
+        获取指定天数前的关键词频率,用于计算趋势
+        """
+        target_date = datetime.now() - timedelta(days=days_back)
+        try:
+            titles, _, _ = self.parser.read_all_titles_for_date(date=target_date)
+        except DataNotFoundError:
+            return {}
+
+        stats = self._calculate_keyword_stats(titles, word_groups)
+        return {k: v["frequency"] for k, v in stats.items()}
+
+    @staticmethod
+    def _calculate_trend(current_freq: int, previous_freq: int) -> str:
+        """
+        根据当前频次和历史频次计算趋势标签
+        """
+        if previous_freq <= 0:
+            return "new" if current_freq > 0 else "stable"
+
+        change_ratio = (current_freq - previous_freq) / previous_freq
+        if change_ratio >= 0.5:
+            return "rising"
+        if change_ratio <= -0.5:
+            return "falling"
+        return "stable"
+
+    def _calculate_weight_score(
+        self,
+        stat: Dict,
+        max_frequency: int,
+        max_news: int,
+        rank_baseline: int,
+        weight_config: Dict[str, float]
+    ) -> float:
+        """
+        基于频次、排名和新闻数量计算综合权重分数
+        """
+        rank_weight = weight_config.get("rank_weight", 0.6)
+        frequency_weight = weight_config.get("frequency_weight", 0.3)
+        hotness_weight = weight_config.get("hotness_weight", 0.1)
+
+        frequency_score = stat["frequency"] / max_frequency if max_frequency else 0
+        news_score = len(stat["titles"]) / max_news if max_news else 0
+
+        if stat["best_rank"] is None or rank_baseline <= 0:
+            rank_score = 0
+        else:
+            rank_score = (rank_baseline - stat["best_rank"] + 1) / rank_baseline
+
+        weight_score = (
+            rank_score * rank_weight
+            + frequency_score * frequency_weight
+            + news_score * hotness_weight
+        )
+        return round(weight_score, 4)
+
+    def _get_weight_config(self) -> Dict[str, float]:
+        """
+        读取权重配置,失败时使用默认值
+        """
+        try:
+            config = self.parser.parse_yaml_config()
+            weight_cfg = config.get("weight", {}) if config else {}
+            return {
+                "rank_weight": float(weight_cfg.get("rank_weight", 0.6)),
+                "frequency_weight": float(weight_cfg.get("frequency_weight", 0.3)),
+                "hotness_weight": float(weight_cfg.get("hotness_weight", 0.1)),
+            }
+        except Exception:
+            return {
+                "rank_weight": 0.6,
+                "frequency_weight": 0.3,
+                "hotness_weight": 0.1,
+            }
 
     def _get_mode_description(self, mode: str) -> str:
         """获取模式描述"""

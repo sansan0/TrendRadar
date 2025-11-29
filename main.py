@@ -101,6 +101,7 @@ def load_config():
         "FEISHU_BATCH_SIZE": config_data["notification"].get("feishu_batch_size", 29000),
         "BARK_BATCH_SIZE": config_data["notification"].get("bark_batch_size", 3600),
         "SLACK_BATCH_SIZE": config_data["notification"].get("slack_batch_size", 4000),
+        "PUSHPLUS_BATCH_SIZE": config_data["notification"].get("pushplus_batch_size", 4000),
         "BATCH_SEND_INTERVAL": config_data["notification"]["batch_send_interval"],
         "FEISHU_MESSAGE_SEPARATOR": config_data["notification"][
             "feishu_message_separator"
@@ -208,6 +209,23 @@ def load_config():
         "slack_webhook_url", ""
     )
 
+    # PushPlus配置
+    config["PUSHPLUS_TOKEN"] = os.environ.get("PUSHPLUS_TOKEN", "").strip() or webhooks.get(
+        "pushplus_token", ""
+    )
+    config["PUSHPLUS_TEMPLATE"] = os.environ.get("PUSHPLUS_TEMPLATE", "").strip() or webhooks.get(
+        "pushplus_template", "markdown"
+    )
+    config["PUSHPLUS_TOPIC"] = os.environ.get("PUSHPLUS_TOPIC", "").strip() or webhooks.get(
+        "pushplus_topic", ""
+    )
+    config["PUSHPLUS_CHANNEL"] = os.environ.get("PUSHPLUS_CHANNEL", "").strip() or webhooks.get(
+        "pushplus_channel", ""
+    )
+    config["PUSHPLUS_ENDPOINT"] = os.environ.get("PUSHPLUS_ENDPOINT", "").strip() or webhooks.get(
+        "pushplus_endpoint", "http://www.pushplus.plus/send"
+    )
+
     # 输出配置来源信息
     notification_sources = []
     if config["FEISHU_WEBHOOK_URL"]:
@@ -240,6 +258,10 @@ def load_config():
     if config["SLACK_WEBHOOK_URL"]:
         slack_source = "环境变量" if os.environ.get("SLACK_WEBHOOK_URL") else "配置文件"
         notification_sources.append(f"Slack({slack_source})")
+
+    if config["PUSHPLUS_TOKEN"]:
+        pushplus_source = "环境变量" if os.environ.get("PUSHPLUS_TOKEN") else "配置文件"
+        notification_sources.append(f"PushPlus({pushplus_source})")
 
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
@@ -3423,6 +3445,11 @@ def send_to_notifications(
     ntfy_token = CONFIG.get("NTFY_TOKEN", "")
     bark_url = CONFIG["BARK_URL"]
     slack_webhook_url = CONFIG["SLACK_WEBHOOK_URL"]
+    pushplus_token = CONFIG["PUSHPLUS_TOKEN"]
+    pushplus_template = CONFIG["PUSHPLUS_TEMPLATE"]
+    pushplus_topic = CONFIG["PUSHPLUS_TOPIC"]
+    pushplus_channel = CONFIG["PUSHPLUS_CHANNEL"]
+    pushplus_endpoint = CONFIG["PUSHPLUS_ENDPOINT"]
 
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
@@ -3484,6 +3511,21 @@ def send_to_notifications(
     if slack_webhook_url:
         results["slack"] = send_to_slack(
             slack_webhook_url,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+        )
+
+    # 发送到 PushPlus
+    if pushplus_token:
+        results["pushplus"] = send_to_pushplus(
+            pushplus_token,
+            pushplus_template,
+            pushplus_topic,
+            pushplus_channel,
+            pushplus_endpoint,
             report_data,
             report_type,
             update_info_to_send,
@@ -4371,6 +4413,147 @@ def send_to_slack(
     return True
 
 
+def send_to_pushplus(
+    token: str,
+    template: str,
+    topic: Optional[str],
+    channel: Optional[str],
+    endpoint: str,
+    report_data: Dict,
+    report_type: str,
+    update_info: Optional[Dict] = None,
+    proxy_url: Optional[str] = None,
+    mode: str = "daily",
+) -> bool:
+    """
+    发送到 PushPlus（支持分批发送，使用 Markdown 格式）
+
+    Args:
+        token: PushPlus 用户令牌
+        template: 消息模板类型（html/txt/json/markdown）
+        topic: 群组编码（可选，用于一对多推送）
+        channel: 发送渠道（可选，如 wechat/webhook/cp/mail 等）
+        endpoint: API 端点地址（支持自建服务器）
+        report_data: 报告数据
+        report_type: 报告类型
+        update_info: 版本更新信息（可选）
+        proxy_url: 代理地址（可选）
+        mode: 运行模式
+
+    Returns:
+        bool: 发送是否成功
+    """
+    # 使用配置的 API 端点
+    api_endpoint = endpoint
+
+    # 请求头
+    headers = {"Content-Type": "application/json"}
+
+    # 代理配置
+    proxies = None
+    if proxy_url:
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 获取分批内容（复用企业微信的 Markdown 格式）
+    batches = split_content_into_batches(
+        report_data,
+        "wework",
+        update_info,
+        max_bytes=CONFIG["PUSHPLUS_BATCH_SIZE"],
+        mode=mode,
+    )
+
+    print(f"PushPlus消息分为 {len(batches)} 批次发送 [{report_type}]")
+
+    # 逐批发送
+    for i, batch_content in enumerate(batches, 1):
+        # 添加批次标识（多批次时）
+        if len(batches) > 1:
+            batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
+            batch_content = batch_header + batch_content
+
+        # 计算批次大小
+        batch_size = len(batch_content.encode("utf-8"))
+        print(
+            f"发送PushPlus第 {i}/{len(batches)} 批次，大小：{batch_size} 字节 [{report_type}]"
+        )
+
+        # 构建请求 payload
+        payload = {
+            "token": token,
+            "title": f"TrendRadar 热点分析报告 - {report_type}",
+            "content": batch_content,
+            "template": template or "markdown",
+        }
+
+        # 添加可选参数
+        if topic:
+            payload["topic"] = topic
+        if channel:
+            payload["channel"] = channel
+
+        try:
+            # 发送请求
+            response = requests.post(
+                api_endpoint,
+                headers=headers,
+                json=payload,
+                proxies=proxies,
+                timeout=30,
+            )
+
+            # 检查响应状态
+            if response.status_code == 200:
+                try:
+                    result = response.json()
+                    # PushPlus API 成功时返回 code=200
+                    if result.get("code") == 200:
+                        print(f"PushPlus第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
+                        # 批次间间隔
+                        if i < len(batches):
+                            time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
+                    else:
+                        # API 返回错误
+                        error_msg = result.get("msg", "未知错误")
+                        print(
+                            f"PushPlus第 {i}/{len(batches)} 批次发送失败 [{report_type}]，"
+                            f"错误码：{result.get('code')}，错误信息：{error_msg}"
+                        )
+                        return False
+                except ValueError:
+                    # JSON 解析失败
+                    print(
+                        f"PushPlus第 {i}/{len(batches)} 批次响应解析失败 [{report_type}]，"
+                        f"响应内容：{response.text[:200]}"
+                    )
+                    return False
+            else:
+                # HTTP 状态码错误
+                print(
+                    f"PushPlus第 {i}/{len(batches)} 批次发送失败 [{report_type}]，"
+                    f"HTTP状态码：{response.status_code}"
+                )
+                try:
+                    error_detail = response.text[:200]
+                    print(f"错误详情：{error_detail}")
+                except Exception:
+                    pass
+                return False
+
+        except requests.exceptions.Timeout:
+            print(f"PushPlus第 {i}/{len(batches)} 批次发送超时 [{report_type}]")
+            return False
+        except requests.exceptions.RequestException as e:
+            print(f"PushPlus第 {i}/{len(batches)} 批次网络请求失败 [{report_type}]：{e}")
+            return False
+        except Exception as e:
+            print(f"PushPlus第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
+            return False
+
+    print(f"PushPlus所有 {len(batches)} 批次发送完成 [{report_type}]")
+    return True
+
+
 # === 主分析器 ===
 class NewsAnalyzer:
     """新闻分析器"""
@@ -4485,6 +4668,7 @@ class NewsAnalyzer:
                 (CONFIG["NTFY_SERVER_URL"] and CONFIG["NTFY_TOPIC"]),
                 CONFIG["BARK_URL"],
                 CONFIG["SLACK_WEBHOOK_URL"],
+                CONFIG["PUSHPLUS_TOKEN"],
             ]
         )
 

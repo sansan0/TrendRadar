@@ -20,7 +20,7 @@ import requests
 import yaml
 
 
-VERSION = "3.3.0"
+VERSION = "3.4.0"
 
 
 # === SMTP邮件配置 ===
@@ -100,6 +100,7 @@ def load_config():
         ),
         "FEISHU_BATCH_SIZE": config_data["notification"].get("feishu_batch_size", 29000),
         "BARK_BATCH_SIZE": config_data["notification"].get("bark_batch_size", 3600),
+        "SLACK_BATCH_SIZE": config_data["notification"].get("slack_batch_size", 4000),
         "BATCH_SEND_INTERVAL": config_data["notification"]["batch_send_interval"],
         "FEISHU_MESSAGE_SEPARATOR": config_data["notification"][
             "feishu_message_separator"
@@ -202,6 +203,11 @@ def load_config():
         "bark_url", ""
     )
 
+    # Slack配置
+    config["SLACK_WEBHOOK_URL"] = os.environ.get("SLACK_WEBHOOK_URL", "").strip() or webhooks.get(
+        "slack_webhook_url", ""
+    )
+
     # 输出配置来源信息
     notification_sources = []
     if config["FEISHU_WEBHOOK_URL"]:
@@ -230,6 +236,10 @@ def load_config():
     if config["BARK_URL"]:
         bark_source = "环境变量" if os.environ.get("BARK_URL") else "配置文件"
         notification_sources.append(f"Bark({bark_source})")
+
+    if config["SLACK_WEBHOOK_URL"]:
+        slack_source = "环境变量" if os.environ.get("SLACK_WEBHOOK_URL") else "配置文件"
+        notification_sources.append(f"Slack({slack_source})")
 
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
@@ -3412,6 +3422,7 @@ def send_to_notifications(
     ntfy_topic = CONFIG["NTFY_TOPIC"]
     ntfy_token = CONFIG.get("NTFY_TOKEN", "")
     bark_url = CONFIG["BARK_URL"]
+    slack_webhook_url = CONFIG["SLACK_WEBHOOK_URL"]
 
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
@@ -3462,6 +3473,17 @@ def send_to_notifications(
     if bark_url:
         results["bark"] = send_to_bark(
             bark_url,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+        )
+
+    # 发送到 Slack
+    if slack_webhook_url:
+        results["slack"] = send_to_slack(
+            slack_webhook_url,
             report_data,
             report_type,
             update_info_to_send,
@@ -4265,6 +4287,90 @@ def send_to_bark(
         return False
 
 
+def convert_markdown_to_mrkdwn(content: str) -> str:
+    """
+    将标准 Markdown 转换为 Slack 的 mrkdwn 格式
+
+    转换规则：
+    - **粗体** → *粗体*
+    - [文本](url) → <url|文本>
+    - 保留其他格式（代码块、列表等）
+    """
+    # 1. 转换链接格式: [文本](url) → <url|文本>
+    content = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<\2|\1>', content)
+
+    # 2. 转换粗体: **文本** → *文本*
+    content = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', content)
+
+    return content
+
+
+def send_to_slack(
+    webhook_url: str,
+    report_data: Dict,
+    report_type: str,
+    update_info: Optional[Dict] = None,
+    proxy_url: Optional[str] = None,
+    mode: str = "daily",
+) -> bool:
+    """发送到Slack（支持分批发送，使用 mrkdwn 格式）"""
+    headers = {"Content-Type": "application/json"}
+    proxies = None
+    if proxy_url:
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 获取分批内容（使用 Slack 批次大小）
+    batches = split_content_into_batches(
+        report_data, "wework", update_info, max_bytes=CONFIG["SLACK_BATCH_SIZE"], mode=mode
+    )
+
+    print(f"Slack消息分为 {len(batches)} 批次发送 [{report_type}]")
+
+    # 逐批发送
+    for i, batch_content in enumerate(batches, 1):
+        # 添加批次标识
+        if len(batches) > 1:
+            batch_header = f"*[第 {i}/{len(batches)} 批次]*\n\n"
+            batch_content = batch_header + batch_content
+
+        # 转换 Markdown 到 mrkdwn 格式
+        mrkdwn_content = convert_markdown_to_mrkdwn(batch_content)
+
+        batch_size = len(mrkdwn_content.encode("utf-8"))
+        print(
+            f"发送Slack第 {i}/{len(batches)} 批次，大小：{batch_size} 字节 [{report_type}]"
+        )
+
+        # 构建 Slack payload（使用简单的 text 字段，支持 mrkdwn）
+        payload = {
+            "text": mrkdwn_content
+        }
+
+        try:
+            response = requests.post(
+                webhook_url, headers=headers, json=payload, proxies=proxies, timeout=30
+            )
+
+            # Slack Incoming Webhooks 成功时返回 "ok" 文本
+            if response.status_code == 200 and response.text == "ok":
+                print(f"Slack第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
+                # 批次间间隔
+                if i < len(batches):
+                    time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
+            else:
+                error_msg = response.text if response.text else f"状态码：{response.status_code}"
+                print(
+                    f"Slack第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{error_msg}"
+                )
+                return False
+        except Exception as e:
+            print(f"Slack第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
+            return False
+
+    print(f"Slack所有 {len(batches)} 批次发送完成 [{report_type}]")
+    return True
+
+
 # === 主分析器 ===
 class NewsAnalyzer:
     """新闻分析器"""
@@ -4378,6 +4484,7 @@ class NewsAnalyzer:
                 ),
                 (CONFIG["NTFY_SERVER_URL"] and CONFIG["NTFY_TOPIC"]),
                 CONFIG["BARK_URL"],
+                CONFIG["SLACK_WEBHOOK_URL"],
             ]
         )
 

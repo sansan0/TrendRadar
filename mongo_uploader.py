@@ -7,10 +7,8 @@ from typing import Dict, List, Tuple, Union, Optional
 
 import pytz
 
-DEFAULT_MONGO_URI = (
-    "mongodb+srv://lethanhson9901:WCUf7zMeNpxZhCl8@cluster0.wbloa.mongodb.net/"
-    "?retryWrites=true&w=majority"
-)
+# Giá trị mặc định là None nếu không có biến môi trường
+DEFAULT_MONGO_URI = None
 
 def _clean_title(title: str) -> str:
     """Normalize whitespace inside titles."""
@@ -156,6 +154,12 @@ def upload_translated_file_to_mongo(
 
     # Cấu hình DB
     mongo_uri = mongo_db_uri or os.environ.get("MONGODB_URI") or DEFAULT_MONGO_URI
+    
+    # Kiểm tra nếu không có MongoDB URI, thì bỏ qua việc upload
+    if not mongo_uri:
+        print("MONGODB_URI not provided. Skipping MongoDB upload.")
+        return 0
+        
     target_db_name = db_name or os.environ.get("MONGODB_DB_NAME") or "trendradar"
     target_collection_name = collection_name or os.environ.get("MONGODB_COLLECTION") or "china_news"
 

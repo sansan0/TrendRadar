@@ -1008,7 +1008,7 @@ def matches_word_groups(
     title_lower = title.lower()
 
     # 过滤词检查
-    if any(filter_word.lower() in title_lower for filter_word in filter_words):
+    if any(isinstance(filter_word, str) and filter_word.lower() in title_lower for filter_word in filter_words):
         return False
 
     # 词组匹配检查
@@ -1019,16 +1019,14 @@ def matches_word_groups(
         # 必须词检查
         if required_words:
             all_required_present = all(
-                req_word.lower() in title_lower for req_word in required_words
-            )
+                req_word.lower() in title_lower for req_word in required_words if isinstance(req_word, str)            )
             if not all_required_present:
                 continue
 
         # 普通词检查
         if normal_words:
             any_normal_present = any(
-                normal_word.lower() in title_lower for normal_word in normal_words
-            )
+                normal_word.lower() in title_lower for normal_word in normal_words if isinstance(normal_word, str)            )
             if not any_normal_present:
                 continue
 
@@ -3417,7 +3415,9 @@ def send_to_notifications(
     email_password = CONFIG["EMAIL_PASSWORD"]
     email_to = CONFIG["EMAIL_TO"]
     email_smtp_server = CONFIG.get("EMAIL_SMTP_SERVER", "")
-    email_smtp_port = CONFIG.get("EMAIL_SMTP_PORT", "")
+    email_smtp_port = CONFIG.get("EMAIL_SMTP_PORT", "") or None
+    if email_smtp_port:
+        email_smtp_port = int(email_smtp_port)
     ntfy_server_url = CONFIG["NTFY_SERVER_URL"]
     ntfy_topic = CONFIG["NTFY_TOPIC"]
     ntfy_token = CONFIG.get("NTFY_TOKEN", "")

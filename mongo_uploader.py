@@ -1,6 +1,7 @@
+# coding=utf-8
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Tuple, Union, Optional
 
@@ -10,7 +11,6 @@ DEFAULT_MONGO_URI = (
     "mongodb+srv://lethanhson9901:WCUf7zMeNpxZhCl8@cluster0.wbloa.mongodb.net/"
     "?retryWrites=true&w=majority"
 )
-
 
 def _clean_title(title: str) -> str:
     """Normalize whitespace inside titles."""
@@ -86,6 +86,45 @@ def _parse_translated_file(file_path: Path) -> Tuple[Dict, Dict]:
     return titles_by_id, id_to_name
 
 
+def _ensure_unique_index(collection, index_key):
+    """Tạo index duy nhất trên collection nếu chưa tồn tại."""
+    from pymongo import errors
+    try:
+        # Kiểm tra xem index đã tồn tại chưa
+        existing_indexes = collection.index_information()
+        index_name = f"{index_key[0][0]}_1_{index_key[1][0]}_1_{index_key[2][0]}_1"
+        if index_name not in existing_indexes:
+            # Tạo index duy nhất
+            collection.create_index(index_key, unique=True)
+            print(f"Đã tạo index duy nhất: {index_key}")
+        else:
+            print(f"Index duy nhất đã tồn tại: {index_key}")
+    except errors.DuplicateKeyError as e:
+        print(f"Cảnh báo: Có dữ liệu trùng trong DB trước khi tạo index: {e}")
+        # Nếu có dữ liệu trùng, cần xử lý (xóa/xác nhận) trước khi tạo index
+        # Trong thực tế, bạn có thể cần thêm logic xử lý tại đây, nhưng để đơn giản, ta bỏ qua lỗi nếu index đã tồn tại.
+        # Tuy nhiên, điều này *chỉ* nên xảy ra nếu bạn chắc chắn không có dữ liệu trùng từ trước.
+        # Nếu có thể có, bạn nên gọi một hàm dọn dẹp dữ liệu trùng trước (xem bên dưới)
+    except Exception as e:
+        print(f"Lỗi khi tạo index duy nhất: {e}")
+
+
+def _cleanup_old_records(collection, days_to_keep: int = 30):
+    """Xóa các bản ghi cũ hơn số ngày quy định."""
+    from pymongo.errors import PyMongoError
+    now = datetime.now(pytz.timezone("Asia/Shanghai"))
+    cutoff_date = now - timedelta(days=days_to_keep)
+
+    try:
+        result = collection.delete_many({"translated_at": {"$lt": cutoff_date}})
+        if result.deleted_count > 0:
+            print(f"Đã xóa {result.deleted_count} bản ghi cũ hơn {days_to_keep} ngày.")
+        else:
+            print(f"Không có bản ghi nào cũ hơn {days_to_keep} ngày để xóa.")
+    except PyMongoError as e:
+        print(f"Lỗi khi xóa bản ghi cũ: {e}")
+
+
 def upload_translated_file_to_mongo(
     translated_file_path: Union[str, Path],
     mongo_db_uri: Optional[str] = None,
@@ -93,13 +132,14 @@ def upload_translated_file_to_mongo(
     collection_name: Optional[str] = None,
 ) -> int:
     """
-    Upload translated news results to MongoDB.
+    Upload translated news results to MongoDB using upsert to avoid duplicates.
+    Also, automatically cleans up old records older than 30 days.
 
-    Returns number of inserted documents (0 on failure or no data).
+    Returns number of inserted/updated documents.
     """
     try:
         from pymongo import MongoClient
-        from pymongo.errors import ConfigurationError, PyMongoError
+        from pymongo.errors import ConfigurationError, PyMongoError, DuplicateKeyError
     except ImportError:
         print("pymongo is not installed, skip MongoDB upload")
         return 0
@@ -114,36 +154,36 @@ def upload_translated_file_to_mongo(
         print(f"No translated news parsed from {path}")
         return 0
 
+    # Cấu hình DB
     mongo_uri = mongo_db_uri or os.environ.get("MONGODB_URI") or DEFAULT_MONGO_URI
     target_db_name = db_name or os.environ.get("MONGODB_DB_NAME") or "trendradar"
-    target_collection = (
-        collection_name or os.environ.get("MONGODB_COLLECTION") or "china_news"
-    )
+    target_collection_name = collection_name or os.environ.get("MONGODB_COLLECTION") or "china_news"
 
     now = datetime.now(pytz.timezone("Asia/Shanghai"))
-    docs: List[Dict] = []
+    docs_to_upsert: List[Dict] = []
 
     for source_id, titles in titles_by_id.items():
         source_name = id_to_name.get(source_id, source_id)
         for title, data in titles.items():
-            docs.append(
-                {
-                    "source_id": source_id,
-                    "source_name": source_name,
-                    "title": title,
-                    "url": data.get("url", ""),
-                    "mobile_url": data.get("mobileUrl", ""),
-                    "ranks": data.get("ranks", []),
-                    "translated_at": now,
-                    "date": now.strftime("%Y-%m-%d"),
-                }
-            )
+            # Dùng title làm unique key cùng với source_id và date
+            # Nếu url là duy nhất hơn, bạn có thể dùng url thay cho title
+            doc = {
+                "source_id": source_id,
+                "source_name": source_name,
+                "title": title,
+                "url": data.get("url", ""),
+                "mobile_url": data.get("mobileUrl", ""),
+                "ranks": data.get("ranks", []), # Có thể cần logic thêm rank nếu đã tồn tại
+                "translated_at": now,
+                "date": now.strftime("%Y-%m-%d"),
+            }
+            docs_to_upsert.append(doc)
 
-    if not docs:
+    if not docs_to_upsert:
         print(f"No translated news documents to upload from {path}")
         return 0
 
-    inserted_count = 0
+    upserted_count = 0
     client = None
     try:
         client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
@@ -153,16 +193,42 @@ def upload_translated_file_to_mongo(
             default_db = None
 
         db = default_db or client[target_db_name]
-        result = db[target_collection].insert_many(docs)
-        inserted_count = len(result.inserted_ids)
-        print(
-            f"Uploaded {inserted_count} translated news items to MongoDB "
-            f"({db.name}.{target_collection})"
-        )
+        collection = db[target_collection_name]
+
+        # 1. Đảm bảo index duy nhất tồn tại để tránh trùng lặp
+        # Sử dụng (source_id, title, date) làm unique key
+        _ensure_unique_index(collection, [("source_id", 1), ("title", 1), ("date", 1)])
+
+        # 2. Xóa dữ liệu cũ hơn 30 ngày
+        _cleanup_old_records(collection, days_to_keep=30)
+
+        # 3. Thực hiện upsert cho từng document
+        # Với index duy nhất, việc upsert sẽ thay thế nếu đã tồn tại.
+        # Tuy nhiên, nếu bạn muốn *cập nhật* mảng ranks (thêm rank mới vào nếu đã có rồi),
+        # thì cần logic phức tạp hơn một chút. Hiện tại, script này sẽ ghi đè ranks mới.
+        for doc in docs_to_upsert:
+            # Điều kiện tìm kiếm duy nhất
+            filter_condition = {
+                "source_id": doc["source_id"],
+                "title": doc["title"],
+                "date": doc["date"],
+            }
+            # Dữ liệu để upsert (nếu không tìm thấy) hoặc cập nhật (nếu tìm thấy)
+            # Ghi đè toàn bộ các trường trừ `_id`
+            # Nếu bạn muốn giữ lại `translated_at` cũ nếu đã tồn tại và chỉ cập nhật rank, bạn cần logic khác.
+            # Ví dụ: update = {"$set": doc, "$addToSet": {"ranks": {"$each": doc["ranks"]}}}
+            # Nhưng nếu schema `ranks` là rank tại thời điểm crawl, thì ghi đè là hợp lý hơn.
+            result = collection.replace_one(filter_condition, doc, upsert=True)
+            if result.upserted_id or result.modified_count > 0:
+                upserted_count += 1
+
+        print(f"Uploaded/Updated {upserted_count} translated news items to MongoDB "
+              f"({db.name}.{collection.name}) using upsert.")
+
     except PyMongoError as e:
-        print(f"MongoDB upload failed: {e}")
+        print(f"MongoDB operation failed: {e}")
     finally:
         if client:
             client.close()
 
-    return inserted_count
+    return upserted_count

@@ -672,6 +672,20 @@ def save_titles_to_file(results: Dict, id_to_name: Dict, failed_ids: List) -> st
 
         if success:
             print(f"Auto-translated file saved to: {output_path}")
+
+            # Upload translated file to MongoDB
+            try:
+                from mongo_uploader import upload_translated_file_to_mongo
+                upload_count = upload_translated_file_to_mongo(output_path)
+                if upload_count > 0:
+                    print(f"MongoDB upload completed: {upload_count} records processed/updated")
+                else:
+                    print("MongoDB upload: No records to process or upload failed")
+            except ImportError as e:
+                print(f"MongoDB upload skipped (pymongo not available): {e}")
+            except Exception as e:
+                print(f"MongoDB upload failed: {e}")
+
             # Also send translated email if email configuration is available
             send_translated_email_if_configured(output_path)
 
@@ -5212,17 +5226,18 @@ def translate_and_send_email():
             print(f"Translation completed successfully. Files generated:")
 
             try:
-                inserted = upload_translated_file_to_mongo(
+                from mongo_uploader import upload_translated_file_to_mongo
+                upload_count = upload_translated_file_to_mongo(
                     output_path, collection_name="china_news"
                 )
-                if inserted:
-                    print(
-                        f"MongoDB upload completed: {inserted} translated records stored."
-                    )
+                if upload_count > 0:
+                    print(f"MongoDB upload completed: {upload_count} records processed/updated")
                 else:
-                    print("MongoDB upload skipped or no records inserted.")
+                    print("MongoDB upload: No records to process or upload failed")
+            except ImportError as e:
+                print(f"MongoDB upload skipped (pymongo not available): {e}")
             except Exception as e:
-                print(f"MongoDB upload encountered an error: {e}")
+                print(f"MongoDB upload failed: {e}")
 
             # Also try to send email with translated content if email configuration is available
             send_translated_email_if_configured(output_path)

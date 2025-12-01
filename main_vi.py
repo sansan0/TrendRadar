@@ -656,39 +656,6 @@ def save_titles_to_file(results: Dict, id_to_name: Dict, failed_ids: List) -> st
             for id_value in failed_ids:
                 f.write(f"{id_value}\n")
 
-    # Automatically translate content if GEMINI_API_KEY is available
-    import os
-    gemini_api_key = os.environ.get("GEMINI_API_KEY")
-    if gemini_api_key:
-        # Import and run translation on the file just created
-        from translation_processor import TranslationProcessor
-
-        # Define output path for translated content
-        output_path = file_path.replace('.txt', '_vi.txt')
-
-        # Create translation processor and run
-        processor = TranslationProcessor(api_key=gemini_api_key)
-        success = processor.process_all_chunks(file_path, output_path)
-
-        if success:
-            print(f"Auto-translated file saved to: {output_path}")
-
-            # Upload translated file to MongoDB
-            try:
-                from mongo_uploader import upload_translated_file_to_mongo
-                upload_count = upload_translated_file_to_mongo(output_path)
-                if upload_count > 0:
-                    print(f"MongoDB upload completed: {upload_count} records processed/updated")
-                else:
-                    print("MongoDB upload: No records to process or upload failed")
-            except ImportError as e:
-                print(f"MongoDB upload skipped (pymongo not available): {e}")
-            except Exception as e:
-                print(f"MongoDB upload failed: {e}")
-
-            # Also send translated email if email configuration is available
-            send_translated_email_if_configured(output_path)
-
     return file_path
 
 

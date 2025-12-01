@@ -176,7 +176,7 @@ def upload_translated_file_to_mongo(
         print("MONGODB_URI not provided. Skipping MongoDB upload.")
         return 0
 
-    target_db_name = db_name or os.environ.get("MONGODB_DB_NAME") or "trendradar"
+    target_db_name = db_name or os.environ.get("MONGODB_DB_NAME") or "tech_digest"
     target_collection_name = collection_name or os.environ.get("MONGODB_COLLECTION") or "china_news"
 
     now = datetime.now(pytz.timezone("Asia/Shanghai"))

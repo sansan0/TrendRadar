@@ -65,7 +65,7 @@ cd 你的项目名
 
 ### Windows 用户
 
-1. **双击运行**项目文件夹中的 `setup-windows.bat`
+1. **双击运行**项目文件夹中的 `setup-windows.bat`，如果有问题，就运行 `setup-windows-en.bat`
 2. **等待安装完成**
 3. **记录显示的配置信息**（命令路径和参数）
 

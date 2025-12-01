@@ -5201,19 +5201,28 @@ def translate_and_send_email():
         print("GEMINI_API_KEY not found, skipping translation")
         return
 
-    # Find latest generated txt file
+    # Find latest generated txt file that is NOT already translated (doesn't contain '_vi' in the name)
     import glob
     from pathlib import Path
 
-    txt_files = glob.glob("output/*/*/*.txt", recursive=True)
-    if not txt_files:
-        # Look for any txt file in the output directory
-        txt_files = list(Path("output").rglob("*.txt"))
+    # First look for original txt files (excluding those already translated with '_vi')
+    original_txt_files = []
+    all_txt_files = glob.glob("output/*/*/*.txt", recursive=True)
 
-    if txt_files:
-        # Get most recently modified file
-        latest_txt_file = str(max(txt_files, key=lambda f: f.stat().st_mtime if isinstance(f, Path) else os.path.getmtime(str(f))))
-        print(f"Found latest txt file for translation: {latest_txt_file}")
+    for file_path in all_txt_files:
+        # Only include files that don't have '_vi' in their name
+        if '_vi' not in os.path.basename(file_path):
+            original_txt_files.append(file_path)
+
+    if not original_txt_files:
+        # If no original files found, look for any txt file in the output directory that doesn't contain '_vi'
+        all_txt_files = list(Path("output").rglob("*.txt"))
+        original_txt_files = [str(f) for f in all_txt_files if '_vi' not in f.name]
+
+    if original_txt_files:
+        # Get most recently modified original file (not already translated)
+        latest_txt_file = str(max(original_txt_files, key=lambda f: f.stat().st_mtime if isinstance(f, Path) else os.path.getmtime(str(f))))
+        print(f"Found latest original txt file for translation: {latest_txt_file}")
 
         # Define output path for translated content
         output_path = latest_txt_file.replace('.txt', '_vi.txt')
@@ -5244,7 +5253,7 @@ def translate_and_send_email():
         else:
             print("Translation failed")
     else:
-        print("No txt files found to translate")
+        print("No original txt files found to translate")
 
 
 def send_translated_email_if_configured(translated_file_path):

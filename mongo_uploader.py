@@ -130,14 +130,14 @@ def upload_translated_file_to_mongo(
     collection_name: Optional[str] = None,
 ) -> int:
     """
-    Upload translated news results to MongoDB using upsert to avoid duplicates.
+    Upload translated file content to MongoDB as a single document.
     Also, automatically cleans up old records older than 30 days.
 
-    Returns number of inserted/updated documents.
+    Returns number of documents inserted/updated (should be 1 if successful).
     """
     try:
         from pymongo import MongoClient
-        from pymongo.errors import ConfigurationError, PyMongoError, DuplicateKeyError
+        from pymongo.errors import ConfigurationError, PyMongoError
     except ImportError:
         print("pymongo is not installed, skip MongoDB upload")
         return 0
@@ -147,45 +147,39 @@ def upload_translated_file_to_mongo(
         print(f"Translated file not found: {path}")
         return 0
 
-    titles_by_id, id_to_name = _parse_translated_file(path)
-    if not titles_by_id:
-        print(f"No translated news parsed from {path}")
+    # Read the full content of the translated file
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+    except Exception as e:
+        print(f"Error reading translated file: {e}")
+        return 0
+
+    if not file_content.strip():
+        print(f"Translated file is empty: {path}")
         return 0
 
     # Cấu hình DB
     mongo_uri = mongo_db_uri or os.environ.get("MONGODB_URI") or DEFAULT_MONGO_URI
-    
+
     # Kiểm tra nếu không có MongoDB URI, thì bỏ qua việc upload
     if not mongo_uri:
         print("MONGODB_URI not provided. Skipping MongoDB upload.")
         return 0
-        
+
     target_db_name = db_name or os.environ.get("MONGODB_DB_NAME") or "trendradar"
     target_collection_name = collection_name or os.environ.get("MONGODB_COLLECTION") or "china_news"
 
     now = datetime.now(pytz.timezone("Asia/Shanghai"))
-    docs_to_upsert: List[Dict] = []
 
-    for source_id, titles in titles_by_id.items():
-        source_name = id_to_name.get(source_id, source_id)
-        for title, data in titles.items():
-            # Dùng title làm unique key cùng với source_id và date
-            # Nếu url là duy nhất hơn, bạn có thể dùng url thay cho title
-            doc = {
-                "source_id": source_id,
-                "source_name": source_name,
-                "title": title,
-                "url": data.get("url", ""),
-                "mobile_url": data.get("mobileUrl", ""),
-                "ranks": data.get("ranks", []), # Có thể cần logic thêm rank nếu đã tồn tại
-                "translated_at": now,
-                "date": now.strftime("%Y-%m-%d"),
-            }
-            docs_to_upsert.append(doc)
-
-    if not docs_to_upsert:
-        print(f"No translated news documents to upload from {path}")
-        return 0
+    # Create a single document containing the full file content
+    doc = {
+        "file_path": str(path),
+        "file_name": path.name,
+        "file_content": file_content,
+        "uploaded_at": now,
+        "date": now.strftime("%Y-%m-%d"),
+    }
 
     upserted_count = 0
     client = None
@@ -200,34 +194,24 @@ def upload_translated_file_to_mongo(
         collection = db[target_collection_name]
 
         # 1. Đảm bảo index duy nhất tồn tại để tránh trùng lặp
-        # Sử dụng (source_id, title, date) làm unique key
-        _ensure_unique_index(collection, [("source_id", 1), ("title", 1), ("date", 1)])
+        # Sử dụng (file_path, date) làm unique key
+        _ensure_unique_index(collection, [("file_path", 1), ("date", 1)])
 
         # 2. Xóa dữ liệu cũ hơn 30 ngày
         _cleanup_old_records(collection, days_to_keep=30)
 
-        # 3. Thực hiện upsert cho từng document
-        # Với index duy nhất, việc upsert sẽ thay thế nếu đã tồn tại.
-        # Tuy nhiên, nếu bạn muốn *cập nhật* mảng ranks (thêm rank mới vào nếu đã có rồi),
-        # thì cần logic phức tạp hơn một chút. Hiện tại, script này sẽ ghi đè ranks mới.
-        for doc in docs_to_upsert:
-            # Điều kiện tìm kiếm duy nhất
-            filter_condition = {
-                "source_id": doc["source_id"],
-                "title": doc["title"],
-                "date": doc["date"],
-            }
-            # Dữ liệu để upsert (nếu không tìm thấy) hoặc cập nhật (nếu tìm thấy)
-            # Ghi đè toàn bộ các trường trừ `_id`
-            # Nếu bạn muốn giữ lại `translated_at` cũ nếu đã tồn tại và chỉ cập nhật rank, bạn cần logic khác.
-            # Ví dụ: update = {"$set": doc, "$addToSet": {"ranks": {"$each": doc["ranks"]}}}
-            # Nhưng nếu schema `ranks` là rank tại thời điểm crawl, thì ghi đè là hợp lý hơn.
-            result = collection.replace_one(filter_condition, doc, upsert=True)
-            if result.upserted_id or result.modified_count > 0:
-                upserted_count += 1
+        # 3. Thực hiện upsert cho document duy nhất
+        # Điều kiện tìm kiếm duy nhất: kết hợp file_path và date
+        filter_condition = {
+            "file_path": doc["file_path"],
+            "date": doc["date"],
+        }
 
-        print(f"Uploaded/Updated {upserted_count} translated news items to MongoDB "
-              f"({db.name}.{collection.name}) using upsert.")
+        result = collection.replace_one(filter_condition, doc, upsert=True)
+        if result.upserted_id or result.modified_count > 0:
+            upserted_count = 1
+            print(f"Uploaded/Updated translated file to MongoDB "
+                  f"({db.name}.{collection.name}) as a single document.")
 
     except PyMongoError as e:
         print(f"MongoDB operation failed: {e}")

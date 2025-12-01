@@ -3926,7 +3926,7 @@ def send_to_wework(
             batch_size = len(plain_content.encode("utf-8"))
         else:
             # markdown 格式：保持原样
-            payload = {"msgtype": "markdown", "markdown": {"content": batch_content}}
+            payload = {"msgtype": "markdown_v2", "markdown_v2": {"content": batch_content}}
             batch_size = len(batch_content.encode("utf-8"))
 
         print(

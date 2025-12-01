@@ -15,6 +15,8 @@ from .tools.analytics import AnalyticsTools
 from .tools.search_tools import SearchTools
 from .tools.config_mgmt import ConfigManagementTools
 from .tools.system import SystemManagementTools
+from .utils.date_parser import DateParser
+from .utils.errors import MCPError
 
 
 # 创建 FastMCP 2.0 应用
@@ -33,6 +35,77 @@ def _get_tools(project_root: Optional[str] = None):
         _tools_instances['config'] = ConfigManagementTools(project_root)
         _tools_instances['system'] = SystemManagementTools(project_root)
     return _tools_instances
+
+
+# ==================== 日期解析工具（优先调用）====================
+
+@mcp.tool
+async def resolve_date_range(
+    expression: str
+) -> str:
+    """
+    【推荐优先调用】将自然语言日期表达式解析为标准日期范围
+
+    **为什么需要这个工具？**
+    用户经常使用"本周"、"最近7天"等自然语言表达日期，但 AI 模型自己计算日期
+    可能导致不一致的结果。此工具在服务器端使用精确的当前时间计算，确保所有
+    AI 模型获得一致的日期范围。
+
+    **推荐使用流程：**
+    1. 用户说"分析AI本周的情感倾向"
+    2. AI 调用 resolve_date_range("本周") → 获取精确日期范围
+    3. AI 调用 analyze_sentiment(topic="ai", date_range=上一步返回的date_range)
+
+    Args:
+        expression: 自然语言日期表达式，支持：
+            - 单日: "今天", "昨天", "today", "yesterday"
+            - 周: "本周", "上周", "this week", "last week"
+            - 月: "本月", "上月", "this month", "last month"
+            - 最近N天: "最近7天", "最近30天", "last 7 days", "last 30 days"
+            - 动态: "最近5天", "last 10 days"（任意天数）
+
+    Returns:
+        JSON格式的日期范围，可直接用于其他工具的 date_range 参数：
+        {
+            "success": true,
+            "expression": "本周",
+            "date_range": {
+                "start": "2025-11-18",
+                "end": "2025-11-26"
+            },
+            "current_date": "2025-11-26",
+            "description": "本周（周一到周日，11-18 至 11-26）"
+        }
+
+    Examples:
+        用户："分析AI本周的情感倾向"
+        AI调用步骤：
+        1. resolve_date_range("本周")
+           → {"date_range": {"start": "2025-11-18", "end": "2025-11-26"}, ...}
+        2. analyze_sentiment(topic="ai", date_range={"start": "2025-11-18", "end": "2025-11-26"})
+
+        用户："看看最近7天的特斯拉新闻"
+        AI调用步骤：
+        1. resolve_date_range("最近7天")
+           → {"date_range": {"start": "2025-11-20", "end": "2025-11-26"}, ...}
+        2. search_news(query="特斯拉", date_range={"start": "2025-11-20", "end": "2025-11-26"})
+    """
+    try:
+        result = DateParser.resolve_date_range_expression(expression)
+        return json.dumps(result, ensure_ascii=False, indent=2)
+    except MCPError as e:
+        return json.dumps({
+            "success": False,
+            "error": e.to_dict()
+        }, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": str(e)
+            }
+        }, ensure_ascii=False, indent=2)
 
 
 # ==================== 数据查询工具 ====================
@@ -165,6 +238,11 @@ async def analyze_topic_trend(
     """
     统一话题趋势分析工具 - 整合多种趋势分析模式
 
+    **重要：日期范围处理**
+    当用户使用"本周"、"最近7天"等自然语言时，请先调用 resolve_date_range 工具获取精确日期：
+    1. 调用 resolve_date_range("本周") → 获取 {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
+    2. 将返回的 date_range 传入本工具
+
     Args:
         topic: 话题关键词（必需）
         analysis_type: 分析类型，可选值：
@@ -173,12 +251,8 @@ async def analyze_topic_trend(
             - "viral": 异常热度检测（识别突然爆火的话题）
             - "predict": 话题预测（预测未来可能的热点）
         date_range: 日期范围（trend和lifecycle模式），可选
-                    - **格式**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}（必须是标准日期格式）
-                    - **说明**: AI必须根据当前日期自动计算并填入具体日期，不能使用"今天"等自然语言
-                    - **计算示例**:
-                      - 用户说"最近7天" → AI计算: {"start": "2025-11-11", "end": "2025-11-17"}（假设今天是11-17）
-                      - 用户说"上周" → AI计算: {"start": "2025-11-11", "end": "2025-11-17"}（上周一到上周日）
-                      - 用户说"本月" → AI计算: {"start": "2025-11-01", "end": "2025-11-17"}（11月1日到今天）
+                    - **格式**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
+                    - **获取方式**: 调用 resolve_date_range 工具解析自然语言日期
                     - **默认**: 不指定时默认分析最近7天
         granularity: 时间粒度（trend模式），默认"day"（仅支持 day，因为底层数据按天聚合）
         threshold: 热度突增倍数阈值（viral模式），默认3.0
@@ -189,19 +263,16 @@ async def analyze_topic_trend(
     Returns:
         JSON格式的趋势分析结果
 
-    **AI使用说明：**
-    当用户使用相对时间表达时（如"最近7天"、"过去一周"、"上个月"），
-    AI必须根据当前日期（从环境 <env> 获取）计算出具体的 YYYY-MM-DD 格式日期。
+    Examples:
+        用户："分析AI本周的趋势"
+        推荐调用流程：
+        1. resolve_date_range("本周") → {"date_range": {"start": "2025-11-18", "end": "2025-11-26"}}
+        2. analyze_topic_trend(topic="AI", date_range={"start": "2025-11-18", "end": "2025-11-26"})
 
-    **重要**：date_range 不接受"今天"、"昨天"等自然语言，必须是 YYYY-MM-DD 格式！
-
-    Examples (假设今天是 2025-11-17):
-        - 用户："分析AI最近7天的趋势"
-          → analyze_topic_trend(topic="人工智能", analysis_type="trend", date_range={"start": "2025-11-11", "end": "2025-11-17"})
-        - 用户："看看特斯拉本月的热度"
-          → analyze_topic_trend(topic="特斯拉", analysis_type="lifecycle", date_range={"start": "2025-11-01", "end": "2025-11-17"})
-        - analyze_topic_trend(topic="比特币", analysis_type="viral", threshold=3.0)
-        - analyze_topic_trend(topic="ChatGPT", analysis_type="predict", lookahead_hours=6)
+        用户："看看特斯拉最近30天的热度"
+        推荐调用流程：
+        1. resolve_date_range("最近30天") → {"date_range": {"start": "2025-10-28", "end": "2025-11-26"}}
+        2. analyze_topic_trend(topic="特斯拉", analysis_type="lifecycle", date_range=...)
     """
     tools = _get_tools()
     result = tools['analytics'].analyze_topic_trend_unified(
@@ -272,16 +343,21 @@ async def analyze_sentiment(
     """
     分析新闻的情感倾向和热度趋势
 
+    **重要：日期范围处理**
+    当用户使用"本周"、"最近7天"等自然语言时，请先调用 resolve_date_range 工具获取精确日期：
+    1. 调用 resolve_date_range("本周") → 获取 {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
+    2. 将返回的 date_range 传入本工具
+
     Args:
         topic: 话题关键词（可选）
         platforms: 平台ID列表，如 ['zhihu', 'weibo', 'douyin']
                    - 不指定时：使用 config.yaml 中配置的所有平台
                    - 支持的平台来自 config/config.yaml 的 platforms 配置
                    - 每个平台都有对应的name字段（如"知乎"、"微博"），方便AI识别
-        date_range: **【对象类型】** 日期范围（可选）
+        date_range: 日期范围（可选）
                     - **格式**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
-                    - **示例**: {"start": "2025-01-01", "end": "2025-01-07"}
-                    - **重要**: 必须是对象格式，不能传递整数
+                    - **获取方式**: 调用 resolve_date_range 工具解析自然语言日期
+                    - **默认**: 不指定则默认查询今天的数据
         limit: 返回新闻数量，默认50，最大100
                注意：本工具会对新闻标题进行去重（同一标题在不同平台只保留一次），
                因此实际返回数量可能少于请求的 limit 值
@@ -290,6 +366,17 @@ async def analyze_sentiment(
 
     Returns:
         JSON格式的分析结果，包含情感分布、热度趋势和相关新闻
+
+    Examples:
+        用户："分析AI本周的情感倾向"
+        推荐调用流程：
+        1. resolve_date_range("本周") → {"date_range": {"start": "2025-11-18", "end": "2025-11-26"}}
+        2. analyze_sentiment(topic="AI", date_range={"start": "2025-11-18", "end": "2025-11-26"})
+
+        用户："分析特斯拉最近7天的新闻情感"
+        推荐调用流程：
+        1. resolve_date_range("最近7天") → {"date_range": {"start": "2025-11-20", "end": "2025-11-26"}}
+        2. analyze_sentiment(topic="特斯拉", date_range={"start": "2025-11-20", "end": "2025-11-26"})
 
     **重要：数据展示策略**
     - 本工具返回完整的分析结果和新闻列表
@@ -386,6 +473,11 @@ async def search_news(
     """
     统一搜索接口，支持多种搜索模式
 
+    **重要：日期范围处理**
+    当用户使用"本周"、"最近7天"等自然语言时，请先调用 resolve_date_range 工具获取精确日期：
+    1. 调用 resolve_date_range("本周") → 获取 {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
+    2. 将返回的 date_range 传入本工具
+
     Args:
         query: 搜索关键词或内容片段
         search_mode: 搜索模式，可选值：
@@ -394,10 +486,8 @@ async def search_news(
             - "entity": 实体名称搜索（适合搜索人物/地点/机构）
         date_range: 日期范围（可选）
                     - **格式**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
-                    - **示例**: {"start": "2025-01-01", "end": "2025-01-07"}
-                    - **说明**: AI需要根据用户的自然语言（如"最近7天"）自动计算日期范围
+                    - **获取方式**: 调用 resolve_date_range 工具解析自然语言日期
                     - **默认**: 不指定时默认查询今天的新闻
-                    - **注意**: start和end可以相同（表示单日查询）
         platforms: 平台ID列表，如 ['zhihu', 'weibo', 'douyin']
                    - 不指定时：使用 config.yaml 中配置的所有平台
                    - 支持的平台来自 config/config.yaml 的 platforms 配置
@@ -415,31 +505,24 @@ async def search_news(
     Returns:
         JSON格式的搜索结果，包含标题、平台、排名等信息
 
+    Examples:
+        用户："搜索本周的AI新闻"
+        推荐调用流程：
+        1. resolve_date_range("本周") → {"date_range": {"start": "2025-11-18", "end": "2025-11-26"}}
+        2. search_news(query="AI", date_range={"start": "2025-11-18", "end": "2025-11-26"})
+
+        用户："最近7天的特斯拉新闻"
+        推荐调用流程：
+        1. resolve_date_range("最近7天") → {"date_range": {"start": "2025-11-20", "end": "2025-11-26"}}
+        2. search_news(query="特斯拉", date_range={"start": "2025-11-20", "end": "2025-11-26"})
+
+        用户："今天的AI新闻"（默认今天，无需解析）
+        → search_news(query="AI")
+
     **重要：数据展示策略**
     - 本工具返回完整的搜索结果列表
     - **默认展示方式**：展示全部返回的新闻，无需总结或筛选
     - 仅在用户明确要求"总结"或"挑重点"时才进行筛选
-
-    **AI使用说明：**
-    当用户使用相对时间表达时（如"最近7天"、"过去一周"、"最近半个月"），
-    AI必须根据当前日期（从环境 <env> 获取）计算出具体的 YYYY-MM-DD 格式日期。
-
-    **重要**：date_range 不接受"今天"、"昨天"等自然语言，必须是 YYYY-MM-DD 格式！
-
-    **计算规则**（假设从 <env> 获取今天是 2025-11-17）：
-    - "今天" → 不传 date_range（默认查今天）
-    - "最近7天" → {"start": "2025-11-11", "end": "2025-11-17"}
-    - "过去一周" → {"start": "2025-11-11", "end": "2025-11-17"}
-    - "上周" → 计算上周一到上周日，如 {"start": "2025-11-11", "end": "2025-11-17"}
-    - "本月" → {"start": "2025-11-01", "end": "2025-11-17"}
-    - "最近30天" → {"start": "2025-10-19", "end": "2025-11-17"}
-
-
-    Examples (假设今天是 2025-11-17):
-        - 用户："今天的AI新闻" → search_news(query="人工智能")
-        - 用户："最近7天的AI新闻" → search_news(query="人工智能", date_range={"start": "2025-11-11", "end": "2025-11-17"})
-        - 精确日期: search_news(query="人工智能", date_range={"start": "2025-01-01", "end": "2025-01-07"})
-        - 模糊搜索: search_news(query="特斯拉降价", search_mode="fuzzy", threshold=0.4)
     """
     tools = _get_tools()
     result = tools['search'].search_news_unified(
@@ -605,9 +688,8 @@ def run_server(
         print("  协议: MCP over stdio (标准输入输出)")
         print("  说明: 通过标准输入输出与 MCP 客户端通信")
     elif transport == 'http':
-        print(f"  监听地址: http://{host}:{port}")
-        print(f"  HTTP端点: http://{host}:{port}/mcp")
-        print("  协议: MCP over HTTP (生产环境)")
+        print(f"  协议: MCP over HTTP (生产环境)")
+        print(f"  服务器监听: {host}:{port}")
 
     if project_root:
         print(f"  项目目录: {project_root}")
@@ -616,6 +698,9 @@ def run_server(
 
     print()
     print("  已注册的工具:")
+    print("    === 日期解析工具（推荐优先调用）===")
+    print("    0. resolve_date_range       - 解析自然语言日期为标准格式")
+    print()
     print("    === 基础数据查询（P0核心）===")
     print("    1. get_latest_news        - 获取最新新闻")
     print("    2. get_news_by_date       - 按日期查询新闻（支持自然语言）")

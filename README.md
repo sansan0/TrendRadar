@@ -14,8 +14,8 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](https://github.com/sansan0/TrendRadar)
-[![MCP](https://img.shields.io/badge/MCP-v1.0.2-green.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.4.1-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![MCP](https://img.shields.io/badge/MCP-v1.0.3-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
 [![个人微信通知](https://img.shields.io/badge/个人微信-通知-00D4AA?style=flat-square)](https://weixin.qq.com/)
@@ -277,7 +277,7 @@
 
 ### **多渠道实时推送**
 
-支持**企业微信**(+ 微信推送方案)、**飞书**、**钉钉**、**Telegram**、**邮件**、**ntfy**，消息直达手机和邮箱
+支持**企业微信**(+ 微信推送方案)、**飞书**、**钉钉**、**Telegram**、**邮件**、**ntfy**、**Bark**、**Slack**，消息直达手机和邮箱
 
 ### **多端适配**
 - **GitHub Pages**：自动生成精美网页报告，PC/移动端适配
@@ -337,6 +337,39 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 - **大版本升级**：从 v1.x 升级到 v2.y，建议删除现有 fork 后重新 fork，这样更省力且避免配置冲突
 
 
+### 2025/11/26 - mcp-v1.0.3
+
+  **MCP 模块更新:**
+  - 新增日期解析工具 resolve_date_range,解决 AI 模型计算日期不一致的问题
+  - 支持自然语言日期表达式解析(本周、最近7天、上月等)
+  - 工具总数从 13 个增加到 14 个
+
+### 2025/11/28 - v3.4.1
+
+**🔧 格式优化**
+
+1. **Bark 推送增强**
+   - Bark 现支持 Markdown 渲染
+   - 启用原生 Markdown 格式：粗体、链接、列表、代码块等
+   - 移除纯文本转换，充分利用 Bark 原生渲染能力
+
+2. **Slack 格式精准化**
+   - 使用专用 mrkdwn 格式处理分批内容
+   - 提升字节大小估算准确性（避免消息超限）
+   - 优化链接格式：`<url|text>` 和加粗语法：`*text*`
+
+3. **性能提升**
+   - 格式转换在分批过程中完成，避免二次处理
+   - 准确估算消息大小，减少发送失败率
+
+**🔧 升级说明**：
+- **GitHub Fork 用户**：更新 `main.py`，`config.yaml`
+
+
+<details>
+<summary>👉 点击展开：<strong>历史更新</strong></summary>
+
+
 ### 2025/11/25 - v3.4.0
 
 **🎉 新增 Slack 推送支持**
@@ -358,10 +391,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 **🔧 升级说明**：
 - **GitHub Fork 用户**：更新 `main.py`、`config/config.yaml`、`.github/workflows/crawler.yml`
-
-
-<details>
-<summary>👉 点击展开：<strong>历史更新</strong></summary>
 
 
 ### 2025/11/24 - v3.3.0
@@ -403,6 +432,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 **🔧 升级说明**：
 - **GitHub Fork 用户**：更新 `main.py`、`config/config.yaml`
+
 
 ### 2025/11/18 - mcp-v1.0.2
 
@@ -1885,7 +1915,7 @@ docker run -d --name trend-radar \
    **使用方法**：
    - 修改 `.env` 文件，取消注释并填写需要的配置
    - 或在 NAS/群晖 Docker 管理界面的"环境变量"中直接添加
-   - 重启容器后生效：`docker-compose restart`
+   - 重启容器后生效：`docker-compose up -d`
 
 
 3. **启动服务**:

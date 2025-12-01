@@ -90,7 +90,16 @@ def _ensure_unique_index(collection, index_key):
     try:
         # Kiểm tra xem index đã tồn tại chưa
         existing_indexes = collection.index_information()
-        index_name = f"{index_key[0][0]}_1_{index_key[1][0]}_1_{index_key[2][0]}_1"
+
+        # Tạo tên index dựa trên số phần tử trong index_key
+        index_parts = []
+        for key_part in index_key:
+            field_name = key_part[0]
+            direction = key_part[1]  # usually 1 for ascending
+            index_parts.append(f"{field_name}_{direction}")
+
+        index_name = "_".join(index_parts)
+
         if index_name not in existing_indexes:
             # Tạo index duy nhất
             collection.create_index(index_key, unique=True)

@@ -554,6 +554,12 @@ class DataFetcher:
             id_to_name[id_value] = name
             response, _, _ = self.fetch_data(id_info)
 
+            # 获取当前平台配置
+            platform_config = next(
+                (p for p in CONFIG["PLATFORMS"] if p["id"] == id_value),
+                None
+            )
+
             if response:
                 try:
                     data = json.loads(response)
@@ -566,6 +572,18 @@ class DataFetcher:
                         title = str(title).strip()
                         url = item.get("url", "")
                         mobile_url = item.get("mobileUrl", "")
+
+                        # 过滤标题
+                        if platform_config and "blackWords" in platform_config:
+                            lower_title = title.lower()
+                            skip_title = False
+                            for bw in platform_config["blackWords"]:
+                                if bw.lower() in lower_title:
+                                    skip_title = True
+                                    break
+                            if skip_title:
+                                print(f"[过滤] {id_value} 过滤标题: {title}")
+                                continue
 
                         if title in results[id_value]:
                             results[id_value][title]["ranks"].append(index)

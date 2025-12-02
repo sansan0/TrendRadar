@@ -1433,6 +1433,25 @@ platforms:
 
 </details>
 
+#### 1.1 平台关键词过滤
+
+<details id="平台关键词过滤">
+<summary>👉 点击展开：<strong>平台关键词过滤示例</strong></summary>
+<br>
+
+不同平台的用户习惯不同，垃圾内容也不同，通过平台级过滤词，可以减少垃圾信息，提升抓取内容质量。
+
+如果要启用平台级关键词过滤，请在 `config/config.yaml` 文件中修改 `platforms` 配置，添加 `blackWords`
+
+```yaml
+platforms:
+  - id: "zhihu"
+    name: "知乎"
+    blackWords: ["如何看待", "如何评价"]
+```
+
+</details>
+
 ### 2. 关键词配置
 
 在 `frequency_words.txt` 文件中配置监控的关键词，支持四种语法和词组功能。

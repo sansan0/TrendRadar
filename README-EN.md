@@ -1383,6 +1383,27 @@ If you don't know how to look, you can directly copy the partially organized [Pl
 
 </details>
 
+#### 1.1 Platform-level keyword filters
+
+<details id="platform-level-black-words">
+<summary>👉 Click to expand: <strong>Platform-level keyword</strong></summary>
+<br>
+
+Different content sources have different noise patterns.
+
+Platform-level filters allow much more precise content control and reduce false positives.
+
+Each platform in `config/config.yaml` can define `blackWords` that will cause an item to be skipped if the title contains them.
+
+```yaml
+platforms:
+  - id: "zhihu"
+    name: "Zhihu"
+    blackWords: ["How should we view", "How would you evaluate"]
+```
+
+</details>
+
 ### 2. Keyword Configuration
 
 Configure monitoring keywords in `frequency_words.txt` with four syntax types and grouping features.

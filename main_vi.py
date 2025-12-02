@@ -615,12 +615,12 @@ def save_titles_to_file(results: Dict, id_to_name: Dict, failed_ids: List) -> st
 
     with open(file_path, "w", encoding="utf-8") as f:
         for id_value, title_data in results.items():
-            # id | name 或 id
+            # 更清晰地标记来源信息
             name = id_to_name.get(id_value)
             if name and name != id_value:
-                f.write(f"{id_value} | {name}\n")
+                f.write(f"[SOURCE] {id_value} | {name}\n")
             else:
-                f.write(f"{id_value}\n")
+                f.write(f"[SOURCE] {id_value}\n")
 
             # 按排名排序标题
             sorted_titles = []

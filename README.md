@@ -870,7 +870,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    ![飞书机器人配置示例](_image/image.png)
 
-   9. 配置完成后，将第 4 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
+   9. 配置完成后，点击"启用"，随后请务必点击页面上方的"发布"按钮，最后将第 4 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
 
    <br>
 
@@ -900,7 +900,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
    }
    ```
 
-   7. 点击"选择操作" > "发送飞书消息"，勾选 "群消息"，然后点击下面的输入框，点击"我管理的群组"（如果没有群组，你可以在飞书 app 上创建群组）
+   7. 点击"选择操作" > "发送飞书消息"，勾选"群消息"，然后点击下面的输入框，点击"我管理的群组"（如果没有群组，你可以在飞书 app 上创建群组）
 
    8. 消息标题填写"TrendRadar 热点监控"
 
@@ -908,7 +908,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
    ![飞书机器人配置示例](_image/image.png)
 
-   10. 配置完成后，将第 5 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
+   10. 配置完成后，点击"启用"，随后请务必点击页面上方的"发布"按钮，最后将第 5 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
 
    </details>
 

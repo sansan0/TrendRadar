@@ -919,8 +919,10 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
                 filtered_latest_titles[source_id] = title_data
         latest_titles = filtered_latest_titles
 
-    # 汇总历史标题（按平台过滤）
+    # 汇总历史标题和URL（按平台过滤）
     historical_titles = {}
+    historical_urls = {}
+
     for file_path in files[:-1]:
         historical_data, _ = parse_file_titles(file_path)
 
@@ -935,17 +937,46 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
         for source_id, titles_data in historical_data.items():
             if source_id not in historical_titles:
                 historical_titles[source_id] = set()
-            for title in titles_data.keys():
+            if source_id not in historical_urls:
+                historical_urls[source_id] = set()
+                
+            for title, data in titles_data.items():
                 historical_titles[source_id].add(title)
+                # 记录 URL 用于去重
+                url = data.get("url", "")
+                if url:
+                    historical_urls[source_id].add(url)
+                # 同时也记录 mobileUrl
+                mobile_url = data.get("mobileUrl", "")
+                if mobile_url:
+                    historical_urls[source_id].add(mobile_url)
 
     # 找出新增标题
     new_titles = {}
     for source_id, latest_source_titles in latest_titles.items():
-        historical_set = historical_titles.get(source_id, set())
+        historical_title_set = historical_titles.get(source_id, set())
+        historical_url_set = historical_urls.get(source_id, set())
         source_new_titles = {}
 
         for title, title_data in latest_source_titles.items():
-            if title not in historical_set:
+            # 获取当前新闻的 URL
+            current_url = title_data.get("url", "")
+            current_mobile_url = title_data.get("mobileUrl", "")
+            
+            # 核心去重逻辑：
+            # 1. 标题不能存在于历史标题中
+            # 2. URL 不能存在于历史 URL 中 (防止标题变更但内容相同的情况)
+            is_duplicate_title = title in historical_title_set
+            is_duplicate_url = False
+            
+            if current_url and current_url in historical_url_set:
+                is_duplicate_url = True
+            elif current_mobile_url and current_mobile_url in historical_url_set:
+                is_duplicate_url = True
+                
+            # 只有当标题和 URL 都不重复时，才认为是新增
+            # 对于没有 URL 的新闻，退化为仅比对标题
+            if not is_duplicate_title and not is_duplicate_url:
                 source_new_titles[title] = title_data
 
         if source_new_titles:

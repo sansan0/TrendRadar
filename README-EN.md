@@ -14,7 +14,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v3.4.1-blue.svg)](https://github.com/sansan0/TrendRadar)
 [![MCP](https://img.shields.io/badge/MCP-v1.0.3-green.svg)](https://github.com/sansan0/TrendRadar)
 
 [![WeWork](https://img.shields.io/badge/WeWork-Notification-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
@@ -272,6 +272,40 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 - **Major Version Upgrade**: Upgrading from v1.x to v2.y, recommend deleting existing fork and re-forking to save effort and avoid config conflicts
 
 
+### 2025/11/28 - v3.4.1
+
+**🔧 Format Optimization**
+
+1. **Bark Push Enhancement**
+   - Bark now supports Markdown rendering
+   - Enabled native Markdown format: bold, links, lists, code blocks, etc.
+   - Removed plain text conversion to fully utilize Bark's native rendering capabilities
+
+2. **Slack Format Precision**
+   - Use dedicated mrkdwn format for batch content processing
+   - Improved byte size estimation accuracy (avoid message overflow)
+   - Optimized link format: `<url|text>` and bold syntax: `*text*`
+
+3. **Performance Improvement**
+   - Format conversion completed during batching process, avoiding secondary processing
+   - Accurate message size estimation reduces send failure rate
+
+**🔧 Upgrade Instructions**:
+- **GitHub Fork Users**: Update `main.py`，`config.yaml`
+
+
+### 2025/11/26 - mcp-v1.0.3
+
+  **MCP Module Update:**
+  - Added date parsing tool resolve_date_range to resolve AI model date calculation inconsistencies
+  - Support natural language date expression parsing (this week, last 7 days, last month, etc.)
+  - Tool count increased from 13 to 14
+
+
+<details>
+<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
+
+
 ### 2025/11/25 - v3.4.0
 
 **🎉 Added Slack Push Support**
@@ -293,17 +327,6 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 
 **🔧 Upgrade Instructions**:
 - **GitHub Fork Users**: Update `main.py`, `config/config.yaml`, `.github/workflows/crawler.yml`
-
-### 2025/11/26 - mcp-v1.0.3
-
-  **MCP Module Update:**
-  - Added date parsing tool resolve_date_range to resolve AI model date calculation inconsistencies
-  - Support natural language date expression parsing (this week, last 7 days, last month, etc.)
-  - Tool count increased from 13 to 14
-
-
-<details>
-<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
 
 
 ### 2025/11/24 - v3.3.0
@@ -1845,7 +1868,7 @@ current directory/
    **Usage Method**:
    - Modify `.env` file, uncomment and fill in needed configs
    - Or add directly in NAS/Synology Docker management interface's "Environment Variables"
-   - Restart container to take effect: `docker-compose restart`
+   - Restart container to take effect: `docker-compose up -d`
 
 
 3. **Start Service**:

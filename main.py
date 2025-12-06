@@ -255,6 +255,8 @@ def load_config():
             "HOTNESS_WEIGHT": config_data["weight"]["hotness_weight"],
         },
         "PLATFORMS": config_data["platforms"],
+        # RSS配置
+        "RSS": config_data.get("rss", {}),
     }
 
     # 通知渠道配置（环境变量优先）
@@ -5268,9 +5270,30 @@ class NewsAnalyzer:
         print(f"开始爬取数据，请求间隔 {self.request_interval} 毫秒")
         ensure_directory_exists("output")
 
+        # 爬取原有平台数据
         results, id_to_name, failed_ids = self.data_fetcher.crawl_websites(
             ids, self.request_interval
         )
+        
+        # 爬取RSS订阅源数据
+        try:
+            from rss_module.rss_feed import fetch_all_rss_feeds, load_rss_config
+            
+            # 加载RSS配置
+            rss_feeds_config = load_rss_config(CONFIG)
+            if rss_feeds_config:
+                print(f"配置的RSS订阅源: {[feed.get('name', feed.get('url', 'Unknown')) for feed in rss_feeds_config]}")
+                
+                # 获取RSS数据
+                proxy_url = CONFIG["DEFAULT_PROXY"] if CONFIG["USE_PROXY"] else None
+                rss_results, rss_id_to_name, rss_failed_ids = fetch_all_rss_feeds(rss_feeds_config, proxy_url)
+                
+                # 合并RSS数据到原有结果中
+                results.update(rss_results)
+                id_to_name.update(rss_id_to_name)
+                failed_ids.extend(rss_failed_ids)
+        except Exception as e:
+            print(f"RSS订阅源爬取失败: {e}")
 
         title_file = save_titles_to_file(results, id_to_name, failed_ids)
         print(f"标题已保存到: {title_file}")

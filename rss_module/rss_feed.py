@@ -71,13 +71,26 @@ class RSSFeed:
     def get_feed_data(self) -> Tuple[Optional[Dict[str, Dict]], str]:
         """
         获取并解析RSS订阅源，返回数据和源名称
+        失败后等待5秒重试一次
         """
+        # 第一次尝试
         feed = self.fetch_feed()
-        if not feed:
-            return None, self.name
+        if feed:
+            data = self.parse_feed(feed)
+            return data, self.name
         
-        data = self.parse_feed(feed)
-        return data, self.name
+        # 第一次失败，等待5秒后重试
+        print(f"等待5秒后重试获取 {self.name}...")
+        time.sleep(5)
+        
+        # 第二次尝试
+        feed = self.fetch_feed()
+        if feed:
+            data = self.parse_feed(feed)
+            return data, self.name
+        
+        # 两次都失败，返回None
+        return None, self.name
 
 
 def load_rss_config(config_data: Dict) -> List[Dict]:

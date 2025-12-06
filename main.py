@@ -985,7 +985,7 @@ def read_all_today_titles(
             filtered_id_to_name = {}
 
             for source_id, title_data in titles_by_id.items():
-                if source_id in current_platform_ids:
+                if source_id in current_platform_ids or source_id.startswith("http"):
                     filtered_titles_by_id[source_id] = title_data
                     if source_id in file_id_to_name:
                         filtered_id_to_name[source_id] = file_id_to_name[source_id]
@@ -1092,11 +1092,12 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
     latest_file = files[-1]
     latest_titles, _ = parse_file_titles(latest_file)
 
-    # 如果指定了当前平台列表，过滤最新文件数据
+    # 如果指定了当前平台列表，过滤最新文件数据，但保留RSS源
     if current_platform_ids is not None:
         filtered_latest_titles = {}
         for source_id, title_data in latest_titles.items():
-            if source_id in current_platform_ids:
+            # 保留配置的平台和RSS源（RSS源的ID是URL，以http开头）
+            if source_id in current_platform_ids or source_id.startswith("http"):
                 filtered_latest_titles[source_id] = title_data
         latest_titles = filtered_latest_titles
 
@@ -1109,7 +1110,7 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
         if current_platform_ids is not None:
             filtered_historical_data = {}
             for source_id, title_data in historical_data.items():
-                if source_id in current_platform_ids:
+                if source_id in current_platform_ids or source_id.startswith("http"):
                     filtered_historical_data[source_id] = title_data
             historical_data = filtered_historical_data
 

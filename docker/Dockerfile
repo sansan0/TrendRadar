@@ -55,6 +55,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py .
 COPY docker/manage.py .
+COPY rss_module/ rss_module/
 
 # 复制 entrypoint.sh 并强制转换为 LF 格式
 COPY docker/entrypoint.sh /entrypoint.sh.tmp

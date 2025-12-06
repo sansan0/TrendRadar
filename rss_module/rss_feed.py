@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 import pytz
 import re
+import time
 
 class RSSFeed:
     def __init__(self, url: str, name: str = "", proxy_url: Optional[str] = None):
@@ -129,7 +130,10 @@ def fetch_all_rss_feeds(feeds_config: List[Dict], proxy_url: Optional[str] = Non
             # 使用URL作为唯一标识符
             results[url] = feed_data
             id_to_name[url] = feed_name
+            print(f'获取 {feed_name} 成功')
+            time.sleep(1)  # 等待1000毫秒
         else:
             failed_ids.append(url)
+            print(f'获取 {feed_name} 失败')
     
     return results, id_to_name, failed_ids

@@ -208,6 +208,11 @@ def load_config():
         "slack_webhook_url", ""
     )
 
+    # Discord配置
+    config["DISCORD_WEBHOOK_URL"] = os.environ.get("DISCORD_WEBHOOK_URL", "").strip() or webhooks.get(
+        "discord_webhook_url", ""
+    )
+
     # 输出配置来源信息
     notification_sources = []
     if config["FEISHU_WEBHOOK_URL"]:
@@ -240,6 +245,10 @@ def load_config():
     if config["SLACK_WEBHOOK_URL"]:
         slack_source = "环境变量" if os.environ.get("SLACK_WEBHOOK_URL") else "配置文件"
         notification_sources.append(f"Slack({slack_source})")
+
+    if config["DISCORD_WEBHOOK_URL"]:
+        discord_source = "环境变量" if os.environ.get("DISCORD_WEBHOOK_URL") else "配置文件"
+        notification_sources.append(f"Discord({discord_source})")
 
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
@@ -3580,6 +3589,7 @@ def send_to_notifications(
     ntfy_token = CONFIG.get("NTFY_TOKEN", "")
     bark_url = CONFIG["BARK_URL"]
     slack_webhook_url = CONFIG["SLACK_WEBHOOK_URL"]
+    discord_webhook_url = CONFIG["DISCORD_WEBHOOK_URL"]
 
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
@@ -3641,6 +3651,17 @@ def send_to_notifications(
     if slack_webhook_url:
         results["slack"] = send_to_slack(
             slack_webhook_url,
+            report_data,
+            report_type,
+            update_info_to_send,
+            proxy_url,
+            mode,
+        )
+
+    # 发送到 Discord
+    if discord_webhook_url:
+        results["discord"] = send_to_discord(
+            discord_webhook_url,
             report_data,
             report_type,
             update_info_to_send,
@@ -4531,6 +4552,69 @@ def send_to_slack(
             return False
 
     print(f"Slack所有 {len(batches)} 批次发送完成 [{report_type}]")
+    return True
+
+
+def send_to_discord(
+    webhook_url: str,
+    report_data: Dict,
+    report_type: str,
+    update_info: Optional[Dict] = None,
+    proxy_url: Optional[str] = None,
+    mode: str = "daily",
+) -> bool:
+    """发送到Discord（使用Embed格式）"""
+    headers = {"Content-Type": "application/json"}
+    proxies = None
+    if proxy_url:
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 获取分批内容
+    discord_batch_size = CONFIG.get("DISCORD_BATCH_SIZE", 2000)  # Discord 单个 embed field 限制2048字符
+    batches = split_content_into_batches(
+        report_data, "markdown", update_info, max_bytes=discord_batch_size, mode=mode
+    )
+
+    print(f"Discord消息分为 {len(batches)} 批次发送 [{report_type}]")
+
+    # 逐批发送
+    for i, batch_content in enumerate(batches, 1):
+        print(f"发送Discord第 {i}/{len(batches)} 批次 [{report_type}]")
+
+        # 构建Discord Embed payload
+        # Discord支持原生Markdown，无需转换
+        embed = {
+            "title": f"📰 热点资讯汇总 ({report_type})",
+            "description": batch_content[:4096],  # Discord description 限制 4096
+            "color": 5814783,  # 蓝色
+            "footer": {
+                "text": f"TrendRadar v{VERSION} | {get_beijing_time().strftime('%Y-%m-%d %H:%M')}"
+            }
+        }
+
+        payload = {
+            "embeds": [embed]
+        }
+
+        try:
+            response = requests.post(
+                webhook_url, headers=headers, json=payload, proxies=proxies, timeout=30
+            )
+
+            if response.status_code == 204 or response.status_code == 200:
+                print(f"Discord第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
+                # 批次间间隔
+                if i < len(batches):
+                    time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
+            else:
+                error_msg = response.text if response.text else f"状态码：{response.status_code}"
+                print(f"Discord第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{error_msg}")
+                return False
+        except Exception as e:
+            print(f"Discord第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
+            return False
+
+    print(f"Discord所有 {len(batches)} 批次发送完成 [{report_type}]")
     return True
 
 

@@ -8,7 +8,13 @@ import os
 import sys
 import subprocess
 import time
+import signal
 from pathlib import Path
+
+# Web 服务器配置
+WEBSERVER_PORT = int(os.environ.get("WEBSERVER_PORT", "8080"))
+WEBSERVER_DIR = "/app/output"
+WEBSERVER_PID_FILE = "/tmp/webserver.pid"
 
 
 def run_command(cmd, shell=True, capture_output=True):
@@ -374,13 +380,13 @@ def restart_supercronic():
     """重启supercronic进程"""
     print("🔄 重启supercronic...")
     print("⚠️ 注意: supercronic 是 PID 1，无法直接重启")
-    
+
     # 检查当前 PID 1
     try:
         with open('/proc/1/cmdline', 'r') as f:
             pid1_cmdline = f.read().replace('\x00', ' ').strip()
         print(f"  🔍 当前 PID 1: {pid1_cmdline}")
-        
+
         if "supercronic" in pid1_cmdline.lower():
             print("  ✅ PID 1 是 supercronic")
             print("  💡 要重启 supercronic，需要重启整个容器:")
@@ -394,29 +400,167 @@ def restart_supercronic():
         print("  💡 建议重启容器: docker restart trend-radar")
 
 
+def start_webserver():
+    """启动 Web 服务器托管 output 目录"""
+    print(f"🌐 启动 Web 服务器 (端口: {WEBSERVER_PORT})...")
+    print(f"  🔒 安全提示：仅提供静态文件访问，限制在 {WEBSERVER_DIR} 目录")
+
+    # 检查是否已经运行
+    if Path(WEBSERVER_PID_FILE).exists():
+        try:
+            with open(WEBSERVER_PID_FILE, 'r') as f:
+                old_pid = int(f.read().strip())
+            try:
+                os.kill(old_pid, 0)  # 检查进程是否存在
+                print(f"  ⚠️ Web 服务器已在运行 (PID: {old_pid})")
+                print(f"  💡 访问: http://localhost:{WEBSERVER_PORT}")
+                print("  💡 停止服务: python manage.py stop_webserver")
+                return
+            except OSError:
+                # 进程不存在，删除旧的 PID 文件
+                os.remove(WEBSERVER_PID_FILE)
+        except Exception as e:
+            print(f"  ⚠️ 清理旧的 PID 文件: {e}")
+            try:
+                os.remove(WEBSERVER_PID_FILE)
+            except:
+                pass
+
+    # 检查目录是否存在
+    if not Path(WEBSERVER_DIR).exists():
+        print(f"  ❌ 目录不存在: {WEBSERVER_DIR}")
+        return
+
+    try:
+        # 启动 HTTP 服务器
+        # 使用 --bind 绑定到 0.0.0.0 使容器内部可访问
+        # 工作目录限制在 WEBSERVER_DIR，防止访问其他目录
+        process = subprocess.Popen(
+            [sys.executable, '-m', 'http.server', str(WEBSERVER_PORT), '--bind', '0.0.0.0'],
+            cwd=WEBSERVER_DIR,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+
+        # 等待一下确保服务器启动
+        time.sleep(1)
+
+        # 检查进程是否还在运行
+        if process.poll() is None:
+            # 保存 PID
+            with open(WEBSERVER_PID_FILE, 'w') as f:
+                f.write(str(process.pid))
+
+            print(f"  ✅ Web 服务器已启动 (PID: {process.pid})")
+            print(f"  📁 服务目录: {WEBSERVER_DIR} (只读，仅静态文件)")
+            print(f"  🌐 访问地址: http://localhost:{WEBSERVER_PORT}")
+            print(f"  📄 首页: http://localhost:{WEBSERVER_PORT}/index.html")
+            print("  💡 停止服务: python manage.py stop_webserver")
+        else:
+            print(f"  ❌ Web 服务器启动失败")
+    except Exception as e:
+        print(f"  ❌ 启动失败: {e}")
+
+
+def stop_webserver():
+    """停止 Web 服务器"""
+    print("🛑 停止 Web 服务器...")
+
+    if not Path(WEBSERVER_PID_FILE).exists():
+        print("  ℹ️ Web 服务器未运行")
+        return
+
+    try:
+        with open(WEBSERVER_PID_FILE, 'r') as f:
+            pid = int(f.read().strip())
+
+        try:
+            # 尝试终止进程
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(0.5)
+
+            # 检查进程是否已终止
+            try:
+                os.kill(pid, 0)
+                # 进程还在，强制杀死
+                os.kill(pid, signal.SIGKILL)
+                print(f"  ⚠️ 强制停止 Web 服务器 (PID: {pid})")
+            except OSError:
+                print(f"  ✅ Web 服务器已停止 (PID: {pid})")
+        except OSError as e:
+            if e.errno == 3:  # No such process
+                print(f"  ℹ️ 进程已不存在 (PID: {pid})")
+            else:
+                raise
+
+        # 删除 PID 文件
+        os.remove(WEBSERVER_PID_FILE)
+    except Exception as e:
+        print(f"  ❌ 停止失败: {e}")
+        # 尝试清理 PID 文件
+        try:
+            os.remove(WEBSERVER_PID_FILE)
+        except:
+            pass
+
+
+def webserver_status():
+    """查看 Web 服务器状态"""
+    print("🌐 Web 服务器状态:")
+
+    if not Path(WEBSERVER_PID_FILE).exists():
+        print("  ⭕ 未运行")
+        print(f"  💡 启动服务: python manage.py start_webserver")
+        return
+
+    try:
+        with open(WEBSERVER_PID_FILE, 'r') as f:
+            pid = int(f.read().strip())
+
+        try:
+            os.kill(pid, 0)  # 检查进程是否存在
+            print(f"  ✅ 运行中 (PID: {pid})")
+            print(f"  📁 服务目录: {WEBSERVER_DIR}")
+            print(f"  🌐 访问地址: http://localhost:{WEBSERVER_PORT}")
+            print(f"  📄 首页: http://localhost:{WEBSERVER_PORT}/index.html")
+            print("  💡 停止服务: python manage.py stop_webserver")
+        except OSError:
+            print(f"  ⭕ 未运行 (PID 文件存在但进程不存在)")
+            os.remove(WEBSERVER_PID_FILE)
+            print("  💡 启动服务: python manage.py start_webserver")
+    except Exception as e:
+        print(f"  ❌ 状态检查失败: {e}")
+
+
 def show_help():
     """显示帮助信息"""
     help_text = """
 🐳 TrendRadar 容器管理工具
 
 📋 命令列表:
-  run         - 手动执行一次爬虫
-  status      - 显示容器运行状态
-  config      - 显示当前配置
-  files       - 显示输出文件
-  logs        - 实时查看日志
-  restart     - 重启说明
-  help        - 显示此帮助
+  run              - 手动执行一次爬虫
+  status           - 显示容器运行状态
+  config           - 显示当前配置
+  files            - 显示输出文件
+  logs             - 实时查看日志
+  restart          - 重启说明
+  start_webserver  - 启动 Web 服务器托管 output 目录
+  stop_webserver   - 停止 Web 服务器
+  webserver_status - 查看 Web 服务器状态
+  help             - 显示此帮助
 
 📖 使用示例:
   # 在容器中执行
   python manage.py run
   python manage.py status
   python manage.py logs
-  
+  python manage.py start_webserver
+
   # 在宿主机执行
   docker exec -it trend-radar python manage.py run
   docker exec -it trend-radar python manage.py status
+  docker exec -it trend-radar python manage.py start_webserver
   docker logs trend-radar
 
 💡 常用操作指南:
@@ -424,18 +568,24 @@ def show_help():
      - 查看 supercronic 是否为 PID 1
      - 检查配置文件和关键文件
      - 查看 cron 调度设置
-  
-  2. 手动执行测试: run  
+
+  2. 手动执行测试: run
      - 立即执行一次新闻爬取
      - 测试程序是否正常工作
-  
+
   3. 查看日志: logs
      - 实时监控运行情况
      - 也可使用: docker logs trend-radar
-  
+
   4. 重启服务: restart
      - 由于 supercronic 是 PID 1，需要重启整个容器
      - 使用: docker restart trend-radar
+
+  5. Web 服务器管理:
+     - 启动: start_webserver
+     - 停止: stop_webserver
+     - 状态: webserver_status
+     - 访问: http://localhost:8080
 """
     print(help_text)
 
@@ -453,6 +603,9 @@ def main():
         "files": show_files,
         "logs": show_logs,
         "restart": restart_supercronic,
+        "start_webserver": start_webserver,
+        "stop_webserver": stop_webserver,
+        "webserver_status": webserver_status,
         "help": show_help,
     }
 

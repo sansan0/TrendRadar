@@ -33,9 +33,15 @@ case "${RUN_MODE:-cron}" in
         /usr/local/bin/python main.py
     fi
 
+    # 启动 Web 服务器（如果配置了）
+    if [ "${ENABLE_WEBSERVER:-false}" = "true" ]; then
+        echo "🌐 启动 Web 服务器..."
+        /usr/local/bin/python manage.py start_webserver
+    fi
+
     echo "⏰ 启动supercronic: ${CRON_SCHEDULE:-*/30 * * * *}"
     echo "🎯 supercronic 将作为 PID 1 运行"
-    
+
     exec /usr/local/bin/supercronic -passthrough-logs /tmp/crontab
     ;;
 *)

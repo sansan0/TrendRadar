@@ -50,8 +50,9 @@ RUN set -ex && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt pyproject.toml ./
+RUN pip install --no-cache-dir uv
+RUN uv sync --no-cache
 
 COPY main.py .
 COPY docker/manage.py .

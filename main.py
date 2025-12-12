@@ -1528,7 +1528,7 @@ def format_title_for_platform(
         else:
             formatted_title = cleaned_title
 
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
+        title_prefix = " " if title_data.get("is_new") else ""
 
         if show_source:
             result = f"<font color='grey'>[{title_data['source_name']}]</font> {title_prefix}{formatted_title}"
@@ -1550,7 +1550,7 @@ def format_title_for_platform(
         else:
             formatted_title = cleaned_title
 
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
+        title_prefix = " " if title_data.get("is_new") else ""
 
         if show_source:
             result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
@@ -1572,19 +1572,24 @@ def format_title_for_platform(
         else:
             formatted_title = cleaned_title
 
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
+        title_prefix = "[新] " if title_data.get("is_new") else ""
 
         if show_source:
-            result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
+            result = f"{title_prefix}**{title_data['source_name']}** - {formatted_title}"
         else:
             result = f"{title_prefix}{formatted_title}"
 
+        # 添加元信息（排名、时间、次数）
+        meta_info = []
         if rank_display:
-            result += f" {rank_display}"
+            meta_info.append(f"`{rank_display}`")
         if title_data["time_display"]:
-            result += f" - {title_data['time_display']}"
+            meta_info.append(f"<font color=\"comment\">{title_data['time_display']}</font>")
         if title_data["count"] > 1:
-            result += f" ({title_data['count']}次)"
+            meta_info.append(f"<font color=\"info\">×{title_data['count']}</font>")
+
+        if meta_info:
+            result += f" {' '.join(meta_info)}"
 
         return result
 
@@ -1594,7 +1599,7 @@ def format_title_for_platform(
         else:
             formatted_title = cleaned_title
 
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
+        title_prefix = " " if title_data.get("is_new") else ""
 
         if show_source:
             result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
@@ -1616,7 +1621,7 @@ def format_title_for_platform(
         else:
             formatted_title = cleaned_title
 
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
+        title_prefix = " " if title_data.get("is_new") else ""
 
         if show_source:
             result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
@@ -1659,7 +1664,7 @@ def format_title_for_platform(
             formatted_title += f" <font color='green'>({title_data['count']}次)</font>"
 
         if title_data.get("is_new"):
-            formatted_title = f"<div class='new-title'>🆕 {formatted_title}</div>"
+            formatted_title = f"<div class='new-title'> {formatted_title}</div>"
 
         return formatted_title
 
@@ -2734,11 +2739,11 @@ def render_feishu_content(
         sequence_display = f"<font color='grey'>[{i + 1}/{total_count}]</font>"
 
         if count >= 10:
-            text_content += f"🔥 {sequence_display} **{word}** : <font color='red'>{count}</font> 条\n\n"
+            text_content += f" {sequence_display} **{word}** : <font color='red'>{count}</font> 条\n\n"
         elif count >= 5:
-            text_content += f"📈 {sequence_display} **{word}** : <font color='orange'>{count}</font> 条\n\n"
+            text_content += f"{sequence_display} **{word}** : <font color='orange'>{count}</font> 条\n\n"
         else:
-            text_content += f"📌 {sequence_display} **{word}** : {count} 条\n\n"
+            text_content += f" {sequence_display} **{word}** : {count} 条\n\n"
 
         for j, title_data in enumerate(stat["titles"], 1):
             formatted_title = format_title_for_platform(
@@ -2759,14 +2764,14 @@ def render_feishu_content(
             mode_text = "当前榜单模式下暂无匹配的热点词汇"
         else:
             mode_text = "暂无匹配的热点词汇"
-        text_content = f"📭 {mode_text}\n\n"
+        text_content = f" {mode_text}\n\n"
 
     if report_data["new_titles"]:
         if text_content and "暂无匹配" not in text_content:
             text_content += f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n"
 
         text_content += (
-            f"🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
+            f" **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
         )
 
         for source_data in report_data["new_titles"]:
@@ -2821,7 +2826,7 @@ def render_dingtalk_content(
     text_content += "---\n\n"
 
     if report_data["stats"]:
-        text_content += f"📊 **热点词汇统计**\n\n"
+        text_content += f"**热点词汇统计**\n\n"
 
         total_count = len(report_data["stats"])
 
@@ -2864,7 +2869,7 @@ def render_dingtalk_content(
             text_content += f"\n---\n\n"
 
         text_content += (
-            f"🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
+            f" **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
         )
 
         for source_data in report_data["new_titles"]:
@@ -2923,7 +2928,9 @@ def split_content_into_batches(
 
     base_header = ""
     if format_type == "wework":
-        base_header = f"**总新闻数：** {total_titles}\n\n\n\n"
+        base_header = f"# TrendRadar 热点报告\n\n"
+        base_header += f"---\n\n"
+        base_header += f"**总新闻数**：<font color=\"info\">{total_titles}</font> 条\n\n"
     elif format_type == "telegram":
         base_header = f"总新闻数： {total_titles}\n\n"
     elif format_type == "ntfy":
@@ -2938,9 +2945,10 @@ def split_content_into_batches(
 
     base_footer = ""
     if format_type == "wework":
-        base_footer = f"\n\n\n> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
+        base_footer = f"\n\n---\n\n"
+        base_footer += f"> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
         if update_info:
-            base_footer += f"\n> TrendRadar 发现新版本 **{update_info['remote_version']}**，当前 **{update_info['current_version']}**"
+            base_footer += f"\n> 发现新版本 **{update_info['remote_version']}** (当前 {update_info['current_version']})"
     elif format_type == "telegram":
         base_footer = f"\n\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
         if update_info:
@@ -2961,7 +2969,7 @@ def split_content_into_batches(
     stats_header = ""
     if report_data["stats"]:
         if format_type == "wework":
-            stats_header = f"📊 **热点词汇统计**\n\n"
+            stats_header = f"## 热点词汇\n\n"
         elif format_type == "telegram":
             stats_header = f"📊 热点词汇统计\n\n"
         elif format_type == "ntfy":
@@ -2985,7 +2993,7 @@ def split_content_into_batches(
             mode_text = "当前榜单模式下暂无匹配的热点词汇"
         else:
             mode_text = "暂无匹配的热点词汇"
-        simple_content = f"📭 {mode_text}\n\n"
+        simple_content = f"{mode_text}\n\n"
         final_content = base_header + simple_content + base_footer
         batches.append(final_content)
         return batches
@@ -3018,15 +3026,14 @@ def split_content_into_batches(
             word_header = ""
             if format_type == "wework":
                 if count >= 10:
-                    word_header = (
-                        f"🔥 {sequence_display} **{word}** : **{count}** 条\n\n"
-                    )
+                    word_header = f"### {word}\n\n"
+                    word_header += f"> <font color=\"warning\">热度值：{count} 条相关新闻</font>\n\n"
                 elif count >= 5:
-                    word_header = (
-                        f"📈 {sequence_display} **{word}** : **{count}** 条\n\n"
-                    )
+                    word_header = f"### {word}\n\n"
+                    word_header += f"> <font color=\"comment\">热度值：{count} 条相关新闻</font>\n\n"
                 else:
-                    word_header = f"📌 {sequence_display} **{word}** : {count} 条\n\n"
+                    word_header = f"### {word}\n\n"
+                    word_header += f"> 热度值：{count} 条相关新闻\n\n"
             elif format_type == "telegram":
                 if count >= 10:
                     word_header = f"🔥 {sequence_display} {word} : {count} 条\n\n"
@@ -3161,7 +3168,7 @@ def split_content_into_batches(
             if i < len(report_data["stats"]) - 1:
                 separator = ""
                 if format_type == "wework":
-                    separator = f"\n\n\n\n"
+                    separator = f"\n\n---\n\n"
                 elif format_type == "telegram":
                     separator = f"\n\n"
                 elif format_type == "ntfy":
@@ -3182,17 +3189,18 @@ def split_content_into_batches(
     if report_data["new_titles"]:
         new_header = ""
         if format_type == "wework":
-            new_header = f"\n\n\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
+            new_header = f"\n\n## 本次新增\n\n"
+            new_header += f"> 共 <font color=\"info\">{report_data['total_new_count']}</font> 条新增热点\n\n"
         elif format_type == "telegram":
             new_header = (
-                f"\n\n🆕 本次新增热点新闻 (共 {report_data['total_new_count']} 条)\n\n"
+                f"\n\n 本次新增热点新闻 (共 {report_data['total_new_count']} 条)\n\n"
             )
         elif format_type == "ntfy":
-            new_header = f"\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
+            new_header = f"\n\n **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
         elif format_type == "feishu":
-            new_header = f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
+            new_header = f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
         elif format_type == "dingtalk":
-            new_header = f"\n---\n\n🆕 **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
+            new_header = f"\n---\n\n **本次新增热点新闻** (共 {report_data['total_new_count']} 条)\n\n"
 
         test_content = current_batch + new_header
         if (
@@ -3211,7 +3219,8 @@ def split_content_into_batches(
         for source_data in report_data["new_titles"]:
             source_header = ""
             if format_type == "wework":
-                source_header = f"**{source_data['source_name']}** ({len(source_data['titles'])} 条):\n\n"
+                source_header = f"### {source_data['source_name']}\n\n"
+                source_header += f"> 新增 {len(source_data['titles'])} 条\n\n"
             elif format_type == "telegram":
                 source_header = f"{source_data['source_name']} ({len(source_data['titles'])} 条):\n\n"
             elif format_type == "ntfy":
@@ -3746,7 +3755,7 @@ def send_to_wework(
             if is_text_mode:
                 batch_header = f"[第 {i}/{len(batches)} 批次]\n\n"
             else:
-                batch_header = f"**[第 {i}/{len(batches)} 批次]**\n\n"
+                batch_header = f"**批次 {i}/{len(batches)}**\n\n"
             batch_content = batch_header + batch_content
 
         # 根据消息类型构建 payload

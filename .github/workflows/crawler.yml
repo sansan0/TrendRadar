@@ -2,41 +2,7 @@ name: Get Hot News
 
 on:
   schedule:
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # ⚠️ 试用版说明 / Trial Mode
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    #
-    # 🔄 运行机制 / How it works:
-    #    - 每个周期为 7 天，届时自动停止
-    #    - 运行 "Check In" 会重置周期（重新开始 7 天倒计时，而非累加）
-    #    - Each cycle is 7 days, then auto-stops
-    #    - "Check In" resets the cycle (restarts 7-day countdown, not cumulative)
-    #
-    # 💡 设计初衷 / Why this design:
-    #    如果 7 天都忘了签到，或许这些资讯对你来说并非刚需
-    #    适时的暂停，能帮你从信息流中抽离，给大脑留出喘息的空间
-    #    If you forget for 7 days, maybe you don't really need it
-    #    A timely pause helps you detach from the stream and gives your mind space
-    #
-    # 🙏 珍惜资源 / Respect shared resources:
-    #    GitHub Actions 是平台提供的公共资源，每次运行都会消耗算力
-    #    签到机制确保资源分配给真正需要的用户，感谢你的理解与配合
-    #    GitHub Actions is a shared public resource provided by the platform
-    #    Check-in ensures resources go to those who truly need it — thank you
-    #
-    # 🚀 长期使用请部署 Docker 版本 / For long-term use, deploy Docker version
-    #
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    #
-    # 📝 修改运行时间：只改第一个数字（0-59），表示每小时第几分钟运行
-    # 📝 Change time: Only modify the first number (0-59) = minute of each hour
-    #
-    # 示例 / Examples:
-    #   "15 * * * *"     → 每小时第15分钟 / minute 15 every hour
-    #   "30 0-14 * * *"  → 北京时间 8:00-22:00 每小时第30分钟 / Beijing 8am-10pm
-    #
     - cron: "33 * * * *"
-
   workflow_dispatch:
 
 concurrency:
@@ -58,6 +24,12 @@ jobs:
         with:
           fetch-depth: 1
           clean: true
+
+      # ---------------- GCS 认证步骤 ----------------
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Check Expiration
         env:
@@ -89,43 +61,28 @@ jobs:
             else
               DAYS_LEFT=$(( (LIMIT_SECONDS - DIFF_SECONDS) / 86400 ))
               echo "✅ 试用期剩余 ${DAYS_LEFT} 天，到期前请运行 'Check In' 签到续期"
-              echo "✅ Trial: ${DAYS_LEFT} days left. Run 'Check In' before expiry to renew."
             fi
           fi
 
-
-      # --------------------------------------------------------------------------------
-      # 🚦 TRAFFIC CONTROL / 流量控制
-      # --------------------------------------------------------------------------------
-      # EN: Generates a random delay between 1 and 300 seconds (5 minutes).
-      #     Critical for load balancing.
-      #
-      # CN: 生成 1 到 300 秒（5分钟）之间的随机延迟。
-      #     这对负载均衡至关重要。
       - name: Random Delay (Traffic Control)
-        if: success()
         run: |
-          echo "🎲 Traffic Control: Generating random delay..."
           DELAY=$(( ( RANDOM % 300 )  + 1 ))
-          echo "⏸️  Sleeping for ${DELAY} seconds to spread the load..."
+          echo "⏸️  Sleeping for ${DELAY} seconds..."
           sleep ${DELAY}s
-          echo "▶️  Delay finished. Starting crawler..."
 
       - name: Set up Python
-        if: success()
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
           cache: "pip"
 
       - name: Install dependencies
-        if: success()
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install google-cloud-storage
 
       - name: Verify required files
-        if: success()
         run: |
           if [ ! -f config/config.yaml ]; then
             echo "Error: Config missing"
@@ -133,7 +90,6 @@ jobs:
           fi
 
       - name: Run crawler
-        if: success()
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -151,13 +107,9 @@ jobs:
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           BARK_URL: ${{ secrets.BARK_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          STORAGE_BACKEND: auto
+          STORAGE_BACKEND: gcs
+          GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
           LOCAL_RETENTION_DAYS: ${{ secrets.LOCAL_RETENTION_DAYS }}
           REMOTE_RETENTION_DAYS: ${{ secrets.REMOTE_RETENTION_DAYS }}
-          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
-          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
-          S3_REGION: ${{ secrets.S3_REGION }}
           GITHUB_ACTIONS: true
         run: python -m trendradar

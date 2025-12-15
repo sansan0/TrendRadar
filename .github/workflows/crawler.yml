@@ -1,20 +1,18 @@
 name: Hot News Crawler
 on:
   schedule:
-    # ⚠️ 重要提示：我们使用的是 GitHub 官方提供的资源来进行的推送，而每个账号的资源是限额的
-    # 为了不被官方判定为滥用而面临封号的风险，不建议设置比半小时更短的执行间隔
-    #
-    # Cron 表达式示例（注意：GitHub Actions 使用 UTC 时间，北京时间需要减 8 小时）:
-    # - "0 * * * *"         # 每小时整点运行一次（实际有偏差）
-    # - "*/30 * * * *"      # 每 30 分钟执行一次
-    # - "*/30 0-14 * * *"   # 每天 UTC 0:00-14:00（北京时间 8:00-22:00），每 30 分钟运行一次
-    # - "0 0,6,12,18 * * *" # 每天 UTC 0:00,6:00,12:00,18:00（北京时间 8:00,14:00,20:00,次日2:00）
-    - cron: "*/30 0-14 * * *"
+    - cron: "0 0-14 * * *"  # 改为每小时执行，降低封号风险（可选）
   workflow_dispatch:
+    inputs:
+      debug:
+        description: '是否开启调试模式'
+        required: false
+        default: 'false'
+        type: boolean
 
 concurrency:
   group: crawler-${{ github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false  # 不终止正在执行的任务
 
 permissions:
   contents: write
@@ -22,8 +20,8 @@ permissions:
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
+    timeout-minutes: 15  # 缩短超时时间
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -53,28 +51,47 @@ jobs:
             exit 1
           fi
           echo "✅ 配置文件检查通过 "
+
+      - name: Check required secrets
+        run: |
+          # 检查核心推送密钥（根据脚本需求调整）
+          if [ -z "$FEISHU_WEBHOOK_URL" ] && [ -z "$TELEGRAM_BOT_TOKEN" ] && [ -z "$DINGTALK_WEBHOOK_URL" ]; then
+            echo "❌ 错误：至少配置一个推送渠道的密钥（飞书/电报/钉钉）"
+            exit 1
+          fi
           
       - name: Run crawler
         env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
-          WEWORK_WEBHOOK_URL: ${{ secrets.WEWORK_WEBHOOK_URL }}
-          WEWORK_MSG_TYPE: ${{ secrets.WEWORK_MSG_TYPE }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          EMAIL_SMTP_SERVER: ${{ secrets.EMAIL_SMTP_SERVER }}
-          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          NTFY_SERVER_URL: ${{ secrets.NTFY_SERVER_URL }}
-          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
-          BARK_URL: ${{ secrets.BARK_URL }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL || '' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '' }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '' }}
+          DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL || '' }}
+          WEWORK_WEBHOOK_URL: ${{ secrets.WEWORK_WEBHOOK_URL || '' }}
+          WEWORK_MSG_TYPE: ${{ secrets.WEWORK_MSG_TYPE || '' }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM || '' }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD || '' }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO || '' }}
+          EMAIL_SMTP_SERVER: ${{ secrets.EMAIL_SMTP_SERVER || '' }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT || '' }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC || '' }}
+          NTFY_SERVER_URL: ${{ secrets.NTFY_SERVER_URL || '' }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN || '' }}
+          BARK_URL: ${{ secrets.BARK_URL || '' }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL || '' }}
           GITHUB_ACTIONS: true
-        run: python main.py
-        
+          DEBUG_MODE: ${{ github.event.inputs.debug }}
+        run: |
+          echo "🚀 开始执行爬虫脚本（调试模式：$DEBUG_MODE）"
+          python main.py 2>&1 | tee crawler.log
+          echo "📊 爬虫执行完成，退出码：$?"
+          
+      - name: Upload crawler log
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: crawler-log
+          path: crawler.log
+          
       - name: Commit and push if changes
         env:
           BRANCH_NAME: ${{ github.event.repository.default_branch }}
@@ -82,38 +99,34 @@ jobs:
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'actions@github.com'
           
-          echo "🔄 Syncing with remote (branch: $BRANCH_NAME)..."
+          echo "🔄 同步远程分支 $BRANCH_NAME..."
           git fetch origin $BRANCH_NAME
-          
-          # 保存当前更改
-          git stash --include-untracked || echo "Nothing to stash"
-          
-          # 同步到远程最新
-          git reset --hard origin/$BRANCH_NAME
-          
-          # 恢复本次更改
-          git stash pop || echo "Nothing to pop"
+          # 拉取远程最新，避免冲突
+          git pull --rebase origin $BRANCH_NAME || {
+            echo "⚠️ 拉取失败，尝试放弃变基"
+            git rebase --abort
+          }
           
           git add -A
           
           if git diff --quiet && git diff --staged --quiet; then
-            echo "📭 No changes to commit"
+            echo "📭 无文件变更，无需提交"
             exit 0
           fi
           
-          echo "📝 Committing  changes..."
+          echo "📝 提交变更..."
           TIMESTAMP=$(TZ=Asia/Shanghai date "+%Y-%m-%d %H:%M:%S")
           git commit -m "Auto update by GitHub Actions at $TIMESTAMP"
           
-          echo "⬆️ Pushing changes with retry..."
+          echo "⬆️ 推送变更（5次重试）..."
           for i in {1..5}; do
-            git pull --rebase origin $BRANCH_NAME && git push origin $BRANCH_NAME && {
-              echo "✅ Successfully pushed on attempt $i"
+            git push origin $BRANCH_NAME && {
+              echo "✅ 第 $i 次推送成功"
               exit 0
             }
-            echo "⚠️ Attempt $i failed, waiting $((i*3)) seconds..."
+            echo "⚠️ 第 $i 次推送失败，等待 $((i*3)) 秒..."
             sleep $((i * 3))
           done
           
-          echo "❌ Failed to push after 5 attempts"
+          echo "❌ 5次推送均失败"
           exit 1

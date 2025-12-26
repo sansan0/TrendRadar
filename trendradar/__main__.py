@@ -729,6 +729,7 @@ def main():
         print("\n请确保以下文件存在:")
         print("  • config/config.yaml")
         print("  • config/frequency_words.txt")
+        print("  • config/custom_dict.txt")
         print("\n参考项目文档进行正确配置")
     except Exception as e:
         print(f"❌ 程序运行错误: {e}")

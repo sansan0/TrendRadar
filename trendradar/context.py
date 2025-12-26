@@ -185,10 +185,10 @@ class AppContext:
     # === 频率词处理 ===
 
     def load_frequency_words(
-        self, frequency_file: Optional[str] = None
+        self, custom_dict_file: Optional[str] = None, frequency_file: Optional[str] = None,
     ) -> Tuple[List[Dict], List[str], List[str]]:
         """加载频率词配置"""
-        return load_frequency_words(frequency_file)
+        return load_frequency_words(custom_dict_file, frequency_file)
 
     def matches_word_groups(
         self,

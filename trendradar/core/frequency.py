@@ -14,8 +14,13 @@ import os
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
+import jieba
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 def load_frequency_words(
+    custom_dict_file: Optional[str] = None,
     frequency_file: Optional[str] = None,
 ) -> Tuple[List[Dict], List[str], List[str]]:
     """
@@ -33,6 +38,7 @@ def load_frequency_words(
     - @数字：该词组最多显示的条数
 
     Args:
+        custom_dict_file: 自定义词典文件路径，默认从环境变量 CUSTOM_DICT_FILE 获取或使用 config/custom_dict.txt
         frequency_file: 频率词配置文件路径，默认从环境变量 FREQUENCY_WORDS_PATH 获取或使用 config/frequency_words.txt
 
     Returns:
@@ -41,6 +47,18 @@ def load_frequency_words(
     Raises:
         FileNotFoundError: 频率词文件不存在
     """
+    if custom_dict_file is None:
+        custom_dict_file = os.environ.get(
+            "CUSTOM_DICT_FILE", "config/custom_dict.txt"
+        )
+
+    # 检查文件是否存在
+    if Path(custom_dict_file).exists():
+        jieba.load_userdict(custom_dict_file)
+        print(f"成功加载自定义词典: {custom_dict_file}")
+    else:
+        print(f"自定义词典文件 {custom_dict_file} 不存在，将使用默认分词")
+
     if frequency_file is None:
         frequency_file = os.environ.get(
             "FREQUENCY_WORDS_PATH", "config/frequency_words.txt"
@@ -153,6 +171,10 @@ def matches_word_groups(
     if not title.strip():
         return False
 
+    # 使用jieba进行分词
+    title_tokens = ' '.join(
+        [token.lower() for token in jieba.lcut(title) if token.strip()]
+    )
     title_lower = title.lower()
 
     # 全局过滤检查（优先级最高）
@@ -168,27 +190,72 @@ def matches_word_groups(
     if any(filter_word.lower() in title_lower for filter_word in filter_words):
         return False
 
-    # 词组匹配检查
+    # TF-IDF相似度匹配检查
     for group in word_groups:
         required_words = group["required"]
         normal_words = group["normal"]
 
+        # 构建关键词集合
+        keywords = []
         # 必须词检查
         if required_words:
-            all_required_present = all(
-                req_word.lower() in title_lower for req_word in required_words
-            )
-            if not all_required_present:
-                continue
-
+            keywords.extend(required_words)
         # 普通词检查
         if normal_words:
-            any_normal_present = any(
-                normal_word.lower() in title_lower for normal_word in normal_words
-            )
-            if not any_normal_present:
-                continue
+            keywords.extend(normal_words)
 
+        if not keywords:
+            continue
+
+        # 使用TF-IDF计算相似度
+        keyword_text = " ".join(keywords).lower()
+        if tfidf_match(title_tokens, keyword_text):
+            return True
         return True
 
     return False
+
+
+def tfidf_match(
+    title_tokens: str, keyword_text: str, threshold: float = 0.105
+) -> bool:
+    """
+    使用TF-IDF计算标题与关键词的相似度
+
+    Args:
+        title_tokens: 分词后的标题文本
+        keyword_text: 关键词文本
+        threshold: 相似度阈值，建议0.1-0.3之间，对于新闻热点分析场景，建议将阈值设置在 0.15-0.25 之间比较合适，既能保证足够的召回率，又能维持较好的准确性。
+
+    Returns:
+        bool: 是否匹配
+    """
+    # 创建TF-IDF向量化器
+    vectorizer = TfidfVectorizer(
+        tokenizer=None, preprocessor=lambda x: x if x else "",
+        stop_words=['的', '了', '在', '是', '我', '有', '和', '就', '不', '人',
+                    '都', '一', '一个',
+                    '上', '也', '很',
+                    '到', '说', '要',
+                    '去', '你', '会', '着', '没有', '看', '好', '自己', '这',
+                    '那', '来', '被',
+                    '与', '为', '对', '将',
+                    '从', '以', '及',
+                    '等', '但', '或', '而', '于', '中', '由', '可', '可以',
+                    '已', '已经', '还',
+                    '更', '最', '再',
+                    '因为', '所以', '如果',
+                    '虽然', '然而'], lowercase=True, )
+
+    try:
+        # 向量化处理
+        tfidf_matrix = vectorizer.fit_transform([title_tokens, keyword_text])
+
+        # 计算余弦相似度
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][
+            0]
+
+        return similarity >= threshold
+    except:
+        # 如果TF-IDF计算失败，回退到传统匹配方式
+        return keyword_text in title_tokens

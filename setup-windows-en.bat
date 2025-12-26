@@ -44,7 +44,7 @@ REM Check Python
 echo [1/4] Checking Python...
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Python not detected. Please install Python 3.10+
+    echo [ERROR] Python not detected. Please install Python 3.12+
     echo Download: https://www.python.org/downloads/
     pause
     exit /b 1
@@ -117,7 +117,7 @@ if %errorlevel% neq 0 (
     echo:
     echo Troubleshooting steps:
     echo   1. Check your internet connection
-    echo   2. Verify Python version ^>= 3.10: python --version
+    echo   2. Verify Python version ^>= 3.12: python --version
     echo   3. Try with verbose output: uv sync --verbose
     echo   4. Check if pyproject.toml is valid
     echo:

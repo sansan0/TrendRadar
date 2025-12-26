@@ -137,9 +137,16 @@ def render_html_content(
                 font-weight: 600;
                 font-size: 16px;
             }
+            .screenshot-mode .content {
+                overflow: visible !important;
+                max-height: none !important;
+            }
 
             .content {
-                padding: 24px;
+                padding: 0 24px;
+                max-height: 80vh;
+                overflow-y: auto;
+                position: relative;
             }
 
             .word-group {
@@ -150,13 +157,24 @@ def render_html_content(
                 margin-top: 0;
             }
 
+            .screenshot-mode .word-header {
+                position: static !important;
+                box-shadow: none !important;
+                background: transparent !important;
+            }
+
             .word-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                margin-bottom: 20px;
-                padding-bottom: 8px;
+                margin-bottom: 15px;
+                padding: 10px 5px 8px 5px;
                 border-bottom: 1px solid #f0f0f0;
+                background: white;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }
 
             .word-info {
@@ -177,8 +195,15 @@ def render_html_content(
                 font-weight: 500;
             }
 
-            .word-count.hot { color: #dc2626; font-weight: 600; }
-            .word-count.warm { color: #ea580c; font-weight: 600; }
+            .word-count.hot {
+                color: #dc2626;
+                font-weight: 600;
+            }
+
+            .word-count.warm {
+                color: #ea580c;
+                font-weight: 600;
+            }
 
             .word-index {
                 color: #999;
@@ -311,6 +336,14 @@ def render_html_content(
                 font-size: 16px;
                 font-weight: 600;
                 margin: 0 0 20px 0;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                border-bottom: 1px solid #f0f0f0;
+                background: white;
+                margin-bottom: 15px;
+                padding: 10px 5px 8px 5px;
             }
 
             .new-source-group {
@@ -445,23 +478,24 @@ def render_html_content(
                 .header { padding: 24px 20px; }
                 .content { padding: 20px; }
                 .footer { padding: 16px 20px; }
-                .header-info { grid-template-columns: 1fr; gap: 12px; }
+                .header-info {gap: 12px; }
+                .header-title { padding-right: 20px; }
                 .news-header { gap: 6px; }
                 .news-content { padding-right: 45px; }
                 .news-item { gap: 8px; }
                 .new-item { gap: 8px; }
                 .news-number { width: 20px; height: 20px; font-size: 12px; }
                 .save-buttons {
-                    position: static;
-                    margin-bottom: 16px;
                     display: flex;
-                    gap: 8px;
-                    justify-content: center;
-                    flex-direction: column;
-                    width: 100%;
+                    position: absolute;
+                    right: 5px;
+                    justify-content: flex-end;
                 }
                 .save-btn {
-                    width: 100%;
+                    margin-top: 10px;
+                    font-size: 10px;
+                    width: 50%;
+                    padding: 4px 4px;
                 }
             }
         </style>
@@ -744,6 +778,9 @@ def render_html_content(
                 try {
                     button.textContent = '生成中...';
                     button.disabled = true;
+
+                    // 启用截图模式
+                    document.body.classList.add('screenshot-mode');
                     window.scrollTo(0, 0);
 
                     // 等待页面稳定
@@ -776,7 +813,8 @@ def render_html_content(
                         windowWidth: window.innerWidth,
                         windowHeight: window.innerHeight
                     });
-
+                    // 恢复正常模式
+                    document.body.classList.remove('screenshot-mode');
                     buttons.style.visibility = 'visible';
 
                     const link = document.createElement('a');
@@ -798,6 +836,8 @@ def render_html_content(
                     }, 2000);
 
                 } catch (error) {
+                    // 恢复正常模式
+                    document.body.classList.remove('screenshot-mode');
                     const buttons = document.querySelector('.save-buttons');
                     buttons.style.visibility = 'visible';
                     button.textContent = '保存失败';
@@ -819,6 +859,9 @@ def render_html_content(
                     button.textContent = '分析中...';
                     button.disabled = true;
 
+                    // 启用截图模式
+                    window.scrollTo(0, 0);
+                    document.body.classList.add('screenshot-mode');
                     // 获取所有可能的分割元素
                     const newsItems = Array.from(container.querySelectorAll('.news-item'));
                     const wordGroups = Array.from(container.querySelectorAll('.word-group'));
@@ -1029,6 +1072,7 @@ def render_html_content(
 
                 } catch (error) {
                     console.error('分段保存失败:', error);
+                    document.body.classList.remove('screenshot-mode');
                     const buttons = document.querySelector('.save-buttons');
                     buttons.style.visibility = 'visible';
                     button.textContent = '保存失败';

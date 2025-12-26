@@ -45,7 +45,7 @@ REM 检查 Python
 echo [1/4] 🐍 检查 Python...
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ❌ 未检测到 Python，请先安装 Python 3.10+
+    echo ❌ 未检测到 Python，请先安装 Python 3.12+
     echo 下载地址: https://www.python.org/downloads/
     pause
     exit /b 1
@@ -118,7 +118,7 @@ if %errorlevel% neq 0 (
     echo.
     echo 可能的原因:
     echo   1. 网络连接问题
-    echo   2. Python 版本不兼容（需要 ^>= 3.10）
+    echo   2. Python 版本不兼容（需要 ^>= 3.12）
     echo   3. pyproject.toml 文件格式错误
     echo.
     echo 故障排查:

@@ -285,6 +285,7 @@ def show_config():
         "TELEGRAM_CHAT_ID",
         "CONFIG_PATH",
         "FREQUENCY_WORDS_PATH",
+        "CUSTOM_DICT_FILE",
         # 存储配置
         "STORAGE_BACKEND",
         "LOCAL_RETENTION_DAYS",

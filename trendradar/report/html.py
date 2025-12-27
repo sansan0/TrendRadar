@@ -45,22 +45,41 @@ def render_html_content(
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <style>
             * { box-sizing: border-box; }
+
+            ::-webkit-scrollbar {
+                width: 1px;
+                height: 1px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background-color: #2d2d2d;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background-color: #4b4b4b;
+                border-radius: 9999px;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background-color: #2d2d2d;
+            }
+
             body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
                 margin: 0;
                 padding: 16px;
-                background: #fafafa;
-                color: #333;
+                background: #f5f5f5; /* Light background */
+                color: #333; /* Dark text */
                 line-height: 1.5;
             }
 
             .container {
                 max-width: 600px;
                 margin: 0 auto;
-                background: white;
+                background: white; /* Light container background */
                 border-radius: 12px;
                 overflow: hidden;
-                box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+                box-shadow: 0 2px 16px rgba(0,0,0,0.1);
             }
 
             .header {
@@ -80,7 +99,7 @@ def render_html_content(
             }
 
             .save-btn {
-                background: rgba(255, 255, 255, 0.2);
+                background: rgba(255, 255, 255, 0.1);
                 border: 1px solid rgba(255, 255, 255, 0.3);
                 color: white;
                 padding: 8px 16px;
@@ -94,7 +113,7 @@ def render_html_content(
             }
 
             .save-btn:hover {
-                background: rgba(255, 255, 255, 0.3);
+                background: rgba(255, 255, 255, 0.2);
                 border-color: rgba(255, 255, 255, 0.5);
                 transform: translateY(-1px);
             }
@@ -177,8 +196,15 @@ def render_html_content(
                 font-weight: 500;
             }
 
-            .word-count.hot { color: #dc2626; font-weight: 600; }
-            .word-count.warm { color: #ea580c; font-weight: 600; }
+            .word-count.hot {
+                color: #dc2626;
+                font-weight: 600;
+            }
+
+            .word-count.warm {
+                color: #ea580c;
+                font-weight: 600;
+            }
 
             .word-index {
                 color: #999;
@@ -266,8 +292,13 @@ def render_html_content(
                 text-align: center;
             }
 
-            .rank-num.top { background: #dc2626; }
-            .rank-num.high { background: #ea580c; }
+            .rank-num.top {
+                background: #dc2626;
+            }
+
+            .rank-num.high {
+                background: #ea580c;
+            }
 
             .time-info {
                 color: #999;
@@ -366,8 +397,13 @@ def render_html_content(
                 flex-shrink: 0;
             }
 
-            .new-item-rank.top { background: #dc2626; }
-            .new-item-rank.high { background: #ea580c; }
+            .new-item-rank.top {
+                background: #dc2626;
+            }
+
+            .new-item-rank.high {
+                background: #ea580c;
+            }
 
             .new-item-content {
                 flex: 1;
@@ -440,30 +476,58 @@ def render_html_content(
                 color: #374151;
             }
 
-            @media (max-width: 480px) {
-                body { padding: 12px; }
-                .header { padding: 24px 20px; }
-                .content { padding: 20px; }
-                .footer { padding: 16px 20px; }
-                .header-info { grid-template-columns: 1fr; gap: 12px; }
-                .news-header { gap: 6px; }
-                .news-content { padding-right: 45px; }
-                .news-item { gap: 8px; }
-                .new-item { gap: 8px; }
-                .news-number { width: 20px; height: 20px; font-size: 12px; }
-                .save-buttons {
-                    position: static;
-                    margin-bottom: 16px;
-                    display: flex;
-                    gap: 8px;
-                    justify-content: center;
-                    flex-direction: column;
-                    width: 100%;
+            /* Dark Mode Styles */
+            @media (prefers-color-scheme: dark) {
+                body {
+                    background: #121212;
+                    color: #e4e4e4;
                 }
-                .save-btn {
-                    width: 100%;
+
+                .container {
+                    background: #1f1f1f;
+                }
+
+                .header {
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                }
+
+                .word-name, .news-title, .new-item-title, .error-title {
+                    color: #e4e4e4;
+                }
+
+                .news-number {
+                    background: #333;
+                }
+
+                .news-item, .new-item {
+                    border-bottom: 1px solid #333;
+                }
+
+                .rank-num {
+                    background: #6b7280;
+                }
+
+                .rank-num.top { background: #ef4444; }
+                .rank-num.high { background: #f97316; }
+
+                .footer {
+                    background: #121212;
+                    border-top: 1px solid #333;
+                }
+
+                .footer-content {
+                    color: #bbb;
+                }
+
+                .footer-link {
+                    color: #4f46e5;
+                }
+
+                .footer-link:hover {
+                    color: #9333ea;
                 }
             }
+
         </style>
     </head>
     <body>

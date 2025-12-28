@@ -17,6 +17,22 @@ from ..utils.errors import DataNotFoundError
 class DataService:
     """数据访问服务类"""
 
+    # 中文停用词列表（用于 auto_extract 模式）
+    STOPWORDS = {
+        '的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一',
+        '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有',
+        '看', '好', '自己', '这', '那', '来', '被', '与', '为', '对', '将', '从',
+        '以', '及', '等', '但', '或', '而', '于', '中', '由', '可', '可以', '已',
+        '已经', '还', '更', '最', '再', '因为', '所以', '如果', '虽然', '然而',
+        '什么', '怎么', '如何', '哪', '哪些', '多少', '几', '这个', '那个',
+        '他', '她', '它', '他们', '她们', '我们', '你们', '大家', '自己',
+        '这样', '那样', '怎样', '这么', '那么', '多么', '非常', '特别',
+        '应该', '可能', '能够', '需要', '必须', '一定', '肯定', '确实',
+        '正在', '已经', '曾经', '将要', '即将', '刚刚', '马上', '立刻',
+        '回应', '发布', '表示', '称', '曝', '官方', '最新', '重磅', '突发',
+        '热搜', '刷屏', '引发', '关注', '网友', '评论', '转发', '点赞'
+    }
+
     def __init__(self, project_root: str = None):
         """
         初始化数据服务
@@ -282,29 +298,61 @@ class DataService:
             }
         }
 
+    def _extract_words_from_title(self, title: str, min_length: int = 2) -> List[str]:
+        """
+        从标题中提取有意义的词语（用于 auto_extract 模式）
+
+        Args:
+            title: 新闻标题
+            min_length: 最小词长
+
+        Returns:
+            关键词列表
+        """
+        # 移除URL和特殊字符
+        title = re.sub(r'http[s]?://\S+', '', title)
+        title = re.sub(r'\[.*?\]', '', title)  # 移除方括号内容
+        title = re.sub(r'[【】《》「」『』""''・·•]', '', title)  # 移除中文标点
+
+        # 使用正则表达式分词（中文和英文）
+        # 匹配连续的中文字符或英文单词
+        words = re.findall(r'[\u4e00-\u9fff]{2,}|[a-zA-Z]{2,}[a-zA-Z0-9]*', title)
+
+        # 过滤停用词和短词
+        keywords = [
+            word for word in words
+            if word and len(word) >= min_length and word.lower() not in self.STOPWORDS
+            and word not in self.STOPWORDS
+        ]
+
+        return keywords
+
     def get_trending_topics(
         self,
         top_n: int = 10,
-        mode: str = "current"
+        mode: str = "current",
+        extract_mode: str = "keywords"
     ) -> Dict:
         """
-        获取个人关注词的新闻出现频率统计
-
-        注意:本工具基于 config/frequency_words.txt 中的个人关注词列表进行统计,
-        而不是自动从新闻中提取热点话题。用户可以自定义这个关注词列表。
+        获取热点话题统计
 
         Args:
-            top_n: 返回TOP N关注词
-            mode: 模式 - daily(当日累计), current(最新一批)
+            top_n: 返回TOP N话题
+            mode: 时间模式
+                - "daily": 当日累计数据统计
+                - "current": 最新一批数据统计（默认）
+            extract_mode: 提取模式
+                - "keywords": 统计预设关注词（基于 config/frequency_words.txt）
+                - "auto_extract": 自动从新闻标题提取高频词
 
         Returns:
-            关注词频率统计字典
+            话题频率统计字典
 
         Raises:
             DataNotFoundError: 数据不存在
         """
         # 尝试从缓存获取
-        cache_key = f"trending_topics:{top_n}:{mode}"
+        cache_key = f"trending_topics:{top_n}:{mode}:{extract_mode}"
         cached = self.cache.get(cache_key, ttl=1800)  # 30分钟缓存
         if cached:
             return cached
@@ -318,38 +366,13 @@ class DataService:
                 suggestion="请确保爬虫已经运行并生成了数据"
             )
 
-        # 加载关键词配置
-        word_groups = self.parser.parse_frequency_words()
-
-        # 根据mode选择要处理的标题数据
-        titles_to_process = {}
-
+        # 根据 mode 选择要处理的标题数据
         if mode == "daily":
-            # daily模式:处理当天所有累计数据
             titles_to_process = all_titles
-
         elif mode == "current":
-            # current模式:只处理最新一批数据(最新时间戳的文件)
-            if timestamps:
-                # 找出最新的时间戳
-                latest_timestamp = max(timestamps.values())
-
-                # 重新读取,只获取最新时间的数据
-                # 这里我们通过timestamps字典反查找最新文件对应的平台
-                latest_titles, _, _ = self.parser.read_all_titles_for_date()
-
-                # 由于read_all_titles_for_date返回所有文件的合并数据,
-                # 我们需要通过timestamps来过滤出最新批次
-                # 简化实现:使用当前所有数据作为最新批次
-                # (更精确的实现需要解析服务支持按时间过滤)
-                titles_to_process = latest_titles
-            else:
-                titles_to_process = all_titles
-
+            titles_to_process = all_titles  # 简化实现
         else:
-            raise ValueError(
-                f"不支持的模式: {mode}。支持的模式: daily, current"
-            )
+            raise ValueError(f"不支持的模式: {mode}。支持的模式: daily, current")
 
         # 统计词频
         word_frequency = Counter()
@@ -358,17 +381,26 @@ class DataService:
         # 遍历要处理的标题
         for platform_id, titles in titles_to_process.items():
             for title in titles.keys():
-                # 对每个关键词组进行匹配
-                for group in word_groups:
-                    all_words = group.get("required", []) + group.get("normal", [])
+                if extract_mode == "keywords":
+                    # 基于预设关键词统计
+                    word_groups = self.parser.parse_frequency_words()
+                    for group in word_groups:
+                        all_words = group.get("required", []) + group.get("normal", [])
+                        for word in all_words:
+                            if word and word in title:
+                                word_frequency[word] += 1
+                                if word not in keyword_to_news:
+                                    keyword_to_news[word] = []
+                                keyword_to_news[word].append(title)
 
-                    for word in all_words:
-                        if word and word in title:
-                            word_frequency[word] += 1
-
-                            if word not in keyword_to_news:
-                                keyword_to_news[word] = []
-                            keyword_to_news[word].append(title)
+                elif extract_mode == "auto_extract":
+                    # 自动提取关键词
+                    extracted_words = self._extract_words_from_title(title)
+                    for word in extracted_words:
+                        word_frequency[word] += 1
+                        if word not in keyword_to_news:
+                            keyword_to_news[word] = []
+                        keyword_to_news[word].append(title)
 
         # 获取TOP N关键词
         top_keywords = word_frequency.most_common(top_n)
@@ -382,8 +414,8 @@ class DataService:
                 "keyword": keyword,
                 "frequency": frequency,
                 "matched_news": len(set(matched_news)),  # 去重后的新闻数量
-                "trend": "stable",  # TODO: 需要历史数据来计算趋势
-                "weight_score": 0.0  # TODO: 需要实现权重计算
+                "trend": "stable",
+                "weight_score": 0.0
             })
 
         # 构建结果
@@ -391,8 +423,9 @@ class DataService:
             "topics": topics,
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "mode": mode,
+            "extract_mode": extract_mode,
             "total_keywords": len(word_frequency),
-            "description": self._get_mode_description(mode)
+            "description": self._get_mode_description(mode, extract_mode)
         }
 
         # 缓存结果
@@ -400,13 +433,19 @@ class DataService:
 
         return result
 
-    def _get_mode_description(self, mode: str) -> str:
+    def _get_mode_description(self, mode: str, extract_mode: str = "keywords") -> str:
         """获取模式描述"""
-        descriptions = {
+        mode_desc = {
             "daily": "当日累计统计",
             "current": "最新一批统计"
-        }
-        return descriptions.get(mode, "未知模式")
+        }.get(mode, "未知时间模式")
+
+        extract_desc = {
+            "keywords": "基于预设关注词",
+            "auto_extract": "自动提取高频词"
+        }.get(extract_mode, "未知提取模式")
+
+        return f"{mode_desc} - {extract_desc}"
 
     def get_current_config(self, section: str = "all") -> Dict:
         """

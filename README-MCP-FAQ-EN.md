@@ -21,7 +21,7 @@ The following optimization strategies are adopted by default, mainly to save AI 
 
 **⚠️ Important:** The choice of AI model directly affects the tool call effectiveness. The smarter the AI, the more accurate the calls. When you remove the above restrictions, for example, from querying today to querying a week, first you need to have a week's data locally, and secondly, token consumption may multiply (why "may", for example, if I query "analyze 'Apple' trend in the last week", if there isn't much Apple news in that week, then token consumption may actually be less).
 
-**💡 Tip:** This project provides a dedicated date parsing tool `resolve_date_range`, which can accurately parse natural language date expressions like "last 7 days", "this week", ensuring all AI models get consistent date ranges. Recommended to use this tool first, see Q14 below for details.
+**💡 Tip:** This project provides a dedicated date parsing tool `resolve_date_range`, which can accurately parse natural language date expressions like "last 7 days", "this week", ensuring all AI models get consistent date ranges. Recommended to use this tool first, see Q18 below for details.
 
 
 ## 💰 AI Models
@@ -129,21 +129,32 @@ After testing one query, please immediately check the [SiliconFlow Billing](http
 
 ---
 
-### Q3: How to view my followed topic frequency statistics?
+### Q3: How to view trending topic statistics?
 
 **You can ask like this:**
 
-- "How many times did my followed words appear today"
-- "Check which words in my follow list are most popular"
-- "Count the frequency of followed words in frequency_words.txt"
+- "How many times did my followed words appear today" (using preset keywords)
+- "Automatically analyze what hot topics are in today's news" (auto extract)
+- "See what are the hottest words in the news" (auto extract)
 
 **Tool called:** `get_trending_topics`
 
-**Important note:**
+**Two extraction modes:**
 
-- This tool **does not** automatically extract news hotspots
-- Rather, it counts your **personal followed words** set in `config/frequency_words.txt`
-- This is a **customizable** list, you can add followed words based on your interests
+| Mode | Description | Example Question |
+|------|------|---------|
+| **keywords** | Count preset followed words (based on `config/frequency_words.txt`, default) | "How many times did my followed words appear" |
+| **auto_extract** | Auto-extract high-frequency words from news titles (no preset needed) | "Auto-analyze hot topics" |
+
+**Usage examples:**
+
+```
+# Use preset followed words (default mode)
+get_trending_topics(mode="current")
+
+# Auto-extract high-frequency words (new feature)
+get_trending_topics(extract_mode="auto_extract", top_n=20)
+```
 
 ---
 
@@ -198,28 +209,42 @@ AI: (date_range={"start": "2025-01-01", "end": "2025-01-31"})
 
 ---
 
-### Q5: How to find historical related news?
+### Q5: How to find related news?
 
 **You can ask like this:**
 
-- "Find news related to 'AI breakthrough' from yesterday"
-- "Search for historical reports about 'Tesla' from last week"
-- "Find news related to 'ChatGPT' from last month"
-- "Look for historical news related to 'iPhone launch event'"
+- "Find news similar to 'Tesla price cut'" (today)
+- "Find news related to 'AI breakthrough' from yesterday" (history)
+- "Search for historical reports about 'Tesla' from last week" (history)
+- "See if there are reports similar to this news in the last 7 days" (history)
 
-**Tool called:** `search_related_news_history`
+**Tool called:** `find_related_news`
+
+**Supported time ranges:**
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| Not specified | Only query today's data (default) | "Find similar news" |
+| Preset values | yesterday, last_week, last_month | "Find related news from yesterday" |
+| Date range | `{"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}` | "Find related reports from Jan 1 to 7" |
 
 **Tool return behavior:**
 
-- Searches yesterday's data
-- Similarity threshold 0.4
+- Similarity threshold 0.5 (adjustable)
 - MCP tool returns up to 50 results to AI
+- Sorted by similarity
 - Does not include URL links
 
 **AI display behavior (Important):**
 
 - ⚠️ **AI usually auto-summarizes**, only showing partial related news
 - ✅ If you want to see all, need to explicitly request: "show all related news"
+
+**Can be adjusted:**
+
+- Specify time: like "find from last week"
+- Adjust threshold: like "similarity above 0.3"
+- Include links: say "need links"
 
 ---
 
@@ -330,27 +355,54 @@ AI: (date_range={"start": "2024-12-01", "end": "2024-12-31"})
 
 ---
 
-### Q9: How to find similar news reports?
+### Q9: How to get deduplicated cross-platform news?
 
 **You can ask like this:**
 
-- "Find news similar to 'Tesla price cut'"
-- "Find similar reports about iPhone launch"
-- "See if there are reports similar to this news"
-- "Find similar news, need links"
+- "Help me aggregate today's news, remove duplicates"
+- "See which news is reported on multiple platforms"
+- "Show me deduplicated hotspot news"
+- "Which news are cross-platform hot topics"
 
-**Tool called:** `find_similar_news`
+**Tool called:** `aggregate_news`
 
-**Tool return behavior:**
+**Tool functionality:**
 
-- Similarity threshold 0.6
-- MCP tool returns up to 50 results to AI
-- Does not include URL links
+- Automatically identifies the same event reported by different platforms
+- Merges similar news into one aggregated news item
+- Shows platform coverage for each news item
+- Calculates comprehensive heat weight
 
-**AI display behavior (Important):**
+**Return information:**
 
-- ⚠️ **AI usually auto-summarizes**, only showing partial similar news
-- ✅ If you want to see all, need to explicitly request: "show all similar news"
+| Field | Description |
+|-------|-------------|
+| **representative_title** | Representative title |
+| **platforms** | List of covered platforms |
+| **platform_count** | Number of covered platforms |
+| **is_cross_platform** | Whether it's cross-platform news |
+| **best_rank** | Best ranking |
+| **aggregate_weight** | Comprehensive weight |
+| **sources** | Details from each platform source |
+
+**Can be adjusted:**
+
+- Specify time: like "from last week"
+- Adjust similarity threshold: like "stricter matching" (0.8) or "looser matching" (0.5)
+- Specify platform: like "only Zhihu and Weibo"
+
+**Usage examples:**
+
+```
+# Default aggregate today's news
+aggregate_news()
+
+# Stricter similarity matching
+aggregate_news(similarity_threshold=0.8)
+
+# Specify date range
+aggregate_news(date_range={"start": "2025-01-01", "end": "2025-01-07"})
+```
 
 ---
 
@@ -371,9 +423,54 @@ AI: (date_range={"start": "2024-12-01", "end": "2024-12-31"})
 
 ---
 
+### Q11: How to compare hotspot changes across different periods?
+
+**You can ask like this:**
+
+- "Compare this week and last week's hotspot changes"
+- "See what's different between this month and last month"
+- "Analyze 'artificial intelligence' heat difference in two periods"
+- "Compare platform activity changes"
+
+**Tool called:** `compare_periods`
+
+**Three comparison modes:**
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **overview** | Overall overview | News count change, keyword change, TOP news comparison |
+| **topic_shift** | Topic change analysis | Rising topics, falling topics, newly appeared topics |
+| **platform_activity** | Platform activity comparison | News count change by platform, fastest/slowest growing platforms |
+
+**Time period presets:**
+
+- `today` / `yesterday`: Today/Yesterday
+- `this_week` / `last_week`: This week/Last week
+- `this_month` / `last_month`: This month/Last month
+- Or use custom date range: `{"start": "2025-01-01", "end": "2025-01-07"}`
+
+**Usage examples:**
+
+```
+# Week-over-week analysis
+compare_periods(period1="last_week", period2="this_week")
+
+# Topic shift analysis
+compare_periods(period1="last_month", period2="this_month", compare_type="topic_shift")
+
+# Focus on specific topic
+compare_periods(
+    period1={"start": "2025-01-01", "end": "2025-01-07"},
+    period2={"start": "2025-01-08", "end": "2025-01-14"},
+    topic="artificial intelligence"
+)
+```
+
+---
+
 ## System Management
 
-### Q11: How to view system configuration?
+### Q12: How to view system configuration?
 
 **You can ask like this:**
 
@@ -393,7 +490,7 @@ AI: (date_range={"start": "2024-12-01", "end": "2024-12-31"})
 
 ---
 
-### Q12: How to check system running status?
+### Q13: How to check system running status?
 
 **You can ask like this:**
 
@@ -413,7 +510,7 @@ AI: (date_range={"start": "2024-12-01", "end": "2024-12-31"})
 
 ---
 
-### Q13: How to manually trigger a crawl task?
+### Q14: How to manually trigger a crawl task?
 
 **You can ask like this:**
 
@@ -452,7 +549,7 @@ AI: (date_range={"start": "2024-12-01", "end": "2024-12-31"})
 
 ## Storage Sync
 
-### Q14: How to sync data from remote storage to local?
+### Q15: How to sync data from remote storage to local?
 
 **You can ask like this:**
 
@@ -484,7 +581,7 @@ Need to configure remote storage in `config/config.yaml` or set environment vari
 
 ---
 
-### Q15: How to view storage status?
+### Q16: How to view storage status?
 
 **You can ask like this:**
 
@@ -505,7 +602,7 @@ Need to configure remote storage in `config/config.yaml` or set environment vari
 
 ---
 
-### Q16: How to view available data dates?
+### Q17: How to view available data dates?
 
 **You can ask like this:**
 
@@ -532,7 +629,7 @@ Need to configure remote storage in `config/config.yaml` or set environment vari
 
 ---
 
-### Q17: How to parse natural language date expressions? (Recommended to use first)
+### Q18: How to parse natural language date expressions? (Recommended to use first)
 
 **You can ask like this:**
 

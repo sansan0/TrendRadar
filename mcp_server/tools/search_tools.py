@@ -11,7 +11,7 @@ from difflib import SequenceMatcher
 from typing import Dict, List, Optional, Tuple, Union
 
 from ..services.data_service import DataService
-from ..utils.validators import validate_keyword, validate_limit
+from ..utils.validators import validate_keyword, validate_limit, validate_threshold
 from ..utils.errors import MCPError, InvalidParameterError, DataNotFoundError
 
 
@@ -95,7 +95,7 @@ class SearchTools:
                 )
 
             limit = validate_limit(limit, default=50)
-            threshold = max(0.0, min(1.0, threshold))
+            threshold = validate_threshold(threshold, default=0.6, min_value=0.0, max_value=1.0)
 
             # 处理日期范围
             if date_range:
@@ -491,9 +491,34 @@ class SearchTools:
 
         return intersection / union
 
+    def _jaccard_similarity(self, list1: List[str], list2: List[str]) -> float:
+        """
+        计算两个列表的 Jaccard 相似度
+
+        Args:
+            list1: 列表1
+            list2: 列表2
+
+        Returns:
+            Jaccard 相似度 (0-1之间)
+        """
+        if not list1 or not list2:
+            return 0.0
+
+        set1 = set(list1)
+        set2 = set(list2)
+
+        intersection = len(set1 & set2)
+        union = len(set1 | set2)
+
+        if union == 0:
+            return 0.0
+
+        return intersection / union
+
     def search_related_news_history(
         self,
-        reference_text: str,
+        reference_title: str,
         time_preset: str = "yesterday",
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
@@ -505,7 +530,7 @@ class SearchTools:
         在历史数据中搜索与给定新闻相关的新闻
 
         Args:
-            reference_text: 参考新闻标题或内容
+            reference_title: 参考新闻标题或内容
             time_preset: 时间范围预设值，可选：
                 - "yesterday": 昨天
                 - "last_week": 上周 (7天)
@@ -523,7 +548,7 @@ class SearchTools:
         Example:
             >>> tools = SearchTools()
             >>> result = tools.search_related_news_history(
-            ...     reference_text="人工智能技术突破",
+            ...     reference_title="人工智能技术突破",
             ...     time_preset="last_week",
             ...     threshold=0.4,
             ...     limit=50
@@ -533,8 +558,8 @@ class SearchTools:
         """
         try:
             # 参数验证
-            reference_text = validate_keyword(reference_text)
-            threshold = max(0.0, min(1.0, threshold))
+            reference_title = validate_keyword(reference_title)
+            threshold = validate_threshold(threshold, default=0.4, min_value=0.0, max_value=1.0)
             limit = validate_limit(limit, default=50)
 
             # 确定查询日期范围
@@ -564,7 +589,7 @@ class SearchTools:
                 )
 
             # 提取参考文本的关键词
-            reference_keywords = self._extract_keywords(reference_text)
+            reference_keywords = self._extract_keywords(reference_title)
 
             if not reference_keywords:
                 raise InvalidParameterError(
@@ -587,7 +612,7 @@ class SearchTools:
 
                         for title, info in titles.items():
                             # 计算标题相似度
-                            title_similarity = self._calculate_similarity(reference_text, title)
+                            title_similarity = self._calculate_similarity(reference_title, title)
 
                             # 提取标题关键词
                             title_keywords = self._extract_keywords(title)
@@ -636,7 +661,7 @@ class SearchTools:
                     "success": True,
                     "results": [],
                     "total": 0,
-                    "query": reference_text,
+                    "query": reference_title,
                     "time_preset": time_preset,
                     "date_range": {
                         "start": search_start.strftime("%Y-%m-%d"),
@@ -662,7 +687,7 @@ class SearchTools:
                     "returned_count": len(results),
                     "requested_limit": limit,
                     "threshold": threshold,
-                    "reference_text": reference_text,
+                    "reference_title": reference_title,
                     "reference_keywords": reference_keywords,
                     "time_preset": time_preset,
                     "date_range": {
@@ -699,3 +724,157 @@ class SearchTools:
                     "message": str(e)
                 }
             }
+
+    def find_related_news_unified(
+        self,
+        reference_title: str,
+        date_range: Optional[Union[Dict[str, str], str]] = None,
+        threshold: float = 0.5,
+        limit: int = 50,
+        include_url: bool = False
+    ) -> Dict:
+        """
+        统一的相关新闻查找工具 - 整合相似新闻和历史相关搜索
+
+        Args:
+            reference_title: 参考新闻标题
+            date_range: 日期范围（可选）
+                - 不指定: 只查询今天的数据
+                - {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}: 查询指定日期范围
+                - "today": 今天
+                - "yesterday": 昨天
+                - "last_week": 最近7天
+                - "last_month": 最近30天
+            threshold: 相似度阈值，0-1之间，默认0.5
+            limit: 返回条数限制，默认50
+            include_url: 是否包含URL链接，默认False
+
+        Returns:
+            相关新闻列表，按相似度排序
+        """
+        try:
+            # 参数验证
+            reference_title = validate_keyword(reference_title)
+            threshold = validate_threshold(threshold, default=0.5, min_value=0.0, max_value=1.0)
+            limit = validate_limit(limit, default=50)
+
+            # 确定日期范围
+            today = datetime.now()
+            
+            if date_range is None or date_range == "today":
+                # 只查询今天
+                search_dates = [today]
+            elif isinstance(date_range, str):
+                # 预设时间范围
+                if date_range == "yesterday":
+                    search_dates = [today - timedelta(days=1)]
+                elif date_range == "last_week":
+                    search_dates = [today - timedelta(days=i) for i in range(7)]
+                elif date_range == "last_month":
+                    search_dates = [today - timedelta(days=i) for i in range(30)]
+                else:
+                    # 单日字符串格式
+                    try:
+                        single_date = datetime.strptime(date_range, "%Y-%m-%d")
+                        search_dates = [single_date]
+                    except ValueError:
+                        search_dates = [today]
+            elif isinstance(date_range, dict):
+                # 日期范围对象
+                start_str = date_range.get("start")
+                end_str = date_range.get("end")
+                if start_str and end_str:
+                    start_date = datetime.strptime(start_str, "%Y-%m-%d")
+                    end_date = datetime.strptime(end_str, "%Y-%m-%d")
+                    search_dates = []
+                    current = start_date
+                    while current <= end_date:
+                        search_dates.append(current)
+                        current += timedelta(days=1)
+                else:
+                    search_dates = [today]
+            else:
+                search_dates = [today]
+
+            # 提取参考标题的关键词
+            reference_keywords = self._extract_keywords(reference_title)
+
+            # 收集所有相关新闻
+            all_related_news = []
+            
+            for search_date in search_dates:
+                try:
+                    all_titles, id_to_name, _ = self.data_service.parser.read_all_titles_for_date(search_date)
+                    
+                    for platform_id, titles in all_titles.items():
+                        platform_name = id_to_name.get(platform_id, platform_id)
+                        
+                        for title, info in titles.items():
+                            if title == reference_title:
+                                continue
+                            
+                            # 计算相似度（使用混合算法）
+                            text_similarity = self._calculate_similarity(reference_title, title)
+                            
+                            # 如果有关键词，也计算关键词重合度
+                            if reference_keywords:
+                                title_keywords = self._extract_keywords(title)
+                                keyword_similarity = self._jaccard_similarity(reference_keywords, title_keywords)
+                                # 混合相似度：70% 文本 + 30% 关键词
+                                similarity = 0.7 * text_similarity + 0.3 * keyword_similarity
+                            else:
+                                similarity = text_similarity
+                            
+                            if similarity >= threshold:
+                                news_item = {
+                                    "title": title,
+                                    "platform": platform_id,
+                                    "platform_name": platform_name,
+                                    "date": search_date.strftime("%Y-%m-%d"),
+                                    "similarity": round(similarity, 3),
+                                    "rank": info["ranks"][0] if info["ranks"] else 0
+                                }
+                                
+                                if include_url:
+                                    news_item["url"] = info.get("url", "")
+                                
+                                all_related_news.append(news_item)
+                                
+                except Exception:
+                    # 某天数据读取失败，跳过
+                    continue
+
+            # 按相似度排序
+            all_related_news.sort(key=lambda x: x["similarity"], reverse=True)
+            
+            # 限制数量
+            results = all_related_news[:limit]
+
+            # 统计信息
+            from collections import Counter
+            platform_dist = Counter([n["platform_name"] for n in all_related_news])
+            date_dist = Counter([n["date"] for n in all_related_news])
+
+            return {
+                "success": True,
+                "summary": {
+                    "total_found": len(all_related_news),
+                    "returned_count": len(results),
+                    "reference_title": reference_title,
+                    "threshold": threshold,
+                    "date_range": {
+                        "start": min(search_dates).strftime("%Y-%m-%d"),
+                        "end": max(search_dates).strftime("%Y-%m-%d")
+                    } if search_dates else None
+                },
+                "results": results,
+                "statistics": {
+                    "platform_distribution": dict(platform_dist),
+                    "date_distribution": dict(date_dist)
+                }
+            }
+
+        except MCPError as e:
+            return {"success": False, "error": e.to_dict()}
+        except Exception as e:
+            return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": str(e)}}

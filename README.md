@@ -4,7 +4,7 @@
   <img src="/_image/banner.webp" alt="TrendRadar Banner" width="80%">
 </a>
 
-🚀 最快<strong>30秒</strong>部署的热点助手 —— 告别无效刷屏，只看真正关心的新闻资讯
+最快<strong>30秒</strong>部署的热点助手 —— 告别无效刷屏，只看真正关心的新闻资讯
 
 <a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
@@ -43,15 +43,23 @@
 
 > 本项目以轻量，易部署为目标
 
+<br>
+
 ## 📑 快速导航
+
+> 💡 **点击下方链接**可快速跳转到对应章节。部署推荐从「**快速开始**」入手，需要详细自定义请看「**配置详解**」
 
 <div align="center">
 
-| [🚀 快速开始](#-快速开始) | [🤖 AI 智能分析](#-ai-智能分析) | [⚙️ 配置详解](#配置详解) | [📝 更新日志](#-更新日志) | [❓ 答疑与交流](#问题答疑与交流) |
-|:---:|:---:|:---:|:---:|:---:|
-| [🐳 Docker部署](#6-docker-部署) | [🔌 MCP客户端](#-mcp-客户端) | [📚 项目相关](#-项目相关) | | |
+|   |   |   |
+|:---:|:---:|:---:|
+| [🚀 **快速开始**](#-快速开始) | [AI 智能分析](#-ai-智能分析) | [⚙️ **配置详解**](#配置详解) |
+| [Docker部署](#6-docker-部署) | [MCP客户端](#-mcp-客户端) | [项目相关](#-项目相关) |
+| | [❓ **答疑与交流**](#问题答疑与交流) | |
 
 </div>
+
+<br>
 
 - 感谢**耐心反馈 bug** 的贡献者，你们的每一条反馈让项目更加完善😉;  
 - 感谢**为项目点 star** 的观众们，**fork** 你所欲也，**star** 我所欲也，两者得兼😍是对开源精神最好的支持; 
@@ -173,7 +181,7 @@
 
 [![Mac下载](https://img.shields.io/badge/Mac-免费下载-FF6B6B?style=for-the-badge&logo=apple&logoColor=white)](https://shandianshuo.cn) [![Windows下载](https://img.shields.io/badge/Windows-免费下载-FF6B6B?style=for-the-badge&logo=lightning&logoColor=white)](https://shandianshuo.cn)
 <a href="https://shandianshuo.cn" target="_blank">
-  <img src="_image/banner-shandianshuo.png" alt="闪电说" width="700"/>
+  <img src="_image/banner-shandianshuo.png" alt="闪电说" width="600"/>
 </a>
 </div>
 
@@ -192,6 +200,17 @@
 - **不会写正则？** README 新增 AI 生成正则的引导，告诉 ChatGPT/Claude/DeepSeek 你想匹配什么，让 AI 帮你写
 
 
+### 2025/12/30 - mcp-v2.0.0
+
+- **架构调整**：移除 TXT 支持，统一使用 SQLite 数据库
+- **RSS 查询**：新增 `get_latest_rss`、`search_rss`、`get_rss_feeds_status`
+- **统一搜索**：`search_news` 支持 `include_rss` 参数同时搜索热榜和 RSS
+
+
+<details>
+<summary>👉 点击展开：<strong>历史更新</strong></summary>
+
+
 ### 2026/01/01 - v4.6.0
 
 - **修复 RSS HTML 显示**：将 RSS 内容合并到热榜 HTML 页面，按源分组显示
@@ -204,17 +223,6 @@
 - **存储结构重构**：扁平化目录结构 `output/{type}/{date}.db`
 - **统一排序配置**：`sort_by_position_first` 同时影响热榜和 RSS
 - **配置结构重构**：`config.yaml` 重新组织为 7 个逻辑分组（app、report、notification、storage、platforms、rss、advanced），配置路径更清晰
-
-
-### 2025/12/30 - mcp-v2.0.0
-
-- **架构调整**：移除 TXT 支持，统一使用 SQLite 数据库
-- **RSS 查询**：新增 `get_latest_rss`、`search_rss`、`get_rss_feeds_status`
-- **统一搜索**：`search_news` 支持 `include_rss` 参数同时搜索热榜和 RSS
-
-
-<details>
-<summary>👉 点击展开：<strong>历史更新</strong></summary>
 
 
 ### 2025/12/26 - mcp-v1.2.0
@@ -738,19 +746,9 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 支持 RSS/Atom 订阅源抓取，按关键词分组统计（与热榜格式一致）：
 
-- 📰 **统一格式**：RSS 与热榜使用相同的关键词匹配和显示格式
-- ⚙️ **简单配置**：直接在 `config.yaml` 中添加 RSS 源
-- 🔄 **合并推送**：热榜和 RSS 合并为一条消息推送
-
-```yaml
-# config/config.yaml 示例
-rss:
-  enabled: true
-  feeds:
-    - id: "hacker-news"
-      name: "Hacker News"
-      url: "https://hnrss.org/frontpage"
-```
+- **统一格式**：RSS 与热榜使用相同的关键词匹配和显示格式
+- **简单配置**：直接在 `config.yaml` 中添加 RSS 源
+- **合并推送**：热榜和 RSS 合并为一条消息推送
 
 > 💡 RSS 使用与热榜相同的 `frequency_words.txt` 进行关键词过滤
 
@@ -765,9 +763,9 @@ rss:
 | **增量监控** (incremental) | 投资者/交易员 | 仅推送新增内容，零重复 |
 
 > 💡 **快速选择指南：**
-> - 🔄 不想看到重复新闻 → 用 `incremental`（增量监控）
-> - 📊 想看完整榜单趋势 → 用 `current`（当前榜单）
-> - 📝 需要每日汇总报告 → 用 `daily`（当日汇总）
+> - 不想看到重复新闻 → 用 `incremental`（增量监控）
+> - 想看完整榜单趋势 → 用 `current`（当前榜单）
+> - 需要每日汇总报告 → 用 `daily`（当日汇总）
 >
 > 详细对比和配置教程见 [配置详解 - 推送模式详解](#3-推送模式详解)
 
@@ -784,22 +782,6 @@ rss:
 ### **精准内容筛选**
 
 设置个人关键词（如：AI、比亚迪、教育政策），只推送相关热点，过滤无关信息
-
-**基础语法**（7种）：
-- 普通词：基础匹配
-- 必须词 `+`：限定范围
-- 过滤词 `!`：排除干扰
-- 数量限制 `@`：控制显示数量（v3.2.0 新增）
-- 全局过滤 `[GLOBAL_FILTER]`：全局排除指定内容（v3.5.0 新增）
-- 正则表达式 `/pattern/`：精确匹配模式（v4.7.0 新增）
-- 显示名称 `=> 备注`：自定义显示文本（v4.7.0 新增）
-
-**高级功能**（v3.2.0 新增）：
-- 🔢 **关键词排序控制**：按热度优先 or 配置顺序优先
-- 📊 **显示数量精准限制**：全局配置 + 单独配置，灵活控制推送长度
-
-**词组化管理**：
-- 空行分隔，独立统计不同主题热点
 
 > 💡 **基础配置教程**：[关键词配置 - 基础语法](#关键词基础语法)
 >
@@ -821,45 +803,24 @@ rss:
 
 ### **个性化热点算法**
 
-不再被各个平台的算法牵着走，TrendRadar 会重新整理全网热搜：
+不再被各个平台的算法牵着走，TrendRadar 会重新整理全网热搜
 
-- **看重排名高的新闻**（占60%）：各平台前几名的新闻优先显示
-- **关注持续出现的话题**（占30%）：反复出现的新闻更重要
-- **考虑排名质量**（占10%）：不仅多次出现，还经常排在前列
+> 💡 三个比例可以调整，详见 [配置详解 - 热点权重调整](#4-热点权重调整)
 
-> 💡 这三个比例可以调整，详见 [配置详解 - 热点权重调整](#4-热点权重调整)
-
-### **多渠道实时推送**
+### **多渠道多账号推送**
 
 支持**企业微信**(+ 微信推送方案)、**飞书**、**钉钉**、**Telegram**、**邮件**、**ntfy**、**Bark**、**Slack**，消息直达手机和邮箱
 
-**📌 多账号推送说明（v3.5.0 新增）：**
-
-- ✅ **支持多账号配置**：所有推送渠道（飞书、钉钉、企业微信、Telegram、ntfy、Bark、Slack）均支持配置多个账号
-- ✅ **配置方式**：使用英文分号 `;` 分隔多个账号值
-- ✅ **示例**：`FEISHU_WEBHOOK_URL` 的 Secret 值填写 `https://webhook1;https://webhook2`
-- ⚠️ **配对配置**：Telegram 和 ntfy 需要保证配对参数数量一致（如 token 和 chat_id 都是 2 个）
-- ⚠️ **数量限制**：默认每个渠道最多 3 个账号，超出会被截断
+> 💡 详细配置教程见 [配置详解 - 多账号推送配置](#10-多账号推送配置)
 
 ### **灵活存储架构**（v4.0.0 重大更新）
 
 **多存储后端支持**：
-- ☁️ **远程云存储**：GitHub Actions 环境默认，支持 S3 兼容协议（R2/OSS/COS 等），数据存储在云端，不污染仓库
-- 💾 **本地 SQLite 数据库**：Docker/本地环境默认，数据完全可控
-- 🔄 **自动后端选择**：根据运行环境智能切换存储方式
+- **远程云存储**：GitHub Actions 环境默认，支持 S3 兼容协议（R2/OSS/COS 等），数据存储在云端，不污染仓库
+- **本地 SQLite 数据库**：Docker/本地环境默认，数据完全可控
+- **自动后端选择**：根据运行环境智能切换存储方式
 
-**数据格式**：
-| 格式 | 用途 | 说明 |
-|------|------|------|
-| **SQLite** | 主存储 | 单文件数据库，查询快速，支持 MCP AI 分析 |
-| **TXT** | 可选快照 | 可读文本格式，方便直接查看 |
-| **HTML** | 报告展示 | 精美可视化页面，PC/移动端适配 |
-
-**数据管理**：
-- ✅ 自动清理过期数据（可配置保留天数）
-- ✅ 时区配置支持（全球时区）
-
-> 💡 详细说明见 [配置详解 - 存储配置](#9-存储配置)
+> 💡 详细说明见 [配置详解 - 存储配置](#11-存储配置)
 
 ### **多端部署**
 - **GitHub Actions**：定时自动爬取 + 远程云存储（需签到续期）
@@ -871,16 +832,8 @@ rss:
 
 基于 MCP (Model Context Protocol) 协议的 AI 对话分析系统，让你用自然语言深度挖掘新闻数据
 
-- **对话式查询**：用自然语言提问，如"查询昨天知乎的热点"、"分析比特币最近的热度趋势"
-- **17 种分析工具**：涵盖基础查询、智能检索、趋势分析、数据洞察、情感分析、RSS 查询等
-- **多客户端支持**：Cherry Studio（GUI 配置）、Claude Desktop、Cursor、Cline 等
-- **深度分析能力**：
-  - 话题趋势追踪（热度变化、生命周期、爆火检测、趋势预测）
-  - 跨平台数据对比（活跃度统计、关键词共现）
-  - 智能摘要生成、相似新闻查找、历史关联检索
-
 > **💡 使用提示**：AI 功能需要本地新闻数据支持
-> - 项目自带 **11月1-15日** 测试数据，可立即体验
+> - 项目自带测试数据，可立即体验功能
 > - 建议自行部署运行项目，获取更实时的数据
 >
 > 详见 [AI 智能分析](#-ai-智能分析)
@@ -950,24 +903,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
    - **保存后看不到值是正常的**：出于安全考虑，保存后重新编辑时，只能看到 Name（名称），看不到 Secret（值）的内容
    - **严禁自创名称**：Secret 的 Name（名称）必须**严格使用**下方列出的名称（如 `WEWORK_WEBHOOK_URL`、`FEISHU_WEBHOOK_URL` 等），不能自己随意修改或创造新名称，否则系统无法识别
    - **可以同时配置多个平台**：系统会向所有配置的平台发送通知
-
-   **📌 多账号推送说明（v3.5.0 新增）：**
-
-   - **支持多账号配置**：所有推送渠道（飞书、钉钉、企业微信、Telegram、ntfy、Bark、Slack）均支持配置多个账号
-   - **配置方式**：使用英文分号 `;` 分隔多个账号值
-   - **示例**：`FEISHU_WEBHOOK_URL` 的 Secret 值填写 `https://webhook1;https://webhook2`
-   - **配对配置**：Telegram 和 ntfy 需要保证配对参数数量一致（如 token 和 chat_id 都是 2 个）
-   - **数量限制**：默认每个渠道最多 3 个账号，超出部分被截断
-
-   **多账号配置示例**：
-
-   | Name（名称） | Secret（值）示例 |
-   |-------------|-----------------|
-   | `FEISHU_WEBHOOK_URL` | `https://webhook1;https://webhook2;https://webhook3` |
-   | `TELEGRAM_BOT_TOKEN` | `token1;token2` |
-   | `TELEGRAM_CHAT_ID` | `chatid1;chatid2` |
-   | `NTFY_TOPIC` | `topic1;topic2` |
-   | `NTFY_TOKEN` | `;token2`（第一个无 token 时留空占位） |
 
    **配置示例：**
 
@@ -2950,6 +2885,24 @@ Cron 是一种定时任务格式，由 5 个部分组成：`分 时 日 月 周`
 >   - **Docker 用户** → 使用 [`.env` 文件配置](#6-docker-部署)（`.env` 已在 `.gitignore` 中，不会被提交）
 > - **本地开发用户**：可以在 `config.yaml` 中配置（确保不会 push 到公开仓库）
 
+#### 多账号推送说明（v3.5.0 新增）
+
+- **支持多账号配置**：所有推送渠道（飞书、钉钉、企业微信、Telegram、ntfy、Bark、Slack）均支持配置多个账号
+- **配置方式**：使用英文分号 `;` 分隔多个账号值
+- **示例**：`FEISHU_WEBHOOK_URL` 的 Secret 值填写 `https://webhook1;https://webhook2`
+- **配对配置**：Telegram 和 ntfy 需要保证配对参数数量一致（如 token 和 chat_id 都是 2 个）
+- **数量限制**：默认每个渠道最多 3 个账号，超出部分被截断
+
+**多账号配置示例**：
+
+| Name（名称） | Secret（值）示例 |
+|-------------|-----------------|
+| `FEISHU_WEBHOOK_URL` | `https://webhook1;https://webhook2;https://webhook3` |
+| `TELEGRAM_BOT_TOKEN` | `token1;token2` |
+| `TELEGRAM_CHAT_ID` | `chatid1;chatid2` |
+| `NTFY_TOPIC` | `topic1;topic2` |
+| `NTFY_TOKEN` | `;token2`（第一个无 token 时留空占位） |
+
 #### 支持的渠道
 
 | 渠道 | 配置项 | 是否需要配对 | 说明 |
@@ -3324,15 +3277,9 @@ Cherry Studio 提供 GUI 配置界面，5 分钟快速部署，复杂的部分�
 
 **详细对话教程**：[README-MCP-FAQ.md](README-MCP-FAQ.md)
 
-<details>
-<summary>👉 点击展开：<strong>查看 AI 对话示例图</strong></summary>
-<br>
-
 > 💡 **提示**：实际不建议一次性问多个问题。如果你选择的 AI 模型连下图的按顺序调用都无法做到，建议换一个。
 
 <img src="/_image/ai2.png" alt="mcp 使用效果图" width="600">
-
-</details>
 
 <br>
 
@@ -3762,57 +3709,6 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 
 - https://github.com/sansan0/bilibili-comment-analyzer
 
-
-### 本项目流程图
-
-```mermaid
-flowchart TD
-    A[👤 用户开始] --> B{🚀 选择部署方式}
-    
-    B -->|云端部署| C1[🍴 Fork 项目到 GitHub]
-    B -->|本地部署| C2[🐳 Docker 部署]
-    
-    C1 --> D[⚙️ 配置通知渠道<br/>可同时配置多个]
-    C2 --> D
-    
-    D --> E[选择通知方式：<br/>📱企业微信 💬飞书 🔔钉钉<br/>📟Telegram 📧邮件]
-    
-    E --> F[🔑 填写通知参数<br/>GitHub Secrets 或环境变量]
-    
-    F --> G[📝 配置关键词<br/>config/frequency_words.txt<br/>普通词/必须词+/过滤词!]
-    
-    G --> H[🎯 选择运行模式<br/>config/config.yaml]
-    
-    H --> H1[📋 daily - 当日汇总<br/>定时推送所有匹配新闻]
-    H --> H2[📰 current - 当前榜单<br/>定时推送最新榜单]
-    H --> H3[📈 incremental - 增量监控<br/>仅推送新增内容]
-    
-    H1 --> I[可选：推送时间窗口控制<br/>⏰ 限制推送时间范围]
-    H2 --> I
-    H3 --> I
-    
-    I --> J[✅ 配置完成]
-    
-    J --> K[🤖 系统自动运行]
-    
-    K --> L[🕷️ 爬取11+平台热点]
-    L --> M[🔍 关键词筛选]
-    M --> N[⚖️ 权重算法排序<br/>排名60% + 频次30% + 热度10%]
-    N --> O[📊 生成报告<br/>HTML网页 + 推送消息]
-    O --> P[📱 多渠道推送通知]
-    
-    P --> Q[🎉 持续接收精准推送<br/>告别信息过载]
-    
-    style A fill:#e3f2fd
-    style B fill:#f3e5f5
-    style D fill:#fff3e0
-    style F fill:#fff9c4
-    style G fill:#e8f5e9
-    style H fill:#e0f2f1
-    style I fill:#fce4ec
-    style O fill:#e1bee7
-    style Q fill:#c8e6c9
-```
 
 [![Star History Chart](https://api.star-history.com/svg?repos=sansan0/TrendRadar&type=Date)](https://www.star-history.com/#sansan0/TrendRadar&Date)
 

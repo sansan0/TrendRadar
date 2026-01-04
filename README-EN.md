@@ -4,7 +4,7 @@
   <img src="/_image/banner.webp" alt="TrendRadar Banner" width="80%">
 </a>
 
-🚀 Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only see the news you truly care about
+Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only see the news you truly care about
 
 <a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
@@ -43,15 +43,23 @@
 
 > This project is designed to be lightweight and easy to deploy
 
+<br>
+
 ## 📑 Quick Navigation
+
+> 💡 **Click the links below** to jump to the corresponding section. Start with "**Quick Start**" for deployment, see "**Configuration Guide**" for detailed customization
 
 <div align="center">
 
-| [🚀 Quick Start](#-quick-start) | [🤖 AI Analysis](#-ai-analysis) | [⚙️ Configuration Guide](#configuration-guide) | [📝 Changelog](#-changelog) | [❓ FAQ & Support](#-faq--support) |
-|:---:|:---:|:---:|:---:|:---:|
-| [🐳 Docker Deployment](#6-docker-deployment) | [🔌 MCP Clients](#-mcp-clients) | [📚 Related Projects](#-related-projects) | | |
+|   |   |   |
+|:---:|:---:|:---:|
+| [🚀 **Quick Start**](#-quick-start) | [AI Analysis](#-ai-analysis) | [⚙️ **Configuration Guide**](#configuration-guide) |
+| [Docker Deployment](#6-docker-deployment) | [MCP Clients](#-mcp-clients) | [Related Projects](#-related-projects) |
+| | [❓ **FAQ & Support**](#-faq--support) | |
 
 </div>
+
+<br>
 
 - Thanks to **bug reporters**, your feedback makes this project better 😉
 - Thanks to **stargazers**, your stars and forks are the best support for open source 😍
@@ -124,7 +132,7 @@ After communication, the author indicated no concerns about server pressure, but
 
 [![Mac Download](https://img.shields.io/badge/Mac-Free_Download-FF6B6B?style=for-the-badge&logo=apple&logoColor=white)](https://shandianshuo.cn) [![Windows Download](https://img.shields.io/badge/Windows-Free_Download-FF6B6B?style=for-the-badge&logo=lightning&logoColor=white)](https://shandianshuo.cn)
 <a href="https://shandianshuo.cn" target="_blank">
-  <img src="_image/banner-shandianshuo.png" alt="FlashSpeak" width="700"/>
+  <img src="_image/banner-shandianshuo.png" alt="FlashSpeak" width="600"/>
 </a>
 </div>
 
@@ -143,6 +151,17 @@ After communication, the author indicated no concerns about server pressure, but
 - **Can't Write Regex?** README now includes AI prompt guide - just tell ChatGPT/Claude/DeepSeek what you want to match
 
 
+### 2025/12/30 - mcp-v2.0.0
+
+- **Architecture Refactoring**: Removed TXT support, unified to SQLite database
+- **RSS Query**: Added `get_latest_rss`, `search_rss`, `get_rss_feeds_status`
+- **Unified Search**: `search_news` supports `include_rss` parameter to search both trending and RSS
+
+
+<details>
+<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
+
+
 ### 2026/01/01 - v4.6.0
 
 - **Fix RSS HTML Display**: Merged RSS content into trending HTML page, grouped by source
@@ -155,17 +174,6 @@ After communication, the author indicated no concerns about server pressure, but
 - **Storage Structure Refactoring**: Flattened directory structure `output/{type}/{date}.db`
 - **Unified Sorting Config**: `sort_by_position_first` affects both trending and RSS
 - **Config Structure Refactoring**: `config.yaml` reorganized into 7 logical groups (app, report, notification, storage, platforms, rss, advanced) with clearer config paths
-
-
-### 2025/12/30 - mcp-v2.0.0
-
-- **Architecture Refactoring**: Removed TXT support, unified to SQLite database
-- **RSS Query**: Added `get_latest_rss`, `search_rss`, `get_rss_feeds_status`
-- **Unified Search**: `search_news` supports `include_rss` parameter to search both trending and RSS
-
-
-<details>
-<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
 
 
 ### 2025/12/26 - mcp-v1.2.0
@@ -701,19 +709,9 @@ Default monitoring of 11 mainstream platforms, with support for adding custom pl
 
 Supports RSS/Atom feed crawling, keyword-based grouping and statistics (consistent with trending format):
 
-- 📰 **Unified Format**: RSS and trending use the same keyword matching and display format
-- ⚙️ **Simple Config**: Add RSS sources directly in `config.yaml`
-- 🔄 **Merged Push**: Trending and RSS are merged into a single notification
-
-```yaml
-# config/config.yaml example
-rss:
-  enabled: true
-  feeds:
-    - id: "hacker-news"
-      name: "Hacker News"
-      url: "https://hnrss.org/frontpage"
-```
+- **Unified Format**: RSS and trending use the same keyword matching and display format
+- **Simple Config**: Add RSS sources directly in `config.yaml`
+- **Merged Push**: Trending and RSS are merged into a single notification
 
 > 💡 RSS uses the same `frequency_words.txt` for keyword filtering as trending
 
@@ -728,9 +726,9 @@ rss:
 | **Incremental Monitor** (incremental) | Traders/Investors | Push only new content, zero duplication |
 
 > 💡 **Quick Selection Guide:**
-> - 🔄 Don't want duplicate news → Use `incremental`
-> - 📊 Want complete ranking trends → Use `current`
-> - 📝 Need daily summary reports → Use `daily`
+> - Don't want duplicate news → Use `incremental`
+> - Want complete ranking trends → Use `current`
+> - Need daily summary reports → Use `daily`
 >
 > For detailed comparison and configuration, see [Configuration Guide - Push Mode Details](#3-push-mode-details)
 
@@ -747,22 +745,6 @@ rss:
 ### **Precise Content Filtering**
 
 Set personal keywords (e.g., AI, BYD, Education Policy) to receive only relevant trending news, filtering out noise.
-
-**Basic Syntax** (7 types):
-- Normal words: Basic matching
-- Required words `+`: Narrow scope
-- Filter words `!`: Exclude noise
-- Count limit `@`: Control display count (v3.2.0 new)
-- Global filter `[GLOBAL_FILTER]`: Globally exclude specified content (v3.5.0 new)
-- Regex `/pattern/`: Precise pattern matching (v4.7.0 new)
-- Display name `=> alias`: Custom display text (v4.7.0 new)
-
-**Advanced Features** (v3.2.0 new):
-- 🔢 **Keyword Sorting Control**: Sort by popularity or config order
-- 📊 **Display Count Limit**: Global config + individual override for flexible control
-
-**Group-based Management**:
-- Separate with blank lines, independent statistics for different topics
 
 > 💡 **Basic Configuration**: [Keyword Configuration - Basic Syntax](#keyword-basic-syntax)
 >
@@ -785,45 +767,22 @@ Real-time tracking of news popularity changes helps you understand not just "wha
 
 ### **Personalized Trending Algorithm**
 
-No longer controlled by platform algorithms, TrendRadar reorganizes all trending searches:
-
-- **Prioritize High-Ranking News** (60%): Top-ranked news from each platform appears first
-- **Focus on Persistent Topics** (30%): Repeatedly appearing news is more important
-- **Consider Ranking Quality** (10%): Not just frequent, but consistently top-ranked
+No longer controlled by platform algorithms, TrendRadar reorganizes all trending searches
 
 > 💡 Weight adjustment guide: [Configuration Guide - Advanced Configuration](#4-advanced-configuration---hotspot-weight-adjustment)
 
-### **Multi-Channel Real-Time Push**
+### **Multi-Channel Multi-Account Push**
 
 Supports **WeWork** (+ WeChat push solution), **Feishu**, **DingTalk**, **Telegram**, **Email**, **ntfy**, **Bark**, **Slack** — messages delivered directly to phone and email.
 
-**📌 Multi-Account Push Notes (v3.5.0 New Feature):**
-
-- ✅ **Multi-Account Configuration Support**: All push channels (Feishu, DingTalk, WeWork, Telegram, ntfy, Bark, Slack) support configuring multiple accounts
-- ✅ **Configuration Method**: Use English semicolon `;` to separate multiple account values
-- ✅ **Example**: Set `FEISHU_WEBHOOK_URL` Secret value to `https://webhook1;https://webhook2`
-- ⚠️ **Paired Configuration**: Telegram and ntfy require paired parameter quantities to match (e.g., token and chat_id both have 2 values)
-- ⚠️ **Quantity Limit**: Default maximum 3 accounts per channel, exceeded values will be truncated
+> 💡 For detailed configuration, see [Configuration Guide - Multi-Account Push Configuration](#10-multiple-account-push-configuration)
 
 ### **Flexible Storage Architecture (v4.0.0 Major Update)**
 
 **Multi-Backend Support**:
-- ☁️ **Remote Cloud Storage**: GitHub Actions environment default, supports S3-compatible protocols (R2/OSS/COS, etc.), data stored in cloud, keeping repository clean
-- 💾 **Local SQLite**: Traditional SQLite database, stable and efficient (Docker/local deployment)
-- 🔀 **Auto Selection**: Auto-selects appropriate backend based on runtime environment
-
-**Data Format Hierarchy**:
-
-| Format | Role | Description |
-|--------|------|-------------|
-| **SQLite** | Primary storage | Complete data with statistics information |
-| **TXT** | Human-readable backup | Optional text records for manual viewing |
-| **HTML** | Web report | Beautiful visual report (GitHub Pages) |
-
-**Data Management Features**:
-- Auto data cleanup (configurable retention period)
-- Timezone support (configurable IANA time zone)
-- Cloud/local seamless switching
+- **Remote Cloud Storage**: GitHub Actions environment default, supports S3-compatible protocols (R2/OSS/COS, etc.), data stored in cloud, keeping repository clean
+- **Local SQLite**: Traditional SQLite database, stable and efficient (Docker/local deployment)
+- **Auto Selection**: Auto-selects appropriate backend based on runtime environment
 
 > 💡 For storage configuration details, see [Configuration Details - Storage Configuration](#11-storage-configuration-v400-new)
 
@@ -837,16 +796,8 @@ Supports **WeWork** (+ WeChat push solution), **Feishu**, **DingTalk**, **Telegr
 
 AI conversational analysis system based on MCP (Model Context Protocol), enabling deep data mining with natural language.
 
-- **Conversational Query**: Ask in natural language, like "Query yesterday's Zhihu trending" or "Analyze recent Bitcoin popularity trends"
-- **17 Analysis Tools**: Basic query, smart search, trend analysis, data insights, sentiment analysis, RSS query, etc.
-- **Multi-Client Support**: Cherry Studio (GUI config), Claude Desktop, Cursor, Cline, etc.
-- **Deep Analysis Capabilities**:
-  - Topic trend tracking (popularity changes, lifecycle, viral detection, trend prediction)
-  - Cross-platform data comparison (activity stats, keyword co-occurrence)
-  - Smart summary generation, similar news finding, historical correlation search
-
 > **💡 Usage Tip**: AI features require local news data support
-> - Project includes **December 21-27** test data for immediate experience
+> - Project includes test data for immediate feature experience
 > - Recommend deploying the project yourself to get more real-time data
 >
 > See [AI Analysis](#-ai-analysis) for details
@@ -916,14 +867,6 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
    - **Cannot See Value After Saving is Normal**: For security reasons, after saving, you can only see the Name when re-editing, but not the Secret value
    - **DO NOT Create Custom Names**: The Secret Name must **strictly use** the names listed below (e.g., `WEWORK_WEBHOOK_URL`, `FEISHU_WEBHOOK_URL`, etc.). Do not modify or create new names arbitrarily, or the system will not recognize them
    - **Can Configure Multiple Platforms**: The system will send notifications to all configured platforms
-
-   **📌 Multi-Account Push Notes (v3.5.0 New Feature):**
-
-   - ✅ **Multi-Account Configuration Support**: All push channels (Feishu, DingTalk, WeWork, Telegram, ntfy, Bark, Slack) support configuring multiple accounts
-   - ✅ **Configuration Method**: Use English semicolon `;` to separate multiple account values
-   - ✅ **Example**: Set `FEISHU_WEBHOOK_URL` Secret value to `https://webhook1;https://webhook2`
-   - ⚠️ **Paired Configuration**: Telegram and ntfy require paired parameter quantities to match (e.g., token and chat_id both have 2 values)
-   - ⚠️ **Quantity Limit**: Default maximum 3 accounts per channel, exceeded values will be truncated
 
    **Configuration Example:**
 
@@ -2914,6 +2857,24 @@ Cron is a time-based job scheduler format, consisting of 5 parts: `minute hour d
 >   - **Docker Users** → Use [`.env` file configuration](#6-docker-deployment) (`.env` is in `.gitignore` and won't be committed)
 > - **Local Development Users**: Can configure in `config.yaml` (ensure it won't be pushed to public repositories)
 
+#### Multi-Account Push Notes (v3.5.0 New Feature)
+
+- **Multi-Account Configuration Support**: All push channels (Feishu, DingTalk, WeWork, Telegram, ntfy, Bark, Slack) support configuring multiple accounts
+- **Configuration Method**: Use English semicolon `;` to separate multiple account values
+- **Example**: Set `FEISHU_WEBHOOK_URL` Secret value to `https://webhook1;https://webhook2`
+- **Paired Configuration**: Telegram and ntfy require paired parameter quantities to match (e.g., token and chat_id both have 2 values)
+- **Quantity Limit**: Default maximum 3 accounts per channel, exceeded values will be truncated
+
+**Multi-Account Configuration Examples**:
+
+| Name | Secret (Value) Example |
+|------|------------------------|
+| `FEISHU_WEBHOOK_URL` | `https://webhook1;https://webhook2;https://webhook3` |
+| `TELEGRAM_BOT_TOKEN` | `token1;token2` |
+| `TELEGRAM_CHAT_ID` | `chatid1;chatid2` |
+| `NTFY_TOPIC` | `topic1;topic2` |
+| `NTFY_TOKEN` | `;token2` (leave empty for first if no token needed) |
+
 #### Supported Channels
 
 | Channel | Configuration Item | Pairing Required | Description |
@@ -3380,15 +3341,9 @@ Cherry Studio provides GUI config interface, 5-minute quick deployment, complex 
 
 **Question Effect**:
 
-<details>
-<summary>👉 Click to expand: <strong>View AI Conversation Example</strong></summary>
-<br>
-
 > 💡 **Tip**: Actually not recommended to ask multiple questions at once. If your chosen AI model cannot even sequentially call as shown below, suggest switching models.
 
 <img src="/_image/ai2.png" alt="MCP usage effect" width="600">
-
-</details>
 
 <br>
 
@@ -3816,57 +3771,6 @@ Any client supporting Model Context Protocol can connect to TrendRadar:
 
 - https://github.com/sansan0/bilibili-comment-analyzer
 
-
-### Project Workflow Diagram
-
-```mermaid
-flowchart TD
-    A[👤 User Start] --> B{🚀 Choose Deployment}
-
-    B -->|Cloud Deployment| C1[🍴 Fork to GitHub]
-    B -->|Local Deployment| C2[🐳 Docker Deploy]
-
-    C1 --> D[⚙️ Configure Notification<br/>Multiple channels supported]
-    C2 --> D
-
-    D --> E[Choose method:<br/>📱WeWork 💬Feishu 🔔DingTalk<br/>📟Telegram 📧Email]
-
-    E --> F[🔑 Fill notification params<br/>GitHub Secrets or Env Vars]
-
-    F --> G[📝 Configure keywords<br/>config/frequency_words.txt<br/>Normal/Required+/Filter!]
-
-    G --> H[🎯 Choose mode<br/>config/config.yaml]
-
-    H --> H1[📋 daily - Daily summary<br/>Scheduled push all matches]
-    H --> H2[📰 current - Current rankings<br/>Scheduled push latest]
-    H --> H3[📈 incremental - Incremental<br/>Push only new content]
-
-    H1 --> I[Optional: Push time window<br/>⏰ Limit push time range]
-    H2 --> I
-    H3 --> I
-
-    I --> J[✅ Config Complete]
-
-    J --> K[🤖 Auto Run]
-
-    K --> L[🕷️ Crawl 11+ platforms]
-    L --> M[🔍 Keyword filtering]
-    M --> N[⚖️ Weight sorting<br/>Rank 60% + Freq 30% + Hot 10%]
-    N --> O[📊 Generate reports<br/>HTML + Push messages]
-    O --> P[📱 Multi-channel push]
-
-    P --> Q[🎉 Receive precise push<br/>Say goodbye to info overload]
-
-    style A fill:#e3f2fd
-    style B fill:#f3e5f5
-    style D fill:#fff3e0
-    style F fill:#fff9c4
-    style G fill:#e8f5e9
-    style H fill:#e0f2f1
-    style I fill:#fce4ec
-    style O fill:#e1bee7
-    style Q fill:#c8e6c9
-```
 
 [![Star History Chart](https://api.star-history.com/svg?repos=sansan0/TrendRadar&type=Date)](https://www.star-history.com/#sansan0/TrendRadar&Date)
 

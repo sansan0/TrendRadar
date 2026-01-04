@@ -57,7 +57,7 @@ COPY docker/manage.py .
 COPY trendradar/ ./trendradar/
 
 # 复制配置文件
-COPY config/ /app/config/
+COPY config/ ./config/
 
 # 复制 entrypoint.sh 并强制转换为 LF 格式
 COPY docker/entrypoint.sh /entrypoint.sh.tmp
@@ -65,7 +65,7 @@ RUN sed -i 's/\r$//' /entrypoint.sh.tmp && \
     mv /entrypoint.sh.tmp /entrypoint.sh && \
     chmod +x /entrypoint.sh && \
     chmod +x manage.py && \
-    mkdir -p /app/config /app/output
+    mkdir -p ./config ./output
 
 ENV PYTHONUNBUFFERED=1 \
     CONFIG_PATH=/app/config/config.yaml \

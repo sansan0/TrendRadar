@@ -142,11 +142,12 @@ class SystemManagementTools:
             # 初始化数据获取器
             advanced = config_data.get("advanced", {})
             crawler_config = advanced.get("crawler", {})
+            api_url = crawler_config.get("api_url", "https://newsnow.busiyi.world/api/s")
             proxy_url = None
             if crawler_config.get("use_proxy"):
                 proxy_url = crawler_config.get("default_proxy")
-            
-            fetcher = DataFetcher(proxy_url=proxy_url)
+
+            fetcher = DataFetcher(api_url=api_url, proxy_url=proxy_url)
             request_interval = crawler_config.get("request_interval", 100)
 
             # 执行爬取

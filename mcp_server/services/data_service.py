@@ -7,11 +7,30 @@
 import re
 from collections import Counter
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .cache_service import get_cache
 from .parser_service import ParserService
 from ..utils.errors import DataNotFoundError
+
+
+def _sanitize_for_json(obj: Any) -> Any:
+    """
+    递归清理对象，将不可 JSON 序列化的类型转换为可序列化类型
+
+    主要处理:
+    - re.Pattern -> 正则表达式字符串
+    """
+    if isinstance(obj, re.Pattern):
+        return obj.pattern
+    elif isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(_sanitize_for_json(item) for item in obj)
+    else:
+        return obj
 
 
 class DataService:
@@ -509,7 +528,7 @@ class DataService:
 
         if section == "all" or section == "keywords":
             keywords_config = {
-                "word_groups": word_groups,
+                "word_groups": _sanitize_for_json(word_groups),
                 "total_groups": len(word_groups)
             }
 

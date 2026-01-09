@@ -7,6 +7,7 @@ TrendRadar 主程序
 """
 
 import os
+import time
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
@@ -1154,8 +1155,29 @@ class NewsAnalyzer:
 def main():
     """主程序入口"""
     try:
-        analyzer = NewsAnalyzer()
-        analyzer.run()
+        run_mode = os.environ.get("RUN_MODE", "single").lower()
+
+        if run_mode == "loop":
+            # 循环模式：持续执行，支持自定义间隔
+            interval = int(os.environ.get("CRAWLER_INTERVAL", 3600))
+            print(f"[循环模式] 启动爬虫服务，间隔: {interval} 秒")
+            while True:
+                try:
+                    analyzer = NewsAnalyzer()
+                    analyzer.run()
+                    print(f"[循环模式] 执行完成，等待 {interval} 秒后继续...")
+                    time.sleep(interval)
+                except KeyboardInterrupt:
+                    print("\n[循环模式] 收到中断信号，正在退出...")
+                    break
+                except Exception as e:
+                    print(f"[循环模式] 执行出错: {e}, {interval} 秒后重试...")
+                    time.sleep(interval)
+        else:
+            # 单次执行模式（默认）
+            analyzer = NewsAnalyzer()
+            analyzer.run()
+
     except FileNotFoundError as e:
         print(f"❌ 配置文件错误: {e}")
         print("\n请确保以下文件存在:")

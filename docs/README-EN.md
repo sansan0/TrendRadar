@@ -1,14 +1,14 @@
 <div align="center" id="trendradar">
 
 <a href="https://github.com/sansan0/TrendRadar" title="TrendRadar">
-  <img src="/_image/banner.webp" alt="TrendRadar Banner" width="80%">
+  <img src="docs/assets/_image/banner.webp" alt="TrendRadar Banner" width="80%">
 </a>
 
 Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only see the news you truly care about
 
 <a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-<a href="https://shandianshuo.cn" target="_blank" title="AI Voice Input, 4x Faster Than Typing ⚡"><img src="_image/shandianshuo.png" alt="FlashSpeak logo" height="50"/></a>
+<a href="https://shandianshuo.cn" target="_blank" title="AI Voice Input, 4x Faster Than Typing ⚡"><img src="docs/assets/_image/shandianshuo.png" alt="FlashSpeak logo" height="50"/></a>
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
@@ -132,7 +132,7 @@ After communication, the author indicated no concerns about server pressure, but
 
 [![Mac Download](https://img.shields.io/badge/Mac-Free_Download-FF6B6B?style=for-the-badge&logo=apple&logoColor=white)](https://shandianshuo.cn) [![Windows Download](https://img.shields.io/badge/Windows-Free_Download-FF6B6B?style=for-the-badge&logo=lightning&logoColor=white)](https://shandianshuo.cn)
 <a href="https://shandianshuo.cn" target="_blank">
-  <img src="_image/banner-shandianshuo.png" alt="FlashSpeak" width="600"/>
+  <img src="docs/assets/_image/banner-shandianshuo.png" alt="FlashSpeak" width="600"/>
 </a>
 </div>
 
@@ -823,7 +823,7 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 
 | Github Pages Effect (Mobile Adapted, Email Push) | Feishu Push Effect |
 |:---:|:---:|
-| ![Github Pages Effect](_image/github-pages.png) | ![Feishu Push Effect](_image/feishu.jpg) |
+| ![Github Pages Effect](docs/assets/_image/github-pages.png) | ![Feishu Push Effect](docs/assets/_image/feishu.jpg) |
 
 
 <br>
@@ -870,7 +870,7 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 
    **Configuration Example:**
 
-   <img src="_image/secrets.png" alt="GitHub Secrets Configuration Example"/>
+   <img src="docs/assets/_image/secrets.png" alt="GitHub Secrets Configuration Example"/>
 
    As shown above, each row is a configuration item:
    - **Name**: Must use the fixed names listed in the expanded sections below (e.g., `WEWORK_WEBHOOK_URL`)
@@ -921,7 +921,7 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 3. Follow the image below to link personal WeChat
 4. After configuration, WeWork App can be deleted from phone
 
-<img src="_image/wework.png" title="Personal WeChat Push Configuration"/>
+<img src="docs/assets/_image/wework.png" title="Personal WeChat Push Configuration"/>
 
 **Notes**:
 - Uses the same Webhook address as WeWork bot
@@ -975,7 +975,7 @@ Method 1 discovered and suggested by **ziventian**, thanks to them. Default is p
 
 8. Most critical part, click + button, select "Webhook Trigger", then arrange as shown in image
 
-![Feishu Bot Config Example](_image/image.png)
+![Feishu Bot Config Example](docs/assets/_image/image.png)
 
 9. After configuration, put Webhook address from step 4 into GitHub Secrets `FEISHU_WEBHOOK_URL`
 
@@ -1013,7 +1013,7 @@ Method 1 discovered and suggested by **ziventian**, thanks to them. Default is p
 
 9. Most critical part, click + button, select "Webhook Trigger", then arrange as shown in image
 
-![Feishu Bot Config Example](_image/image.png)
+![Feishu Bot Config Example](docs/assets/_image/image.png)
 
 10. After configuration, put Webhook address from step 5 into GitHub Secrets `FEISHU_WEBHOOK_URL`
 
@@ -3343,7 +3343,7 @@ Cherry Studio provides GUI config interface, 5-minute quick deployment, complex 
 
 > 💡 **Tip**: Actually not recommended to ask multiple questions at once. If your chosen AI model cannot even sequentially call as shown below, suggest switching models.
 
-<img src="/_image/ai2.png" alt="MCP usage effect" width="600">
+<img src="docs/assets/_image/ai2.png" alt="MCP usage effect" width="600">
 
 <br>
 
@@ -3740,7 +3740,7 @@ Any client supporting Model Context Protocol can connect to TrendRadar:
 
 | WeChat Official Account |
 |:---:|
-| <img src="_image/weixin.png" width="400" title="Silicon Tea Room"/> |
+| <img src="docs/assets/_image/weixin.png" width="400" title="Silicon Tea Room"/> |
 
 </div>
 

@@ -31,6 +31,15 @@ packages = ["trendradar", "mcp_server"]
 channels = ["conda-forge"]
 platforms = ["osx-arm64"]
 
+[tool.pixi.dependencies]
+pyclean = ">=3.4.0,<4"
+
+[tool.pixi.activation.env]
+# Default environment variables when pixi environment is activated
+# These can be overridden when running specific tasks or manually
+CRAWLER_INTERVAL = "1800"  # Crawler loop interval in seconds (default: 30 minutes)
+RUN_MODE = "loop"          # Default run mode for crawler-server task
+
 [tool.pixi.pypi-dependencies]
 trendradar = { path = ".", editable = true }
 
@@ -42,20 +51,14 @@ dev = { features = ["dev"], solve-group = "default" }
 # Build Docker image for Synology NAS (amd64 architecture) and save as tar
 build-nas = "cd docker && docker buildx build --platform linux/amd64 --load -t docker-trendradar:latest -f Dockerfile .. && docker buildx build --platform linux/amd64 --load -t docker-trendradar-mcp:latest -f Dockerfile.mcp .. && docker save docker-trendradar:latest docker-trendradar-mcp:latest -o ../trendradar-nas.tar"
 
-# Run TrendRadar crawler
-run = "python -m trendradar"
+# Run crawler once (single run, generates HTML report)
+crawler = "python -m trendradar"
 
-# Run TrendRadar MCP server
-mcp = "python -m mcp_server"
+# Run crawler as scheduled service (continuous loop, default interval: 1 hour)
+# Use RUN_MODE=loop for continuous execution, CRAWLER_INTERVAL to customize (in seconds)
+crawler-server = "RUN_MODE=loop python -m trendradar"
 
-# Start web server for viewing reports
-webserver = "python -c 'from trendradar.report.web_server import serve; serve()'"
+# Run TrendRadar MCP server (continuous service)
+mcp = "python -c 'from mcp_server.server import run_server; run_server()'"
 
-# Run tests (if pytest is configured)
-test = "python -m pytest --version 2>/dev/null || echo 'pytest not installed'"
 
-# Lint with ruff
-lint = "ruff check . 2>/dev/null || echo 'ruff not installed'"
-
-# Format code with ruff
-format = "ruff format . 2>/dev/null || echo 'ruff not installed'"

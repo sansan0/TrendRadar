@@ -3735,14 +3735,15 @@ GPL-3.0 License
 # 安装 Pixi
 curl -fsSL https://pixi.sh/install.sh | bash
 
-# 运行爬虫
-pixi run run
+# 运行爬虫（单次）
+pixi run crawler
+
+# 运行爬虫服务（定时执行，默认每1小时）
+# 自定义间隔：CRAWLER_INTERVAL=1800 pixi run crawler-server
+pixi run crawler-server
 
 # 运行 MCP 服务器
 pixi run mcp
-
-# 启动报告查看 Web 服务器
-pixi run webserver
 
 # 构建 NAS Docker 镜像
 pixi run build-nas

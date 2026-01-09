@@ -1,14 +1,14 @@
 <div align="center" id="trendradar">
 
 <a href="https://github.com/sansan0/TrendRadar" title="TrendRadar">
-  <img src="/_image/banner.webp" alt="TrendRadar Banner" width="80%">
+  <img src="docs/assets/_image/banner.webp" alt="TrendRadar Banner" width="80%">
 </a>
 
 最快<strong>30秒</strong>部署的热点助手 —— 告别无效刷屏，只看真正关心的新闻资讯
 
 <a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-<a href="https://shandianshuo.cn" target="_blank" title="AI 语音输入，比打字快 4 倍 ⚡"><img src="_image/shandianshuo.png" alt="闪电说 logo" height="50"/></a>
+<a href="https://shandianshuo.cn" target="_blank" title="AI 语音输入，比打字快 4 倍 ⚡"><img src="docs/assets/_image/shandianshuo.png" alt="闪电说 logo" height="50"/></a>
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
@@ -181,7 +181,7 @@
 
 [![Mac下载](https://img.shields.io/badge/Mac-免费下载-FF6B6B?style=for-the-badge&logo=apple&logoColor=white)](https://shandianshuo.cn) [![Windows下载](https://img.shields.io/badge/Windows-免费下载-FF6B6B?style=for-the-badge&logo=lightning&logoColor=white)](https://shandianshuo.cn)
 <a href="https://shandianshuo.cn" target="_blank">
-  <img src="_image/banner-shandianshuo.png" alt="闪电说" width="600"/>
+  <img src="docs/assets/_image/banner-shandianshuo.png" alt="闪电说" width="600"/>
 </a>
 </div>
 
@@ -709,11 +709,11 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 <tr>
 <td align="center">
 优化前<br>
-<img src="_image/before.jpg" alt="飞书消息界面 - 优化前" width="400"/>
+<img src="docs/assets/_image/before.jpg" alt="飞书消息界面 - 优化前" width="400"/>
 </td>
 <td align="center">
 优化后<br>
-<img src="_image/after.jpg" alt="飞书消息界面 - 优化后" width="400"/>
+<img src="docs/assets/_image/after.jpg" alt="飞书消息界面 - 优化后" width="400"/>
 </td>
 </tr>
 </table>
@@ -859,7 +859,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 | Github Pages 效果(手机端适配、邮箱推送效果) | 飞书推送效果 |
 |:---:|:---:|
-| ![Github Pages效果](_image/github-pages.png) | ![飞书推送效果](_image/feishu.jpg) |
+| ![Github Pages效果](docs/assets/_image/github-pages.png) | ![飞书推送效果](docs/assets/_image/feishu.jpg) |
 
 
 <br>
@@ -906,7 +906,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    **配置示例：**
 
-   <img src="_image/secrets.png" alt="GitHub Secrets 配置示例"/>
+   <img src="docs/assets/_image/secrets.png" alt="GitHub Secrets 配置示例"/>
 
    如上图所示，每一行是一个配置项：
    - **Name（名称）**：必须使用下方展开内容中列出的固定名称（如 `WEWORK_WEBHOOK_URL`）
@@ -957,7 +957,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
    3. 按照下面图片操作，关联个人微信
    4. 配置好后，手机上的企业微信 App 可以删除
 
-   <img src="_image/wework.png" title="个人微信推送配置"/>
+   <img src="docs/assets/_image/wework.png" title="个人微信推送配置"/>
 
    **说明**：
    - 与企业微信机器人使用相同的 Webhook 地址
@@ -1011,7 +1011,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    8. 最关键的部分来了，点击 + 按钮，选择"Webhook 触发"，然后按照下面的图片摆放
 
-   ![飞书机器人配置示例](_image/image.png)
+   ![飞书机器人配置示例](docs/assets/_image/image.png)
 
    9. 配置完成后，将第 4 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
 
@@ -1049,7 +1049,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    9. 最关键的部分来了，点击 + 按钮，选择"Webhook 触发"，然后按照下面的图片摆放
 
-   ![飞书机器人配置示例](_image/image.png)
+   ![飞书机器人配置示例](docs/assets/_image/image.png)
 
    10. 配置完成后，将第 5 步复制的 Webhook 地址配置到 GitHub Secrets 中的 `FEISHU_WEBHOOK_URL`
 
@@ -3279,7 +3279,7 @@ Cherry Studio 提供 GUI 配置界面，5 分钟快速部署，复杂的部分�
 
 > 💡 **提示**：实际不建议一次性问多个问题。如果你选择的 AI 模型连下图的按顺序调用都无法做到，建议换一个。
 
-<img src="/_image/ai2.png" alt="mcp 使用效果图" width="600">
+<img src="docs/assets/_image/ai2.png" alt="mcp 使用效果图" width="600">
 
 <br>
 
@@ -3677,7 +3677,7 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 
 |公众号关注 |
 |:---:|
-| <img src="_image/weixin.png" width="400" title="硅基茶水间"/> |
+| <img src="docs/assets/_image/weixin.png" width="400" title="硅基茶水间"/> |
 
 </div>
 

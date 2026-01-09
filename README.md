@@ -3725,3 +3725,46 @@ GPL-3.0 License
 [🔝 回到顶部](#trendradar)
 
 </div>
+---
+
+## 本地开发
+
+### 使用 Pixi（推荐）
+
+```bash
+# 安装 Pixi
+curl -fsSL https://pixi.sh/install.sh | bash
+
+# 运行爬虫
+pixi run run
+
+# 运行 MCP 服务器
+pixi run mcp
+
+# 启动报告查看 Web 服务器
+pixi run webserver
+
+# 构建 NAS Docker 镜像
+pixi run build-nas
+```
+
+### 使用 pip
+
+```bash
+# 安装依赖
+pip install -e .
+
+# 运行爬虫
+python -m trendradar
+
+# 运行 MCP 服务器
+python -m mcp_server
+```
+
+### 配置
+
+- 主配置文件：`config/config.yaml`（敏感，请勿提交）
+- 配置示例：`docs/config-examples/config.example.yaml`
+- 关键词文件：`config/frequency_words.txt`
+
+更多文档请查看 `docs/` 目录。

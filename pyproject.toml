@@ -26,3 +26,36 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["trendradar", "mcp_server"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+trendradar = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+
+[tool.pixi.tasks]
+# Build Docker image for Synology NAS (amd64 architecture) and save as tar
+build-nas = "cd docker && docker buildx build --platform linux/amd64 --load -t docker-trendradar:latest -f Dockerfile .. && docker buildx build --platform linux/amd64 --load -t docker-trendradar-mcp:latest -f Dockerfile.mcp .. && docker save docker-trendradar:latest docker-trendradar-mcp:latest -o ../trendradar-nas.tar"
+
+# Run TrendRadar crawler
+run = "python -m trendradar"
+
+# Run TrendRadar MCP server
+mcp = "python -m mcp_server"
+
+# Start web server for viewing reports
+webserver = "python -c 'from trendradar.report.web_server import serve; serve()'"
+
+# Run tests (if pytest is configured)
+test = "python -m pytest --version 2>/dev/null || echo 'pytest not installed'"
+
+# Lint with ruff
+lint = "ruff check . 2>/dev/null || echo 'ruff not installed'"
+
+# Format code with ruff
+format = "ruff format . 2>/dev/null || echo 'ruff not installed'"

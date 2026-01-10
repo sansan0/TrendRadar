@@ -9,7 +9,8 @@
 - 全局过滤词（[GLOBAL_FILTER] 区域）
 - 最大显示数量（@前缀）
 - 正则表达式（/pattern/ 语法）
-- 显示名称（=> 备注 语法）
+- 显示名称（=> 别名 语法）
+- 组别名（[组别名] 语法，作为词组第一行）
 """
 
 import os
@@ -136,7 +137,8 @@ def load_frequency_words(
     current_section = "WORD_GROUPS"
 
     for group in word_groups:
-        lines = [line.strip() for line in group.split("\n") if line.strip()]
+        # 过滤空行和注释行（# 开头）
+        lines = [line.strip() for line in group.split("\n") if line.strip() and not line.strip().startswith("#")]
 
         if not lines:
             continue
@@ -161,6 +163,15 @@ def load_frequency_words(
 
         # 处理词组区域
         words = lines
+        group_alias = None  # 组别名（[别名] 语法）
+
+        # 检查第一行是否为组别名（非区域标记）
+        if words and words[0].startswith("[") and words[0].endswith("]"):
+            potential_alias = words[0][1:-1].strip()
+            # 排除区域标记（GLOBAL_FILTER, WORD_GROUPS）
+            if potential_alias.upper() not in ("GLOBAL_FILTER", "WORD_GROUPS"):
+                group_alias = potential_alias
+                words = words[1:]  # 移除组别名行
 
         group_required_words = []
         group_normal_words = []
@@ -196,12 +207,21 @@ def load_frequency_words(
             else:
                 group_key = " ".join(w["word"] for w in group_required_words)
 
-            # 提取显示名称：优先使用第一个有 display_name 的词
-            display_name = None
-            for w in group_normal_words + group_required_words:
-                if w.get("display_name"):
-                    display_name = w["display_name"]
-                    break
+            # 生成显示名称
+            # 优先级：组别名 > 行别名拼接 > 关键词拼接
+            if group_alias:
+                # 有组别名，直接使用
+                display_name = group_alias
+            else:
+                # 没有组别名，拼接每行的显示名（行别名或关键词本身）
+                all_words = group_normal_words + group_required_words
+                display_parts = []
+                for w in all_words:
+                    # 优先使用行别名，否则使用关键词本身
+                    part = w.get("display_name") or w["word"]
+                    display_parts.append(part)
+                # 用 " / " 拼接多个词
+                display_name = " / ".join(display_parts) if display_parts else None
 
             processed_groups.append(
                 {

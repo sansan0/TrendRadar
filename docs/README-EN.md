@@ -13,8 +13,8 @@ Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v4.7.0-blue.svg)](https://github.com/sansan0/TrendRadar)
-[![MCP](https://img.shields.io/badge/MCP-v2.0.1-green.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v5.0.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![MCP](https://img.shields.io/badge/MCP-v3.1.5-green.svg)](https://github.com/sansan0/TrendRadar)
 [![RSS](https://img.shields.io/badge/RSS-Feed_Support-orange.svg?style=flat-square&logo=rss&logoColor=white)](https://github.com/sansan0/TrendRadar)
 
 [![WeWork](https://img.shields.io/badge/WeWork-Notification-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
@@ -26,12 +26,14 @@ Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only
 [![ntfy](https://img.shields.io/badge/ntfy-Notification-00D4AA?style=flat-square)](https://github.com/binwiederhier/ntfy)
 [![Bark](https://img.shields.io/badge/Bark-Notification-00D4AA?style=flat-square)](https://github.com/Finb/Bark)
 [![Slack](https://img.shields.io/badge/Slack-Notification-00D4AA?style=flat-square)](https://slack.com/)
+[![Generic Webhook](https://img.shields.io/badge/Generic-Webhook-607D8B?style=flat-square&logo=webhook&logoColor=white)](#)
 
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Automation-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/sansan0/TrendRadar)
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Deployment-4285F4?style=flat-square&logo=github&logoColor=white)](https://sansan0.github.io/TrendRadar)
 [![Docker](https://img.shields.io/badge/Docker-Deployment-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/wantcat/trendradar)
 [![MCP Support](https://img.shields.io/badge/MCP-AI_Analysis-FF6B6B?style=flat-square&logo=ai&logoColor=white)](https://modelcontextprotocol.io/)
+[![AI Analysis Push](https://img.shields.io/badge/AI-Analysis_Push-FF6B6B?style=flat-square&logo=openai&logoColor=white)](#)
 
 </div>
 
@@ -61,12 +63,19 @@ Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only
 
 <br>
 
-- Thanks to **bug reporters**, your feedback makes this project better 😉
 - Thanks to **stargazers**, your stars and forks are the best support for open source 😍
-- Thanks to **followers**, your interactions make the content more meaningful 😎
 
 <details>
-<summary>👉 Click to view <strong>Acknowledgments</strong> (Current <strong>🔥73🔥</strong> supporters)</summary>
+<summary>👉 Click to view <strong>Acknowledgments</strong> (Angel Round Honor Roll 🔥73+🔥 supporters)</summary>
+
+### Acknowledgments to Early Supporters
+
+> 💡 **Special Note**:
+>
+> 1. **About the List**: The table below records supporters from the early stage (Angel Round) of the project. Due to the manual nature of statistics in the early days, **there may be omissions or incomplete records. If anyone was missed, it was unintentional, and we ask for your kind understanding**.
+> 2. **Future Plan**: To focus limited energy back on code development and feature iteration, **this list will no longer be manually maintained as of today**.
+>
+> Whether your name is on the list or not, your every bit of support is the cornerstone that allows TrendRadar to be where it is today. 🙏
 
 ### Infrastructure Support
 
@@ -92,7 +101,8 @@ After communication, the author indicated no concerns about server pressure, but
 
 > Thanks to **financial supporters**. Your generosity has transformed into snacks and drinks beside my keyboard, accompanying every iteration of this project
 >
-> **"One-yuan appreciation"** has been suspended. If you still want to support the author, please visit the [official account](#-faq--support) article and click "Like Author" at the bottom.
+> **Return of "One-Yuan Appreciation"**:
+> With the release of v5.0.0, the project enters a new phase. To support growing API costs and caffeine consumption, the "One-Yuan Appreciation" channel is now reopened. Every bit of your kindness translates into Tokens and motivation in the code world. 🚀 [Support Now](#-faq--support)
 
 | Supporter | Amount (CNY) | Date | Note |
 | :-------: | :----------: | :--: | :--: |
@@ -143,12 +153,51 @@ After communication, the author indicated no concerns about server pressure, but
 >**📌 Check Latest Updates**: **[Original Repository Changelog](https://github.com/sansan0/TrendRadar?tab=readme-ov-file#-changelog)**:
 - **Tip**: Check [Changelog] to understand specific [Features]
 
+### 2026/01/10 - v5.0.0
+
+> **Dev Anecdote**:
+> A salute to a certain 'C' model provider that accompanied me for over two years, only to slap me with `"This organization has been disabled"` right after I renewed my subscription.
+
+**✨ "Five Major Sections" Content Refactoring**
+
+This update refactors the push message structure into five distinct core sections:
+
+1.  **📊 Trending News**: Aggregated trending topics from across the web, precisely filtered by your keywords.
+2.  **📰 RSS Feeds**: Your personalized subscription content, supporting keyword-based grouping.
+3.  **🆕 New Items**: Real-time capture of brand new trending topics since the last run (marked with 🆕).
+4.  **📋 Independent Display**: Complete trending lists or RSS feeds from specified platforms, **completely unaffected by keyword filtering**.
+5.  **✨ AI Analysis**: Deep insights driven by AI, including trend overview, popularity trends, and **critically important** sentiment analysis.
+
+**✨ AI Smart Analysis Push Feature**
+
+- **AI Analysis Integration**: Use AI models to deeply analyze push content, automatically generate trending insights, keyword analysis, cross-platform correlation, potential impact assessment
+- **Sentiment Analysis**: New deep sentiment recognition to accurately capture positive, negative, controversial, or concerned public opinions (v5.0.0 key enhancement)
+- **Multi AI Provider Support**: Supports DeepSeek (default, cost-effective), OpenAI, Google Gemini, and any OpenAI-compatible API
+- **Two Push Modes**: `only_analysis` (AI analysis only), `both` (push both)
+- **Custom Prompts**: Customize AI analysis role and output format via `config/ai_analysis_prompt.txt`
+- **Multi-dimensional Analysis**: AI can analyze ranking changes, trending duration, cross-platform performance, trend prediction
+
+### 2026/01/10 - mcp-v3.0.0~v3.1.5
+
+- **Breaking Change**: All tool return values unified to `{success, summary, data, error}` structure
+- **Async Consistency**: All 21 tool functions wrapped with `asyncio.to_thread()` for sync calls
+- **MCP Resources**: Added 4 resources (platforms, rss-feeds, available-dates, keywords)
+- **RSS Enhancement**: `get_latest_rss` supports multi-day queries (days param), cross-date URL deduplication
+- **Regex Matching Fix**: `get_trending_topics` supports `/pattern/` regex syntax and `display_name`
+- **Cache Optimization**: Added `make_cache_key()` function with param sorting + MD5 hash for consistency
+- **New check_version Tool**: Check TrendRadar and MCP Server version updates simultaneously
+
+
+<details>
+<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
+
+
 ### 2026/01/02 - v4.7.0
 
 - **Fix RSS HTML Display**: Fixed RSS data format mismatch causing rendering issues, now displays correctly grouped by keyword
 - **New Regex Syntax**: Keyword config supports `/pattern/` regex syntax, solves English substring mismatch issues (e.g., `ai` matching `training`) [📖 View Syntax Details](#keyword-basic-syntax)
 - **New Display Name Syntax**: Use `=> alias` to give complex regex a friendly name, cleaner push notifications (e.g., `/\bai\b/ => AI Related`)
-- **Can't Write Regex?** README now includes AI prompt guide - just tell ChatGPT/Claude/DeepSeek what you want to match
+- **Can't Write Regex?** README now includes AI prompt guide - just tell ChatGPT/Gemini/DeepSeek what you want to match
 
 
 ### 2025/12/30 - mcp-v2.0.0
@@ -156,10 +205,6 @@ After communication, the author indicated no concerns about server pressure, but
 - **Architecture Refactoring**: Removed TXT support, unified to SQLite database
 - **RSS Query**: Added `get_latest_rss`, `search_rss`, `get_rss_feeds_status`
 - **Unified Search**: `search_news` supports `include_rss` parameter to search both trending and RSS
-
-
-<details>
-<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
 
 
 ### 2026/01/01 - v4.6.0
@@ -430,7 +475,7 @@ After communication, the author indicated no concerns about server pressure, but
 
 ### 2025/10/20 - v3.0.0
 
-**Major Update - AI Analysis Feature Launched** 🤖
+**Major Update - AI Analysis Feature Launched** ✨
 
 - **Core Features**:
   - New MCP (Model Context Protocol) based AI analysis server
@@ -792,6 +837,27 @@ Supports **WeWork** (+ WeChat push solution), **Feishu**, **DingTalk**, **Telegr
 - **Local Running**: Python environment direct execution
 
 
+### **AI Analysis Push (v5.0.0 New)**
+
+Use AI models to deeply analyze push content, automatically generate trending insights report
+
+- **Smart Analysis**: Automatically analyze trending topics, keyword popularity, cross-platform correlation, potential impact
+- **Multi Provider**: Supports DeepSeek, OpenAI, Gemini, and OpenAI-compatible APIs
+- **Flexible Push**: Choose original content only, AI analysis only, or both
+- **Custom Prompts**: Customize analysis perspective via `config/ai_analysis_prompt.txt`
+
+> 💡 Detailed configuration tutorial: [AI Analysis Configuration](#12-ai-analysis-configuration)
+
+### **Independent Display Section (v5.0.0 New)**
+
+Provide complete trending display for specified platforms, unaffected by keyword filtering
+
+- **Full Trending**: Specified platforms show complete trending list, for users who want to see full rankings
+- **RSS Independent Display**: RSS source content can be fully displayed, not limited by keywords
+- **Flexible Configuration**: Support configuring display platforms, RSS sources, max count
+
+> 💡 Detailed configuration tutorial: [Report Configuration - Independent Display](#7-report-configuration)
+
 ### **AI Smart Analysis (v3.0.0 New)**
 
 AI conversational analysis system based on MCP (Model Context Protocol), enabling deep data mining with natural language.
@@ -847,9 +913,9 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 * **Recommended**: Configure cloud storage service (Cloudflare R2 free tier is sufficient, Alibaba Cloud OSS, Tencent Cloud COS, etc.)
 * **Note**: Requires periodic check-in renewal (every 7 days)
 
-1️⃣ **Get project code**
+### 1️⃣ Step 1: Get project code
 
-   Click the green **[Use this template]** button at the top right of this repository page → Select "Create a new repository".
+   Click the green **[Use this template]** button in the upper right corner of this repository → select "Create a new repository".
 
    > ⚠️ Note:
    > - Any mention of "Fork" in this document can be understood as "Use this template"
@@ -857,9 +923,9 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 
    <br>
 
-2️⃣ **Setup GitHub Secrets**:
+### 2️⃣ Step 2: Setup GitHub Secrets
 
-   In your forked repo, go to `Settings` > `Secrets and variables` > `Actions` > `New repository secret`
+   In your Forked repository, go to `Settings` > `Secrets and variables` > `Actions` > `New repository secret`
 
    **📌 Important Instructions (Please Read Carefully):**
 
@@ -961,9 +1027,6 @@ Method 1 discovered and suggested by **ziventian**, thanks to them. Default is p
 {
   "message_type": "text",
   "content": {
-    "total_titles": "{{Content}}",
-    "timestamp": "{{Content}}",
-    "report_type": "{{Content}}",
     "text": "{{Content}}"
   }
 }
@@ -999,9 +1062,6 @@ Method 1 discovered and suggested by **ziventian**, thanks to them. Default is p
 {
   "message_type": "text",
   "content": {
-    "total_titles": "{{Content}}",
-    "timestamp": "{{Content}}",
-    "report_type": "{{Content}}",
     "text": "{{Content}}"
   }
 }
@@ -1463,15 +1523,82 @@ Slack is a team collaboration tool, Incoming Webhooks can push messages to Slack
 
 </details>
 
+<details>
+<summary>👉 Click to expand: <strong>Generic Webhook Push</strong> (Supports Discord, Matrix, IFTTT, etc.)</summary>
+<br>
+
+**GitHub Secret Configuration (⚠️ Name must be exact):**
+- **Name**: `GENERIC_WEBHOOK_URL` (copy and paste this name, don't type manually)
+- **Secret**: Your Webhook URL
+
+- **Name**: `GENERIC_WEBHOOK_TEMPLATE` (optional, copy and paste this name)
+- **Secret**: JSON template string, supports `{title}` and `{content}` placeholders
+
+<br>
+
+**Generic Webhook Introduction:**
+
+Generic Webhook supports any platform that accepts HTTP POST requests, including but not limited to:
+- **Discord**: Push to channels via Webhook
+- **Matrix**: Push via Webhook bridge
+- **IFTTT**: Trigger automation workflows
+- **Custom Services**: Any custom service supporting Webhooks
+
+**Configuration Examples:**
+
+### Discord Configuration
+
+1. **Get Webhook URL**:
+   - Go to Discord Server Settings → Integrations → Webhooks
+   - Create new Webhook, copy URL
+
+2. **Configure Template**:
+   ```json
+   {"content": "{content}"}
+   ```
+
+3. **GitHub Secret Configuration**:
+   - `GENERIC_WEBHOOK_URL`: Discord Webhook URL
+   - `GENERIC_WEBHOOK_TEMPLATE`: `{"content": "{content}"}`
+
+### Custom Templates
+
+Templates support two placeholders:
+- `{title}` - Message title
+- `{content}` - Message content
+
+**Template Examples**:
+```json
+# Default format (used when empty)
+{"title": "{title}", "content": "{content}"}
+
+# Discord format
+{"content": "{content}"}
+
+# Custom format
+{"text": "{content}", "username": "TrendRadar"}
+```
+
+---
+
+**Notes:**
+- ✅ Supports Markdown format (same as WeWork format)
+- ✅ Supports automatic batch sending
+- ✅ Supports multi-account configuration (use `;` separator)
+- ⚠️ Template must be valid JSON format
+- ⚠️ Different platforms have different message format requirements, please refer to target platform documentation
+
+</details>
+
 > ⚠️ Note:
 > - For first deployment, suggest completing **GitHub Secrets** configuration first (choose one push platform), then jump to [Step 3] to test push success.
 > - **Don't modify** `config/config.yaml` and `frequency_words.txt` temporarily, adjust these configs after push test succeeds as needed.
 
    <br>
 
-3️⃣ **Manual Test News Push**:
+### 3️⃣ Step 3: Manual Test News Push
 
-   > ⚠️ Note:
+   > ⚠️ Reminder:
    > - Complete Step 1-2 first, then test immediately! Test success first, then adjust configuration (Step 4) as needed.
    > - IMPORTANT: Enter your own forked project, not this project!
 
@@ -1497,9 +1624,9 @@ Slack is a team collaboration tool, Incoming Webhooks can push messages to Slack
 
    <br>
 
-4️⃣ **Configuration Notes (Optional)**:
+### 4️⃣ Step 4: Configuration Notes (Optional)
 
-   Default configuration works normally. Only adjust if you need personalization, understanding these three files:
+   The default configuration is ready to use. If you need personalized adjustments, just understand the following files:
 
    | File | Purpose |
    |------|---------|
@@ -1511,9 +1638,9 @@ Slack is a team collaboration tool, Incoming Webhooks can push messages to Slack
 
    <br>
 
-5️⃣ **GitHub Actions Check-In Mechanism & Remote Cloud Storage Configuration**:
+### 5️⃣ Step 5: GitHub Actions Check-In & Remote Cloud Storage
 
-   **v4.0.0 Important Change**: Introduced "Activity Detection" mechanism—GitHub Actions requires periodic check-in to remain active.
+   **v4.0.0 Important Change**: Introduced the "Activity Detection" mechanism; GitHub Actions need periodic check-ins to maintain operation.
 
    - **Running Cycle**: Valid for **7 days**—service will automatically suspend when countdown ends.
    - **Renewal Method**: Manually trigger the "Check In" workflow on the Actions page to reset the 7-day validity period.
@@ -1586,9 +1713,22 @@ Slack is a team collaboration tool, Incoming Webhooks can push messages to Slack
 
    <br>
 
-6️⃣ **🎉 Deployment Success! Share Your Experience**
+### 6️⃣ Step 6: Enable AI Analysis Push
 
-   Congratulations on completing the TrendRadar configuration! You can now start tracking trending news.
+   This is a core feature of v5.0.0, letting AI summarize and analyze news for you. Highly recommended.
+
+   **Configuration Method:**
+   Add the following to GitHub Secrets (or `.env` / `config.yaml`):
+   - `AI_API_KEY`: Your API Key (Supports DeepSeek, OpenAI, etc.)
+   - `AI_PROVIDER`: Provider name (e.g., `deepseek`, `openai`)
+
+   That's it! No complex deployment needed. You'll see the smart analysis report in the next push.
+
+   <br>
+
+### 7️⃣ Step 7: 🎉 Deployment Success!
+
+   Congratulations! Now you can start enjoying the efficient information flow brought by TrendRadar.
 
    💬 Many users are sharing their experiences on the official account, we look forward to your insights~
 
@@ -1600,16 +1740,18 @@ Slack is a team collaboration tool, Incoming Webhooks can push messages to Slack
 
    <br>
 
-7️⃣ **🤖 Want Smarter Analysis? Try AI-Enhanced Features** (Optional)
+### 8️⃣ Step 8: Advanced: Choose Your AI Assistant
 
-   Basic configuration already meets daily needs, but if you want:
+   TrendRadar provides two ways to use AI to meet different needs:
 
-   - Let AI automatically analyze trending topics and data insights
-   - Search and query news using natural language
-   - Get sentiment analysis, topic prediction, and deep analytics
-   - Directly access data in AI tools like Claude, Cursor, etc.
+   | Feature | ✨ AI Analysis Push (Step 6) | 🧠 AI Smart Analysis |
+   | :--- | :--- | :--- |
+   | **Mode** | **Passive Receipt** (Daily Report) | **Active Conversation** (Deep Research) |
+   | **Scenario** | "What's big today?" | "Analyze AI industry changes over the past week" |
+   | **Deployment** | Minimalist (Just add Key) | Advanced (Requires Local/Docker) |
+   | **Client** | Mobile | PC |
 
-   👉 **Learn More**: [AI Analysis](#-ai-analysis) — Unlock hidden capabilities and make trend tracking more efficient!
+   👉 **Conclusion**: Start with **AI Analysis Push** for daily needs; if you are a data analyst or need deep mining, try **[MCP Smart Analysis](#-ai-analysis)**.
 
 <br>
 
@@ -1809,7 +1951,7 @@ machine learning
 
 **💡 Can't Write Regex? Let AI Help!**
 
-If you're not familiar with regular expressions, just ask ChatGPT / Claude / DeepSeek to generate one:
+If you're not familiar with regular expressions, just ask ChatGPT / Gemini / DeepSeek to generate one:
 
 > I need a Python regex to match the word "ai" but not match "ai" in "training".
 > Please give me the regex in `/pattern/` format without extra explanation.
@@ -2249,6 +2391,7 @@ TrendRadar provides two independent Docker images, deploy according to your need
    # Download config file templates
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml -P config/
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt -P config/
+   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/ai_analysis_prompt.txt -P config/
 
    # Download docker compose config
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/.env -P docker/
@@ -2260,16 +2403,18 @@ TrendRadar provides two independent Docker images, deploy according to your need
 current directory/
 ├── config/
 │   ├── config.yaml
-│   └── frequency_words.txt
+│   ├── frequency_words.txt
+│   └── ai_analysis_prompt.txt    # AI analysis prompt (v5.0.0 new, optional)
 └── docker/
     ├── .env
     └── docker-compose.yml
 ```
 
 2. **Config File Description**:
-   - `config/config.yaml` - Application main config (report mode, push settings, etc.)
+   - `config/config.yaml` - Application main config (report mode, push settings, AI analysis, etc.)
    - `config/frequency_words.txt` - Keyword config (set your interested trending keywords)
-   - `.env` - Environment variable config (webhook URLs and scheduled tasks)
+   - `config/ai_analysis_prompt.txt` - AI prompt config (customize AI analysis role and output format, v5.0.0 new)
+   - `.env` - Environment variable config (webhook URLs, API Keys, scheduled tasks)
 
    **⚙️ Environment Variable Override Mechanism (v3.0.5+)**
 
@@ -2280,13 +2425,14 @@ current directory/
    | `ENABLE_CRAWLER` | `advanced.crawler.enabled` | `true` / `false` | Enable crawler |
    | `ENABLE_NOTIFICATION` | `notification.enabled` | `true` / `false` | Enable notification |
    | `REPORT_MODE` | `report.mode` | `daily` / `incremental` / `current`| Report mode |
-   | `MAX_ACCOUNTS_PER_CHANNEL` | `advanced.max_accounts_per_channel` | `3` | Maximum accounts per channel |
-   | `PUSH_WINDOW_ENABLED` | `notification.push_window.enabled` | `true` / `false` | Push time window switch |
-   | `PUSH_WINDOW_START` | `notification.push_window.start` | `08:00` | Push start time |
-   | `PUSH_WINDOW_END` | `notification.push_window.end` | `22:00` | Push end time |
+   | `DISPLAY_MODE` | `report.display_mode` | `keyword` / `platform` | Display mode |
    | `ENABLE_WEBSERVER` | - | `true` / `false` | Auto-start web server |
-   | `WEBSERVER_PORT` | - | `8080` | Web server port (default 8080) |
-   | `FEISHU_WEBHOOK_URL` | `notification.channels.feishu.webhook_url` | `https://...` | Feishu Webhook (supports multi-account, use `;` separator) |
+   | `WEBSERVER_PORT` | - | `8080` | Web server port |
+   | `FEISHU_WEBHOOK_URL` | `notification.channels.feishu.webhook_url` | `https://...` | Feishu Webhook (multi-account use `;` separator) |
+   | `AI_ANALYSIS_ENABLED` | `ai_analysis.enabled` | `true` / `false` | Enable AI analysis (v5.0.0 new) |
+   | `AI_API_KEY` | `ai_analysis.api_key` | `sk-xxx...` | AI API Key (v5.0.0 new) |
+   | `AI_PROVIDER` | `ai_analysis.provider` | `deepseek` / `openai` / `gemini` | AI provider (v5.0.0 new) |
+   | `S3_*` | `storage.remote.*` | - | Remote storage config (5 params) |
 
    **Config Priority**: Environment Variables > config.yaml
 
@@ -2323,7 +2469,7 @@ current directory/
 
    > 💡 **Tips**:
    > - Most users only need to start `trendradar` for news push functionality
-   > - Only start `trendradar-mcp` when using Claude/ChatGPT for AI dialogue analysis
+   > - Only need to start `trendradar-mcp` when using ChatGPT/Gemini for AI dialogue analysis
    > - Both services are independent and can be flexibly combined
 
 4. **Check Running Status**:
@@ -2701,6 +2847,39 @@ REVERSE_CONTENT_ORDER=true
 ```bash
 SORT_BY_POSITION_FIRST=true
 MAX_NEWS_PER_KEYWORD=10
+```
+
+#### Independent Display Section Configuration (v5.0.0 New)
+
+Provides full trending list display for specified platforms, unaffected by `frequency_words.txt` keyword filtering.
+
+**Configuration Location:** `notification.standalone_display` section in `config/config.yaml`
+
+```yaml
+notification:
+  standalone_display:
+    enabled: false                    # Enable or not
+    platforms: ["zhihu", "weibo"]     # Trending platform ID list
+    rss_feeds: ["hacker-news"]        # RSS feed ID list
+    max_items: 20                     # Max display count per source (0=unlimited)
+```
+
+**Use Cases:**
+- Want to view the complete trending ranking of a platform (like Zhihu) instead of just keyword-matched content
+- Subscribed to RSS feeds with few updates (like personal blogs) and want full push every time
+
+**Effect Example:**
+```
+📋 Independent Display Section (Total 15 items)
+
+Zhihu Trending (10 items):
+  1. [Zhihu] How to view OpenAI releasing Sora?
+  2. [Zhihu] 2024 postgraduate entrance exam scores released...
+  ...
+
+Hacker News (5 items):
+  1. [Hacker News] Launch HN: TrendRadar...
+  ...
 ```
 
 </details>
@@ -3293,9 +3472,126 @@ export TIMEZONE=Asia/Shanghai
 
 </details>
 
+### 12. AI Analysis Configuration
+
+<details id="ai-analysis-config">
+<summary>👉 Click to expand: <strong>AI Analysis Push Configuration Guide</strong></summary>
 <br>
 
-## 🤖 AI Analysis
+#### Feature Overview
+
+v5.0.0 adds AI analysis push feature, using AI models to deeply analyze push content and automatically generate trending insights report.
+
+**Analysis includes**:
+- Trending topic overview
+- Keyword popularity analysis
+- Cross-platform correlation analysis
+- Potential impact assessment
+- Signals worth attention
+- Summary and recommendations
+
+#### Configuration Location
+
+**Config file**: `ai_analysis` section in `config/config.yaml`
+
+```yaml
+ai_analysis:
+  enabled: false                    # Enable AI analysis
+  provider: "deepseek"              # AI provider
+  api_key: ""                       # API Key (recommend using AI_API_KEY env var)
+  model: "deepseek-chat"            # Model name
+  base_url: ""                      # Custom API endpoint (optional)
+  timeout: 90                       # Request timeout (seconds)
+  push_mode: "both"                 # Push mode
+  max_news_for_analysis: 50         # Max news items to analyze
+  include_rss: true                 # Include RSS content
+  prompt_file: "ai_analysis_prompt.txt"  # Prompt config file
+```
+
+#### Supported AI Providers
+
+| Provider | provider value | Default endpoint |
+|----------|---------------|------------------|
+| **DeepSeek** | `deepseek` | https://api.deepseek.com/v1/chat/completions |
+| **OpenAI** | `openai` | https://api.openai.com/v1/chat/completions |
+| **Google Gemini** | `gemini` | https://generativelanguage.googleapis.com/v1beta/openai/chat/completions |
+| **Custom** | `custom` | Requires base_url |
+
+> 💡 **Tip**: When using `custom` provider, `base_url` must be the complete API address (e.g., `https://api.example.com/v1/chat/completions`)
+
+#### Push Mode Description
+
+| Mode | Description |
+|------|-------------|
+| `only_analysis` | Push AI analysis result only, no original content |
+| `both` | Push both (default), AI analysis appended after original content |
+
+> 💡 **Tip**: If you don't need AI analysis, set `enabled` to `false` instead of using `push_mode`
+
+#### Environment Variable Support
+
+| Environment Variable | Description | Example |
+|---------------------|-------------|---------|
+| `AI_ANALYSIS_ENABLED` | Enable AI analysis | `true` / `false` |
+| `AI_API_KEY` | AI API Key | `sk-xxx...` |
+| `AI_PROVIDER` | AI provider | `deepseek` / `openai` / `gemini` / `custom` |
+| `AI_MODEL` | Model name | `deepseek-chat` |
+| `AI_BASE_URL` | Complete API address (required for custom) | `https://api.example.com/v1/chat/completions` |
+
+#### Custom Prompts
+
+Edit `config/ai_analysis_prompt.txt` to customize AI analysis role and output format.
+
+**File structure**:
+```
+[system]
+System prompt, define AI role and analysis principles
+...
+
+[user]
+User prompt template, supports variable substitution
+...
+```
+
+**Available variables**:
+- `{report_mode}` - Current report mode
+- `{report_type}` - Report type description
+- `{current_time}` - Current time
+- `{news_count}` - Trending news count
+- `{rss_count}` - RSS news count
+- `{keywords}` - Matched keywords list
+- `{platforms}` - Data source platforms list
+- `{news_content}` - News content
+
+#### Quick Enable Example
+
+**Method 1: Config file**
+
+```yaml
+ai_analysis:
+  enabled: true
+  provider: "deepseek"
+  api_key: "sk-your-api-key"
+  model: "deepseek-chat"
+  push_mode: "both"
+```
+
+**Method 2: Environment variables (Recommended)**
+
+```bash
+# GitHub Actions: Add to Secrets
+# Docker: Add to .env file
+AI_ANALYSIS_ENABLED=true
+AI_API_KEY=sk-your-api-key
+AI_PROVIDER=deepseek
+AI_MODEL=deepseek-chat
+```
+
+</details>
+
+<br>
+
+## ✨ AI Analysis
 
 TrendRadar v3.0.0 added **MCP (Model Context Protocol)** based AI analysis feature, allowing natural language conversations with news data for deep analysis.
 
@@ -3357,43 +3653,6 @@ TrendRadar MCP service supports standard Model Context Protocol (MCP), can conne
 - Replace `/path/to/TrendRadar` with your actual project path
 - Windows paths use double backslashes: `C:\\Users\\YourName\\TrendRadar`
 - Remember to restart after saving
-
-<details>
-<summary><b>👉 Click to expand: Claude Desktop</b></summary>
-
-#### Config File Method
-
-Edit Claude Desktop's MCP config file:
-
-**Windows**:
-`%APPDATA%\Claude\claude_desktop_config.json`
-
-**Mac**:
-`~/Library/Application Support/Claude/claude_desktop_config.json`
-
-**Config Content**:
-```json
-{
-  "mcpServers": {
-    "trendradar": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/path/to/TrendRadar",
-        "run",
-        "python",
-        "-m",
-        "mcp_server.server"
-      ],
-      "env": {},
-      "disabled": false,
-      "alwaysAllow": []
-    }
-  }
-}
-```
-
-</details>
 
 <details>
 <summary><b>👉 Click to expand: Cursor</b></summary>
@@ -3524,38 +3783,6 @@ Edit `~/.continue/config.json`:
 Analyze recent 7 days "Tesla" popularity trend
 Generate today's trending summary report
 Search "Bitcoin" related news and analyze sentiment
-```
-
-</details>
-
-<details>
-<summary><b>👉 Click to expand: Claude Code CLI</b></summary>
-
-#### HTTP Mode Configuration
-
-```bash
-# 1. Start HTTP service
-# Windows: start-http.bat
-# Mac/Linux: ./start-http.sh
-
-# 2. Add MCP server
-claude mcp add --transport http trendradar http://localhost:3333/mcp
-
-# 3. Verify connection (ensure service started)
-claude mcp list
-```
-
-#### Usage Examples
-
-```bash
-# Query news
-claude "Search today's Zhihu trending news, top 10"
-
-# Trend analysis
-claude "Analyze 'artificial intelligence' topic popularity trend for the past week"
-
-# Data comparison
-claude "Compare Zhihu and Weibo platform attention on 'Bitcoin'"
 ```
 
 </details>
@@ -3725,24 +3952,20 @@ Any client supporting Model Context Protocol can connect to TrendRadar:
 
 ## ☕ FAQ & Support
 
-> If you want to support this project, you can search **Tencent Charity** on WeChat and donate to **Education Support Programs** as you wish
+> If this project is helpful to you, you can choose the following ways to support:
+> 1. **Public Welfare**: Search for **Tencent Charity** on WeChat and donate to **Education Support** related projects as you wish.
 >
-> Thanks to those who participated in the **one-yuan donation**! You are listed in the **Acknowledgments** at the top. Your support gives more motivation to open source maintenance. Personal donation QR code has been removed.
->
-> 🎯 Interested in sponsoring this project? Your banner will be displayed in the Sponsors section at the top.
+> 2. **Sponsor the Developer**: Your sponsorship will be used to replenish caffeine for the carbon-based organism and Token consumption for the silicon-based organism.
 
-- **GitHub Issues**: Suitable for targeted answers. Please provide complete info when asking (screenshots, error logs, system environment, etc.)
-- **WeChat Official Account**: Suitable for quick consultation. Suggest priority to communicate in public comment area of related articles. If private message, please use polite language 😉
+
+- **GitHub Issues**: Suitable for targeted answers. Please provide complete info when asking (screenshots, error logs, system environment, etc.).
+- **Official Account**: Suitable for quick consultation. Suggest priority to communicate in public comment area of related articles. If private message, please use polite language 😉
 - **Contact**: path@linux.do
 
 
-<div align="center">
-
-| WeChat Official Account |
-|:---:|
-| <img src="docs/assets/_image/weixin.png" width="400" title="Silicon Tea Room"/> |
-
-</div>
+| Official Account | WeChat Appreciation | Alipay Appreciation |
+|:---:|:---:|:---:| 
+| <img src="_image/weixin.png" width="300" title="Silicon Tea Room"/> | <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2025%2F07%2F17%2F2ae0a88d98079f7e876c2b4dc85233c6-9e8025.JPG" width="300" title="WeChat Pay"/> | <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2025%2F07%2F17%2F1ed4f20ab8e35be51f8e84c94e6e239b4-fe4947.JPG" width="300" title="Alipay"/> |
 
 <br>
 

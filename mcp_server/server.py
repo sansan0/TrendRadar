@@ -5,10 +5,12 @@ TrendRadar MCP Server - FastMCP 2.0 实现
 支持 stdio 和 HTTP 两种传输模式。
 """
 
+import asyncio
 import json
 from typing import List, Optional, Dict, Union
 
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
+from fastmcp.server.dependencies import get_context
 
 from .tools.data_query import DataQueryTools
 from .tools.analytics import AnalyticsTools
@@ -26,6 +28,9 @@ mcp = FastMCP('trendradar-news')
 # 全局工具实例（在第一次请求时初始化）
 _tools_instances = {}
 
+# Session-level 工具实例存储（用于 Context 管理）
+_session_tools: Dict[str, Dict] = {}
+
 
 def _get_tools(project_root: Optional[str] = None):
     """获取或创建工具实例（单例模式）"""
@@ -37,6 +42,108 @@ def _get_tools(project_root: Optional[str] = None):
         _tools_instances['system'] = SystemManagementTools(project_root)
         _tools_instances['storage'] = StorageSyncTools(project_root)
     return _tools_instances
+
+
+def _get_tools_with_context(ctx: Optional[Context] = None) -> Dict:
+    """
+    获取工具实例（支持 Session 隔离）
+
+    如果提供了 Context，则为每个 session 创建独立的工具实例。
+    这样可以避免不同会话之间的状态污染。
+
+    Args:
+        ctx: FastMCP Context 对象
+
+    Returns:
+        工具实例字典
+    """
+    if ctx is None:
+        return _get_tools()
+
+    # 获取 session ID（如果有的话）
+    session_id = getattr(ctx, 'session_id', None) or 'default'
+
+    if session_id not in _session_tools:
+        # 为新 session 创建工具实例
+        _session_tools[session_id] = {
+            'data': DataQueryTools(),
+            'analytics': AnalyticsTools(),
+            'search': SearchTools(),
+            'config': ConfigManagementTools(),
+            'system': SystemManagementTools(),
+            'storage': StorageSyncTools(),
+        }
+
+    return _session_tools[session_id]
+
+
+# ==================== MCP Resources ====================
+
+@mcp.resource("config://platforms")
+async def get_platforms_resource() -> str:
+    """
+    获取支持的平台列表
+
+    返回 config.yaml 中配置的所有平台信息，包括 ID 和名称。
+    """
+    tools = _get_tools()
+    config = await asyncio.to_thread(
+        tools['config'].get_current_config, section="crawler"
+    )
+    return json.dumps({
+        "platforms": config.get("platforms", []),
+        "description": "TrendRadar 支持的热榜平台列表"
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.resource("config://rss-feeds")
+async def get_rss_feeds_resource() -> str:
+    """
+    获取 RSS 订阅源列表
+
+    返回当前配置的所有 RSS 源信息。
+    """
+    tools = _get_tools()
+    status = await asyncio.to_thread(tools['data'].get_rss_feeds_status)
+    return json.dumps({
+        "feeds": status.get("today_feeds", {}),
+        "description": "TrendRadar 支持的 RSS 订阅源列表"
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.resource("data://available-dates")
+async def get_available_dates_resource() -> str:
+    """
+    获取可用的数据日期范围
+
+    返回本地存储中可查询的日期列表。
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(
+        tools['storage'].list_available_dates, source="local"
+    )
+    return json.dumps({
+        "dates": result.get("data", {}).get("local", {}).get("dates", []),
+        "description": "本地存储中可查询的日期列表"
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.resource("config://keywords")
+async def get_keywords_resource() -> str:
+    """
+    获取关注词配置
+
+    返回 frequency_words.txt 中配置的关注词分组。
+    """
+    tools = _get_tools()
+    config = await asyncio.to_thread(
+        tools['config'].get_current_config, section="keywords"
+    )
+    return json.dumps({
+        "word_groups": config.get("word_groups", []),
+        "total_groups": config.get("total_groups", 0),
+        "description": "TrendRadar 关注词配置"
+    }, ensure_ascii=False, indent=2)
 
 
 # ==================== 日期解析工具（优先调用）====================
@@ -93,7 +200,7 @@ async def resolve_date_range(
         2. search_news(query="特斯拉", date_range={"start": "2025-11-20", "end": "2025-11-26"})
     """
     try:
-        result = DateParser.resolve_date_range_expression(expression)
+        result = await asyncio.to_thread(DateParser.resolve_date_range_expression, expression)
         return json.dumps(result, ensure_ascii=False, indent=2)
     except MCPError as e:
         return json.dumps({
@@ -146,7 +253,10 @@ async def get_latest_news(
     **注意**：如果用户询问"为什么只显示了部分"，说明他们需要完整数据
     """
     tools = _get_tools()
-    result = tools['data'].get_latest_news(platforms=platforms, limit=limit, include_url=include_url)
+    result = await asyncio.to_thread(
+        tools['data'].get_latest_news,
+        platforms=platforms, limit=limit, include_url=include_url
+    )
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -176,7 +286,10 @@ async def get_trending_topics(
         - 自动提取热点: get_trending_topics(extract_mode="auto_extract", top_n=20)
     """
     tools = _get_tools()
-    result = tools['data'].get_trending_topics(top_n=top_n, mode=mode, extract_mode=extract_mode)
+    result = await asyncio.to_thread(
+        tools['data'].get_trending_topics,
+        top_n=top_n, mode=mode, extract_mode=extract_mode
+    )
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -185,11 +298,12 @@ async def get_trending_topics(
 @mcp.tool
 async def get_latest_rss(
     feeds: Optional[List[str]] = None,
+    days: int = 1,
     limit: int = 50,
     include_summary: bool = False
 ) -> str:
     """
-    获取最新的 RSS 订阅数据
+    获取最新的 RSS 订阅数据（支持多日查询）
 
     RSS 数据与热榜新闻分开存储，按时间流展示，适合获取特定来源的最新内容。
 
@@ -197,6 +311,10 @@ async def get_latest_rss(
         feeds: RSS 源 ID 列表，如 ['hacker-news', '36kr']
                - 不指定时：返回所有已配置 RSS 源的数据
                - 支持的 RSS 源来自 config/config.yaml 的 rss.feeds 配置
+        days: 获取最近 N 天的数据，默认 1（仅今天），最大 30 天
+              - 1: 仅今天（默认）
+              - 7: 最近一周
+              - 30: 最近一个月
         limit: 返回条数限制，默认50，最大500
         include_summary: 是否包含文章摘要，默认False（节省token）
 
@@ -209,17 +327,22 @@ async def get_latest_rss(
             - url: 文章链接
             - published_at: 发布时间
             - author: 作者（如有）
+            - date: 数据日期
             - summary: 摘要（仅当 include_summary=True）
         - total: 返回条数
         - feeds: 请求的 RSS 源列表
 
     Examples:
-        - 获取所有 RSS 最新内容: get_latest_rss()
-        - 获取指定源: get_latest_rss(feeds=['hacker-news'])
-        - 包含摘要: get_latest_rss(include_summary=True, limit=20)
+        - 获取今天所有 RSS: get_latest_rss()
+        - 获取最近一周: get_latest_rss(days=7)
+        - 获取指定源最近7天: get_latest_rss(feeds=['hacker-news'], days=7)
+        - 包含摘要: get_latest_rss(include_summary=True, days=7, limit=20)
     """
     tools = _get_tools()
-    result = tools['data'].get_latest_rss(feeds=feeds, limit=limit, include_summary=include_summary)
+    result = await asyncio.to_thread(
+        tools['data'].get_latest_rss,
+        feeds=feeds, days=days, limit=limit, include_summary=include_summary
+    )
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -252,7 +375,8 @@ async def search_rss(
         - search_rss(keyword="machine learning", feeds=['hacker-news'], days=14)
     """
     tools = _get_tools()
-    result = tools['data'].search_rss(
+    result = await asyncio.to_thread(
+        tools['data'].search_rss,
         keyword=keyword,
         feeds=feeds,
         days=days,
@@ -281,7 +405,7 @@ async def get_rss_feeds_status() -> str:
         - get_rss_feeds_status()  # 查看所有 RSS 源状态
     """
     tools = _get_tools()
-    result = tools['data'].get_rss_feeds_status()
+    result = await asyncio.to_thread(tools['data'].get_rss_feeds_status)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -325,7 +449,8 @@ async def get_news_by_date(
     **注意**：如果用户询问"为什么只显示了部分"，说明他们需要完整数据
     """
     tools = _get_tools()
-    result = tools['data'].get_news_by_date(
+    result = await asyncio.to_thread(
+        tools['data'].get_news_by_date,
         date_range=date_range,
         platforms=platforms,
         limit=limit,
@@ -388,7 +513,8 @@ async def analyze_topic_trend(
         2. analyze_topic_trend(topic="特斯拉", analysis_type="lifecycle", date_range=...)
     """
     tools = _get_tools()
-    result = tools['analytics'].analyze_topic_trend_unified(
+    result = await asyncio.to_thread(
+        tools['analytics'].analyze_topic_trend_unified,
         topic=topic,
         analysis_type=analysis_type,
         date_range=date_range,
@@ -434,7 +560,8 @@ async def analyze_data_insights(
         - analyze_data_insights(insight_type="keyword_cooccur", min_frequency=5, top_n=15)
     """
     tools = _get_tools()
-    result = tools['analytics'].analyze_data_insights_unified(
+    result = await asyncio.to_thread(
+        tools['analytics'].analyze_data_insights_unified,
         insight_type=insight_type,
         topic=topic,
         date_range=date_range,
@@ -497,7 +624,8 @@ async def analyze_sentiment(
     - 仅在用户明确要求"总结"或"挑重点"时才进行筛选
     """
     tools = _get_tools()
-    result = tools['analytics'].analyze_sentiment(
+    result = await asyncio.to_thread(
+        tools['analytics'].analyze_sentiment,
         topic=topic,
         platforms=platforms,
         date_range=date_range,
@@ -546,7 +674,8 @@ async def find_related_news(
     - 仅在用户明确要求"总结"时才进行筛选
     """
     tools = _get_tools()
-    result = tools['search'].find_related_news_unified(
+    result = await asyncio.to_thread(
+        tools['search'].find_related_news_unified,
         reference_title=reference_title,
         date_range=date_range,
         threshold=threshold,
@@ -575,7 +704,8 @@ async def generate_summary_report(
         JSON格式的摘要报告，包含Markdown格式内容
     """
     tools = _get_tools()
-    result = tools['analytics'].generate_summary_report(
+    result = await asyncio.to_thread(
+        tools['analytics'].generate_summary_report,
         report_type=report_type,
         date_range=date_range
     )
@@ -635,7 +765,8 @@ async def aggregate_news(
     - 可优先展示 platform_count > 1 的新闻
     """
     tools = _get_tools()
-    result = tools['analytics'].aggregate_news(
+    result = await asyncio.to_thread(
+        tools['analytics'].aggregate_news,
         date_range=date_range,
         platforms=platforms,
         similarity_threshold=similarity_threshold,
@@ -693,7 +824,8 @@ async def compare_periods(
           )
     """
     tools = _get_tools()
-    result = tools['analytics'].compare_periods(
+    result = await asyncio.to_thread(
+        tools['analytics'].compare_periods,
         period1=period1,
         period2=period2,
         topic=topic,
@@ -785,7 +917,8 @@ async def search_news(
     - 当include_rss=True时，热榜和RSS结果分开展示，RSS在热榜之后
     """
     tools = _get_tools()
-    result = tools['search'].search_news_unified(
+    result = await asyncio.to_thread(
+        tools['search'].search_news_unified,
         query=query,
         search_mode=search_mode,
         date_range=date_range,
@@ -821,7 +954,7 @@ async def get_current_config(
         JSON格式的配置信息
     """
     tools = _get_tools()
-    result = tools['config'].get_current_config(section=section)
+    result = await asyncio.to_thread(tools['config'].get_current_config, section=section)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -836,7 +969,52 @@ async def get_system_status() -> str:
         JSON格式的系统状态信息
     """
     tools = _get_tools()
-    result = tools['system'].get_system_status()
+    result = await asyncio.to_thread(tools['system'].get_system_status)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+async def check_version(
+    proxy_url: Optional[str] = None
+) -> str:
+    """
+    检查版本更新（同时检查 TrendRadar 和 MCP Server）
+
+    比较本地版本与 GitHub 远程版本，判断是否需要更新。
+    远程版本 URL 从 config.yaml 获取：
+    - version_check_url: TrendRadar 版本
+    - mcp_version_check_url: MCP Server 版本
+
+    Args:
+        proxy_url: 可选的代理URL，用于访问 GitHub（如 http://127.0.0.1:7890）
+
+    Returns:
+        JSON格式的版本检查结果，包含：
+        - success: 是否成功
+        - summary:
+            - description: 结果描述
+            - any_update: 是否有任何组件需要更新
+        - data:
+            - trendradar: TrendRadar 版本检查结果
+                - name: 组件名称
+                - current_version: 当前本地版本（如 "5.0.0"）
+                - remote_version: 远程最新版本
+                - need_update: 是否需要更新
+                - message: 状态描述
+            - mcp: MCP Server 版本检查结果
+                - name: 组件名称
+                - current_version: 当前本地版本（如 "3.1.4"）
+                - remote_version: 远程最新版本
+                - need_update: 是否需要更新
+                - message: 状态描述
+            - any_update: 是否有任何组件需要更新
+
+    Examples:
+        - check_version()  # 直接检查两个组件的版本
+        - check_version(proxy_url="http://127.0.0.1:7890")  # 使用代理访问 GitHub
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(tools['system'].check_version, proxy_url=proxy_url)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -871,7 +1049,10 @@ async def trigger_crawl(
         - 使用默认平台: trigger_crawl()  # 爬取config.yaml中配置的所有平台
     """
     tools = _get_tools()
-    result = tools['system'].trigger_crawl(platforms=platforms, save_to_local=save_to_local, include_url=include_url)
+    result = await asyncio.to_thread(
+        tools['system'].trigger_crawl,
+        platforms=platforms, save_to_local=save_to_local, include_url=include_url
+    )
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -914,7 +1095,7 @@ async def sync_from_remote(
         - S3_SECRET_ACCESS_KEY: 访问密钥
     """
     tools = _get_tools()
-    result = tools['storage'].sync_from_remote(days=days)
+    result = await asyncio.to_thread(tools['storage'].sync_from_remote, days=days)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -948,7 +1129,7 @@ async def get_storage_status() -> str:
         - get_storage_status()  # 查看所有存储状态
     """
     tools = _get_tools()
-    result = tools['storage'].get_storage_status()
+    result = await asyncio.to_thread(tools['storage'].get_storage_status)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -992,7 +1173,7 @@ async def list_available_dates(
         - list_available_dates(source="remote")  # 仅查看远程
     """
     tools = _get_tools()
-    result = tools['storage'].list_available_dates(source=source)
+    result = await asyncio.to_thread(tools['storage'].list_available_dates, source=source)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -1065,12 +1246,13 @@ def run_server(
     print("    === 配置与系统管理 ===")
     print("    15. get_current_config      - 获取当前系统配置")
     print("    16. get_system_status       - 获取系统运行状态")
-    print("    17. trigger_crawl           - 手动触发爬取任务")
+    print("    17. check_version           - 检查版本更新（对比本地与远程版本）")
+    print("    18. trigger_crawl           - 手动触发爬取任务")
     print()
     print("    === 存储同步工具 ===")
-    print("    18. sync_from_remote        - 从远程存储拉取数据到本地")
-    print("    19. get_storage_status      - 获取存储配置和状态")
-    print("    20. list_available_dates    - 列出本地/远程可用日期")
+    print("    19. sync_from_remote        - 从远程存储拉取数据到本地")
+    print("    20. get_storage_status      - 获取存储配置和状态")
+    print("    21. list_available_dates    - 列出本地/远程可用日期")
     print("=" * 60)
     print()
 

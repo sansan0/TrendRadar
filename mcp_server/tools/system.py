@@ -47,8 +47,11 @@ class SystemManagementTools:
             status = self.data_service.get_system_status()
 
             return {
-                **status,
-                "success": True
+                "success": True,
+                "summary": {
+                    "description": "系统运行状态和健康检查信息"
+                },
+                "data": status
             }
 
         except MCPError as e:
@@ -232,14 +235,17 @@ class SystemManagementTools:
 
             result = {
                 "success": True,
-                "task_id": f"crawl_{int(time.time())}",
-                "status": "completed",
-                "crawl_time": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-                "platforms": list(results.keys()),
-                "total_news": len(news_response_data),
-                "failed_platforms": failed_ids,
-                "data": news_response_data,
-                "saved_to_local": save_success and save_to_local
+                "summary": {
+                    "description": "爬取任务执行结果",
+                    "task_id": f"crawl_{int(time.time())}",
+                    "status": "completed",
+                    "crawl_time": current_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "total_news": len(news_response_data),
+                    "platforms": list(results.keys()),
+                    "failed_platforms": failed_ids,
+                    "saved_to_local": save_success and save_to_local
+                },
+                "data": news_response_data
             }
 
             if save_success:
@@ -367,3 +373,183 @@ class SystemManagementTools:
             .replace('"', "&quot;")
             .replace("'", "&#x27;")
         )
+
+    def check_version(self, proxy_url: Optional[str] = None) -> Dict:
+        """
+        检查版本更新
+
+        同时检查 TrendRadar 和 MCP Server 两个组件的版本更新。
+        远程版本 URL 从 config.yaml 获取：
+        - version_check_url: TrendRadar 版本
+        - mcp_version_check_url: MCP Server 版本
+
+        Args:
+            proxy_url: 可选的代理URL，用于访问远程版本
+
+        Returns:
+            版本检查结果字典，包含：
+            - success: 是否成功
+            - trendradar: TrendRadar 版本检查结果
+            - mcp: MCP Server 版本检查结果
+            - any_update: 是否有任何组件需要更新
+
+        Example:
+            >>> tools = SystemManagementTools()
+            >>> result = tools.check_version()
+            >>> print(result['data']['any_update'])
+        """
+        import yaml
+        import requests
+
+        def parse_version(version_str: str):
+            """将版本号字符串解析为元组"""
+            try:
+                parts = version_str.strip().split(".")
+                if len(parts) != 3:
+                    raise ValueError("版本号格式不正确")
+                return int(parts[0]), int(parts[1]), int(parts[2])
+            except:
+                return 0, 0, 0
+
+        def check_single_version(
+            name: str,
+            local_version: str,
+            remote_url: str,
+            proxies: Optional[Dict],
+            headers: Dict
+        ) -> Dict:
+            """检查单个组件的版本"""
+            try:
+                response = requests.get(
+                    remote_url, proxies=proxies, headers=headers, timeout=10
+                )
+                response.raise_for_status()
+                remote_version = response.text.strip()
+
+                local_tuple = parse_version(local_version)
+                remote_tuple = parse_version(remote_version)
+                need_update = local_tuple < remote_tuple
+
+                if need_update:
+                    message = f"发现新版本 {remote_version}，当前版本 {local_version}，建议更新"
+                elif local_tuple > remote_tuple:
+                    message = f"当前版本 {local_version} 高于远程版本 {remote_version}（可能是开发版本）"
+                else:
+                    message = f"当前版本 {local_version} 已是最新版本"
+
+                return {
+                    "success": True,
+                    "name": name,
+                    "current_version": local_version,
+                    "remote_version": remote_version,
+                    "need_update": need_update,
+                    "current_parsed": list(local_tuple),
+                    "remote_parsed": list(remote_tuple),
+                    "message": message
+                }
+            except requests.exceptions.Timeout:
+                return {
+                    "success": False,
+                    "name": name,
+                    "current_version": local_version,
+                    "error": "获取远程版本超时"
+                }
+            except requests.exceptions.RequestException as e:
+                return {
+                    "success": False,
+                    "name": name,
+                    "current_version": local_version,
+                    "error": f"网络请求失败: {str(e)}"
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "name": name,
+                    "current_version": local_version,
+                    "error": str(e)
+                }
+
+        try:
+            # 导入本地版本
+            from trendradar import __version__ as trendradar_version
+            from mcp_server import __version__ as mcp_version
+
+            # 从配置文件获取远程版本 URL
+            config_path = self.project_root / "config" / "config.yaml"
+            if not config_path.exists():
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "CONFIG_NOT_FOUND",
+                        "message": f"配置文件不存在: {config_path}"
+                    }
+                }
+
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_data = yaml.safe_load(f)
+
+            advanced_config = config_data.get("advanced", {})
+            trendradar_url = advanced_config.get(
+                "version_check_url",
+                "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version"
+            )
+            mcp_url = advanced_config.get(
+                "mcp_version_check_url",
+                "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version_mcp"
+            )
+
+            # 配置代理
+            proxies = None
+            if proxy_url:
+                proxies = {"http": proxy_url, "https": proxy_url}
+
+            # 请求头
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/plain, */*",
+                "Cache-Control": "no-cache",
+            }
+
+            # 检查两个版本
+            trendradar_result = check_single_version(
+                "TrendRadar", trendradar_version, trendradar_url, proxies, headers
+            )
+            mcp_result = check_single_version(
+                "MCP Server", mcp_version, mcp_url, proxies, headers
+            )
+
+            # 判断是否有任何更新
+            any_update = (
+                (trendradar_result.get("success") and trendradar_result.get("need_update", False)) or
+                (mcp_result.get("success") and mcp_result.get("need_update", False))
+            )
+
+            return {
+                "success": True,
+                "summary": {
+                    "description": "版本检查结果（TrendRadar + MCP Server）",
+                    "any_update": any_update
+                },
+                "data": {
+                    "trendradar": trendradar_result,
+                    "mcp": mcp_result,
+                    "any_update": any_update
+                }
+            }
+
+        except ImportError as e:
+            return {
+                "success": False,
+                "error": {
+                    "code": "IMPORT_ERROR",
+                    "message": f"无法导入版本信息: {str(e)}"
+                }
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(e)
+                }
+            }

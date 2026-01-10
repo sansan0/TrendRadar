@@ -4,9 +4,57 @@
 实现TTL缓存机制，提升数据访问性能。
 """
 
+import hashlib
+import json
 import time
 from typing import Any, Optional
 from threading import Lock
+
+
+def make_cache_key(namespace: str, **params) -> str:
+    """
+    生成结构化缓存 key
+
+    通过对参数排序和哈希，确保相同参数组合总是生成相同的 key。
+
+    Args:
+        namespace: 缓存命名空间，如 "latest_news", "trending_topics"
+        **params: 缓存参数
+
+    Returns:
+        格式化的缓存 key，如 "latest_news:a1b2c3d4"
+
+    Examples:
+        >>> make_cache_key("latest_news", platforms=["zhihu"], limit=50)
+        'latest_news:8f14e45f'
+        >>> make_cache_key("search", query="AI", mode="keyword")
+        'search:3c6e0b8a'
+    """
+    if not params:
+        return namespace
+
+    # 对参数进行规范化处理
+    normalized_params = {}
+    for k, v in params.items():
+        if v is None:
+            continue  # 跳过 None 值
+        elif isinstance(v, (list, tuple)):
+            # 列表排序后转为字符串
+            normalized_params[k] = json.dumps(sorted(v) if all(isinstance(i, str) for i in v) else list(v), ensure_ascii=False)
+        elif isinstance(v, dict):
+            # 字典按键排序后转为字符串
+            normalized_params[k] = json.dumps(v, sort_keys=True, ensure_ascii=False)
+        else:
+            normalized_params[k] = str(v)
+
+    # 排序参数并生成哈希
+    sorted_params = sorted(normalized_params.items())
+    param_str = "&".join(f"{k}={v}" for k, v in sorted_params)
+
+    # 使用 MD5 生成短哈希（取前8位）
+    hash_value = hashlib.md5(param_str.encode('utf-8')).hexdigest()[:8]
+
+    return f"{namespace}:{hash_value}"
 
 
 class CacheService:

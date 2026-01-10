@@ -374,8 +374,12 @@ class AppContext:
         mode: str = "daily",
         rss_items: Optional[list] = None,
         rss_new_items: Optional[list] = None,
+        ai_content: Optional[str] = None,
+        standalone_data: Optional[Dict] = None,
+        ai_stats: Optional[Dict] = None,
+        report_type: str = "热点分析报告",
     ) -> List[str]:
-        """分批处理消息内容（支持热榜+RSS合并）
+        """分批处理消息内容（支持热榜+RSS合并+AI分析+独立展示区）
 
         Args:
             report_data: 报告数据
@@ -385,6 +389,10 @@ class AppContext:
             mode: 报告模式
             rss_items: RSS 统计条目列表
             rss_new_items: RSS 新增条目列表
+            ai_content: AI 分析内容（已渲染的字符串）
+            standalone_data: 独立展示区数据
+            ai_stats: AI 分析统计数据
+            report_type: 报告类型
 
         Returns:
             分批后的消息内容列表
@@ -407,6 +415,11 @@ class AppContext:
             rss_new_items=rss_new_items,
             timezone=self.config.get("TIMEZONE", "Asia/Shanghai"),
             display_mode=self.display_mode,
+            ai_content=ai_content,
+            standalone_data=standalone_data,
+            rank_threshold=self.rank_threshold,
+            ai_stats=ai_stats,
+            report_type=report_type,
         )
 
     # === 通知发送 ===

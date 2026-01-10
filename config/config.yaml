@@ -168,6 +168,18 @@ notification:
     end: "22:00"                      # 结束时间（北京时间）
     once_per_day: true                # true=窗口内只推送一次，false=窗口内每次执行都推送
 
+  # 📋 独立展示区配置（可选功能）
+  # 用途：将指定平台的完整热榜/RSS 单独展示，不受关键词过滤影响
+  # 适用场景：
+  #   - 想完整查看某个平台的热榜排名
+  #   - RSS 源内容较少，希望全部展示而非只显示关键词匹配的
+  # 注意：同一新闻可能同时出现在关键词匹配区和独立展示区
+  standalone_display:
+    enabled: false                    # 是否启用独立展示区
+    platforms: []                     # 热榜平台 ID 列表（如 ["zhihu", "weibo"]）
+    rss_feeds: []                     # RSS 源 ID 列表（如 ["hacker-news"]）
+    max_items: 20                     # 每个源最多展示条数（0=不限制）
+
   # 推送渠道配置
   channels:
     feishu:
@@ -201,6 +213,12 @@ notification:
 
     slack:
       webhook_url: ""                 # Slack Incoming Webhook URL
+
+    generic_webhook:
+      webhook_url: ""                 # 通用 Webhook URL（支持 Discord、Matrix、IFTTT 等）
+      payload_template: ""            # JSON 模板，支持 {title} 和 {content} 占位符
+                                      # 示例：{"content": "{content}"}
+                                      # 留空则使用默认格式：{"title": "{title}", "content": "{content}"}
 
 
 # ===============================================================
@@ -247,22 +265,75 @@ storage:
 
 
 # ===============================================================
-# 7. 高级设置（一般无需修改）
+# 7. AI 分析功能
+#
+# 使用 AI 大模型对推送内容进行深度分析
+# 支持 OpenAI、Anthropic、DeepSeek等兼容接口
+# ===============================================================
+ai_analysis:
+  enabled: true                    # 是否启用 AI 分析
+
+  # AI 提供商配置
+  # 支持的提供商:
+  #   - deepseek: DeepSeek（默认）
+  #   - openai: OpenAI
+  #   - gemini: Google Gemini
+  #   - custom: 自定义 OpenAI 兼容接口（需填写完整 base_url）
+  provider: "deepseek"              # 提供商
+  api_key: ""                       # API Key（建议使用环境变量 AI_API_KEY）
+
+  model: "deepseek-chat"            # 模型名称
+                                    # DeepSeek: deepseek-chat, deepseek-reasoner
+                                    # OpenAI: o3-mini, o1, gpt-4o
+                                    # Gemini: gemini-2.5-flash, gemini-2.5-pro
+
+  base_url: ""                      # 完整 API 地址（可选）
+                                    # 留空则使用提供商默认端点
+                                    # 其他提供商必须填写完整 URL
+                                    # 示例: https://api.openai.com/v1/chat/completions
+
+  timeout: 90                       # 请求超时（秒）
+
+  # 推送模式（仅在 enabled: true 时生效）
+  # - only_analysis: 仅推送 AI 分析结果（若开启了“独立展示区”则一并保留，屏蔽原始热榜/RSS 列表）
+  # - both: 两者都推送（分析追加在原始内容后）
+  # 注：如果不需要 AI 分析，请将上方 enabled 设为 false，无需使用 push_mode 控制
+  push_mode: "both"
+
+  # 分析选项
+  max_news_for_analysis: 50         # 参与分析的新闻数量上限（控制成本关键项）
+                                    # api 成本估算 (仅供参考)
+                                      # 按默认推送频率和模型
+                                      # GitHub Action 约 0.1 元/天
+                                      # Docker 部署约 0.2 元/天
+
+  include_rss: false                # 是否包含 RSS 内容进行分析
+
+  # 提示词配置文件路径（相对于 config 目录）
+  prompt_file: "ai_analysis_prompt.txt"
+
+
+# ===============================================================
+# 8. 高级设置（一般无需修改）
 # ===============================================================
 advanced:
+  # 调试模式
+  debug: false
+
   # 版本检查
   version_check_url: "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version"
+  mcp_version_check_url: "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version_mcp"
 
   # 爬虫设置
   crawler:
     enabled: true                     # 是否启用爬取新闻功能
-    request_interval: 1000            # 请求间隔（毫秒）
+    request_interval: 2000            # 请求间隔（毫秒）
     use_proxy: false                  # 是否启用代理
     default_proxy: "http://127.0.0.1:10801"
 
   # RSS 设置
   rss:
-    request_interval: 2000            # 请求间隔（毫秒）
+    request_interval: 1000            # 请求间隔（毫秒）
     timeout: 15                       # 请求超时（秒）
     use_proxy: false                  # 是否使用代理
     proxy_url: ""                     # RSS 专属代理（留空则使用 crawler.default_proxy）

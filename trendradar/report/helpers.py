@@ -113,13 +113,29 @@ def format_rank_display(ranks: List[int], rank_threshold: int, format_type: str)
         highlight_end = "**"
 
     # 生成排名显示
+    rank_str = ""
     if min_rank <= rank_threshold:
         if min_rank == max_rank:
-            return f"{highlight_start}[{min_rank}]{highlight_end}"
+            rank_str = f"{highlight_start}[{min_rank}]{highlight_end}"
         else:
-            return f"{highlight_start}[{min_rank} - {max_rank}]{highlight_end}"
+            rank_str = f"{highlight_start}[{min_rank} - {max_rank}]{highlight_end}"
     else:
         if min_rank == max_rank:
-            return f"[{min_rank}]"
+            rank_str = f"[{min_rank}]"
         else:
-            return f"[{min_rank} - {max_rank}]"
+            rank_str = f"[{min_rank} - {max_rank}]"
+
+    # 计算热度趋势
+    trend_arrow = ""
+    if len(ranks) >= 2:
+        prev_rank = ranks[-2]
+        curr_rank = ranks[-1]
+        if curr_rank < prev_rank:
+            trend_arrow = "🔺"  # 排名上升（数值变小）
+        elif curr_rank > prev_rank:
+            trend_arrow = "🔻"  # 排名下降（数值变大）
+        else:
+            trend_arrow = "➖"  # 排名持平
+    # len(ranks) == 1 时不显示趋势箭头（新上榜由 is_new 字段在 formatter.py 中处理）
+
+    return f"{rank_str} {trend_arrow}" if trend_arrow else rank_str

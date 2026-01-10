@@ -13,8 +13,8 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v4.7.0-blue.svg)](https://github.com/sansan0/TrendRadar)
-[![MCP](https://img.shields.io/badge/MCP-v2.0.1-green.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v5.0.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![MCP](https://img.shields.io/badge/MCP-v3.1.5-green.svg)](https://github.com/sansan0/TrendRadar)
 [![RSS](https://img.shields.io/badge/RSS-订阅源支持-orange.svg?style=flat-square&logo=rss&logoColor=white)](https://github.com/sansan0/TrendRadar)
 
 [![企业微信通知](https://img.shields.io/badge/企业微信-通知-00D4AA?style=flat-square)](https://work.weixin.qq.com/)
@@ -26,12 +26,14 @@
 [![ntfy通知](https://img.shields.io/badge/ntfy-通知-00D4AA?style=flat-square)](https://github.com/binwiederhier/ntfy)
 [![Bark通知](https://img.shields.io/badge/Bark-通知-00D4AA?style=flat-square)](https://github.com/Finb/Bark)
 [![Slack通知](https://img.shields.io/badge/Slack-通知-00D4AA?style=flat-square)](https://slack.com/)
+[![通用Webhook](https://img.shields.io/badge/通用-Webhook-607D8B?style=flat-square&logo=webhook&logoColor=white)](#)
 
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-自动化-2088FF?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/sansan0/TrendRadar)
 [![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-部署-4285F4?style=flat-square&logo=github&logoColor=white)](https://sansan0.github.io/TrendRadar)
 [![Docker](https://img.shields.io/badge/Docker-部署-2496ED?style=flat-square&logo=docker&logoColor=white)](https://hub.docker.com/r/wantcat/trendradar)
 [![MCP Support](https://img.shields.io/badge/MCP-AI分析支持-FF6B6B?style=flat-square&logo=ai&logoColor=white)](https://modelcontextprotocol.io/)
+[![AI分析推送](https://img.shields.io/badge/AI-分析推送-FF6B6B?style=flat-square&logo=openai&logoColor=white)](#)
 
 </div>
 
@@ -61,12 +63,19 @@
 
 <br>
 
-- 感谢**耐心反馈 bug** 的贡献者，你们的每一条反馈让项目更加完善😉;  
-- 感谢**为项目点 star** 的观众们，**fork** 你所欲也，**star** 我所欲也，两者得兼😍是对开源精神最好的支持; 
-- 感谢**关注[公众号](#问题答疑与交流)** 的读者们，你们的留言、点赞、分享和推荐等积极互动让内容更有温度😎。 
+- 感谢**为项目点 star** 的观众们，**fork** 你所欲也，**star** 我所欲也，两者得兼😍是对开源精神最好的支持
 
 <details>
-<summary>👉 点击展开：<strong>致谢名单</strong> (当前 <strong>🔥73🔥</strong> 位)</summary>
+<summary>👉 点击展开：<strong>致谢名单</strong> (天使轮荣誉榜 🔥73+🔥 位)</summary>
+
+### 早期支持者致谢
+
+> 💡 **特别说明**：
+>
+> 1. **关于名单**：下方表格记录了项目起步阶段（天使轮）的支持者。因早期人工统计繁琐，**难免存在疏漏或记录不全的情况，如有遗漏，实非本意，万望海涵**。
+> 2. **未来规划**：为了将有限的精力回归代码与功能迭代，**即日起不再人工维护此名单**。
+>
+> 无论名字是否上榜，你们的每一份支持都是 TrendRadar 能够走到今天的基石。🙏
 
 ### 基础设施支持
 
@@ -92,9 +101,8 @@
 
 > 感谢**给予资金支持**的朋友们，你们的慷慨已化身为键盘旁的零食饮料，陪伴着项目的每一次迭代。
 >
-> **"一元点赞"已暂停**，如仍想支持作者，可前往[公众号](#问题答疑与交流)文章底部点击"喜欢作者"。
->
-> 一位可爱猫头像的朋友，不知你从哪个角落翻到了我的收款码，三连了 1.8，心意已收到，感谢厚爱
+> **关于"一元点赞"的回归**：
+> 随着 v5.0.0 版本的发布，项目迈入了一个新的阶段。为了支持日益增长的 API 成本和咖啡因消耗，"一元点赞"通道现已重新开启。你的每一份心意，都将转化为代码世界里的 Token 和动力。🚀 [前往支持](#问题答疑与交流)
 
 |           点赞人            |  金额  |  日期  |             备注             |
 | :-------------------------: | :----: | :----: | :-----------------------: |
@@ -192,12 +200,71 @@
 > **📌 查看最新更新**：**[原仓库更新日志](https://github.com/sansan0/TrendRadar?tab=readme-ov-file#-更新日志)** ：
 - **提示**：建议查看【历史更新】，明确具体的【功能内容】
 
+### 2026/01/10 - v5.0.0
+
+> **开发小插曲**：         
+> 致敬那个陪伴我两年多、却在刚续费后反手弹出 `"This organization has been disabled"` 的某 C 厂模型
+
+**✨ 推送内容“五大板块”重构**
+
+本次更新对推送消息进行了区域化重构，现在推送内容清晰地划分为五大核心板块：
+
+1.  **📊 热榜新闻**：根据您的关键词精准筛选后的全网热点聚合。
+2.  **📰 RSS 订阅**：您的个性化订阅源内容，支持按关键词分组。
+3.  **🆕 本次新增**：实时捕捉自上次运行以来的全新热点（带 🆕 标记）。
+4.  **📋 独立展示区**：指定平台的完整热榜或 RSS 源展示，**完全不受关键词过滤限制**。
+5.  **✨ AI 分析板块**：由 AI 驱动的深度洞察，包含趋势概述、热度走势及**极其重要**的情感倾向分析。
+
+**✨ AI 智能分析推送功能**
+
+- **AI 分析集成**：使用 AI 大模型对推送内容进行深度分析，自动生成热点趋势概述、关键词热度分析、跨平台关联、潜在影响评估等
+- **情感倾向分析**：新增深度情感识别，精准捕捉舆论的正负面、争议或担忧情绪
+- **多 AI 提供商支持**：支持 DeepSeek（默认，性价比高）、OpenAI、Google Gemini 及任意 OpenAI 兼容接口
+- **两种推送模式**：`only_analysis`（仅 AI 分析）、`both`（两者都推送）
+- **自定义提示词**：通过 `config/ai_analysis_prompt.txt` 文件自定义 AI 分析角色和输出格式
+- **多维度数据分析**：AI 可分析排名变化、热度持续时间、跨平台表现、趋势预测等
+
+**📋 独立展示区功能**
+
+- **完整热榜展示**：指定平台的完整热榜单独展示，不受关键词过滤影响
+- **RSS 独立展示**：RSS 源内容可完整展示，适合内容较少的订阅源
+- **灵活配置**：支持配置展示平台列表、RSS 源列表、最大展示条数
+
+**📊 推送体验重构**
+
+- **排版升级**：重新设计并统一各渠道统计头部，强化区块组织，消息层次一目了然
+- **配置简化**：优化飞书等通知渠道的配置逻辑，上手更简单
+- **热度趋势箭头**：新增 🔺(上升)、🔻(下降)、➖(持平) 趋势标识，直观展示热度变化
+- **通用 Webhook**：支持自定义 Webhook URL 和 JSON 模板，轻松适配 Discord、Matrix、IFTTT 等任意平台
+
+**🔧 配置优化**
+
+- **频率词配置增强**：新增 `[组别名]` 语法，支持 `#` 注释行，配置更清晰（感谢 [@songge8](https://github.com/sansan0/TrendRadar/issues/752) 提出的建议）
+- **环境变量支持**：AI 分析相关配置支持环境变量覆盖（`AI_API_KEY`、`AI_PROVIDER` 等）
+
+> 💡 详细配置教程见 [AI 分析配置](#12-ai-分析配置)
+
+### 2026/01/10 - mcp-v3.0.0~v3.1.5
+
+- **Breaking Change**：所有工具返回值统一为 `{success, summary, data, error}` 结构
+- **异步一致性**：所有 21 个工具函数使用 `asyncio.to_thread()` 包装同步调用
+- **MCP Resources**：新增 4 个资源（platforms、rss-feeds、available-dates、keywords）
+- **RSS 增强**：`get_latest_rss` 支持多日查询（days 参数），跨日期 URL 去重
+- **正则匹配修复**：`get_trending_topics` 支持 `/pattern/` 正则语法和 `display_name`
+- **缓存优化**：新增 `make_cache_key()` 函数，参数排序+MD5 哈希确保一致性
+- **新增 check_version 工具**：支持同时检查 TrendRadar 和 MCP Server 版本更新
+
+
+<details>
+<summary>👉 点击展开：<strong>历史更新</strong></summary>
+
+
 ### 2026/01/02 - v4.7.0
 
 - **修复 RSS HTML 显示**：修复 RSS 数据格式不匹配导致的渲染问题，现在按关键词分组正确显示
 - **新增正则表达式语法**：关键词配置支持 `/pattern/` 正则语法，解决英文子字符串误匹配问题（如 `ai` 匹配 `training`）[📖 查看语法详解](#关键词基础语法)
 - **新增显示名称语法**：使用 `=> 备注` 给复杂的正则表达式起个好记的名字，推送消息显示更清晰（如 `/\bai\b/ => AI相关`）
-- **不会写正则？** README 新增 AI 生成正则的引导，告诉 ChatGPT/Claude/DeepSeek 你想匹配什么，让 AI 帮你写
+- **不会写正则？** README 新增 AI 生成正则的引导，告诉 ChatGPT/Gemini/DeepSeek 你想匹配什么，让 AI 帮你写
 
 
 ### 2025/12/30 - mcp-v2.0.0
@@ -205,10 +272,6 @@
 - **架构调整**：移除 TXT 支持，统一使用 SQLite 数据库
 - **RSS 查询**：新增 `get_latest_rss`、`search_rss`、`get_rss_feeds_status`
 - **统一搜索**：`search_news` 支持 `include_rss` 参数同时搜索热榜和 RSS
-
-
-<details>
-<summary>👉 点击展开：<strong>历史更新</strong></summary>
 
 
 ### 2026/01/01 - v4.6.0
@@ -475,7 +538,7 @@
 
 ### 2025/10/20 - v3.0.0
 
-**重大更新 - AI 分析功能上线** 🤖
+**重大更新 - AI 分析功能上线** ✨
 
 - **核心功能**：
   - 新增基于 MCP (Model Context Protocol) 的 AI 分析服务器
@@ -828,6 +891,27 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 - **本地运行**：Windows/Mac/Linux 直接运行
 
 
+### **AI 分析推送（v5.0.0 新增）**
+
+使用 AI 大模型对推送内容进行深度分析，自动生成热点洞察报告
+
+- **智能分析**：自动分析热点趋势、关键词热度、跨平台关联、潜在影响
+- **多提供商**：支持 DeepSeek、OpenAI、Gemini 及 OpenAI 兼容接口
+- **灵活推送**：可选仅原始内容、仅 AI 分析、或两者都推送
+- **自定义提示词**：通过 `config/ai_analysis_prompt.txt` 自定义分析角度
+
+> 💡 详细配置教程见 [AI 分析配置](#12-ai-分析配置)
+
+### **独立展示区（v5.0.0 新增）**
+
+为指定平台提供完整热榜展示，不受关键词过滤影响
+
+- **完整热榜**：指定平台的热榜完整展示，适合想看完整排名的用户
+- **RSS 独立展示**：RSS 源内容可完整展示，不受关键词限制
+- **灵活配置**：支持配置展示平台、RSS 源、最大条数
+
+> 💡 详细配置教程见 [报告配置 - 独立展示区](#7-报告配置)
+
 ### **AI 智能分析（v3.0.0 新增）**
 
 基于 MCP (Model Context Protocol) 协议的 AI 对话分析系统，让你用自然语言深度挖掘新闻数据
@@ -872,18 +956,17 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
 #### 🅰️ 方案一：Docker 部署（推荐 🔥）
 
-* **特点**：比 GitHub Actions 更稳定
+* **特点**：比 GitHub Actions 更稳定，数据本地存储（无需配置云存储）
 * **适用**：有自己的服务器、NAS 或长期运行的电脑
-
-👉 **[跳转到 Docker 部署教程](#6-docker-部署)**
+* **注意**：你需要阅读了解下方的基础配置流程，然后跳转到 Docker 教程进行部署。
 
 #### 🅱️ 方案二：GitHub Actions 部署（本章节内容 ⬇️）
 
-* **特点**：数据存储在 **远程云存储**（不再写入 Git 仓库）
-* **推荐**：配置云存储服务（Cloudflare R2 免费额度足够、阿里云 OSS、腾讯云 COS 等）
-* **注意**：需定期签到续期（7天一次）
+* **特点**：无服务器，数据存储在 **远程云存储**（推荐配置）
+* **适用**：没有服务器的用户，利用 GitHub 免费资源
+* **注意**：需配置云存储以获得完整体验，且需定期签到续期
 
-1️⃣ **获取项目代码**
+### 1️⃣ 第一步：获取项目代码
 
    点击本仓库页面右上角的绿色 **[Use this template]** 按钮 → 选择 "Create a new repository"。
 
@@ -893,7 +976,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    <br>
 
-2️⃣ **设置 GitHub Secrets**:
+### 2️⃣ 第二步：设置 GitHub Secrets
 
    在你 Fork 后的仓库中，进入 `Settings` > `Secrets and variables` > `Actions` > `New repository secret`
 
@@ -997,9 +1080,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
    {
      "message_type": "text",
      "content": {
-       "total_titles": "{{内容}}",
-       "timestamp": "{{内容}}",
-       "report_type": "{{内容}}",
        "text": "{{内容}}"
      }
    }
@@ -1035,9 +1115,6 @@ GitHub 一键 Fork 即可使用，无需编程基础。
    {
      "message_type": "text",
      "content": {
-       "total_titles": "{{内容}}",
-       "timestamp": "{{内容}}",
-       "report_type": "{{内容}}",
        "text": "{{内容}}"
      }
    }
@@ -1499,9 +1576,76 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    </details>
 
+   <details>
+   <summary>👉 点击展开：<strong>通用 Webhook 推送</strong>（支持 Discord、Matrix、IFTTT 等）</summary>
    <br>
 
-3️⃣ **手动测试新闻推送**：
+   **GitHub Secret 配置（⚠️ Name 名称必须严格一致）：**
+   - **Name（名称）**：`GENERIC_WEBHOOK_URL`（请复制粘贴此名称，不要手打）
+   - **Secret（值）**：你的 Webhook URL
+
+   - **Name（名称）**：`GENERIC_WEBHOOK_TEMPLATE`（可选配置，请复制粘贴此名称）
+   - **Secret（值）**：JSON 模板字符串，支持 `{title}` 和 `{content}` 占位符
+
+   <br>
+
+   **通用 Webhook 简介：**
+
+   通用 Webhook 支持任意接受 HTTP POST 请求的平台，包括但不限于：
+   - **Discord**：通过 Webhook 推送到频道
+   - **Matrix**：通过 Webhook 桥接推送
+   - **IFTTT**：触发自动化流程
+   - **自建服务**：任何支持 Webhook 的自定义服务
+
+   **配置示例：**
+
+   ### Discord 配置
+
+   1. **获取 Webhook URL**：
+      - 进入 Discord 服务器设置 → 整合 → Webhooks
+      - 创建新 Webhook，复制 URL
+
+   2. **配置模板**：
+      ```json
+      {"content": "{content}"}
+      ```
+
+   3. **GitHub Secret 配置**：
+      - `GENERIC_WEBHOOK_URL`：Discord Webhook URL
+      - `GENERIC_WEBHOOK_TEMPLATE`：`{"content": "{content}"}`
+
+   ### 自定义模板
+
+   模板支持两个占位符：
+   - `{title}` - 消息标题
+   - `{content}` - 消息内容
+
+   **模板示例**：
+   ```json
+   # 默认格式（留空时使用）
+   {"title": "{title}", "content": "{content}"}
+
+   # Discord 格式
+   {"content": "{content}"}
+
+   # 自定义格式
+   {"text": "{content}", "username": "TrendRadar"}
+   ```
+
+   ---
+
+   **注意事项：**
+   - ✅ 支持 Markdown 格式（与企业微信格式一致）
+   - ✅ 支持自动分批推送
+   - ✅ 支持多账号配置（用 `;` 分隔）
+   - ⚠️ 模板必须是有效的 JSON 格式
+   - ⚠️ 不同平台对消息格式要求不同，请参考目标平台文档
+
+   </details>
+
+   <br>
+
+### 3️⃣ 第三步：手动测试新闻推送
 
    > ⚠️ 提醒：
    > - 完成第 1-2 步后，请立即测试！测试成功后再根据需要调整配置（第 4 步）
@@ -1530,21 +1674,22 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    <br>
 
-4️⃣ **配置说明（可选）**：
+### 4️⃣ 第四步：配置说明（可选）
 
-   默认配置已可正常使用，如需个性化调整，了解以下三个文件即可：
+   默认配置已可正常使用，如需个性化调整，了解以下文件即可：
 
    | 文件 | 作用 |
    |------|------|
    | `config/config.yaml` | 主配置文件：推送模式、时间窗口、平台列表、热点权重等 |
    | `config/frequency_words.txt` | 关键词文件：设置你关心的词汇，筛选推送内容 |
+   | `config/ai_analysis_prompt.txt` | AI 提示词模板：自定义 AI 分析师的角色和分析维度 |
    | `.github/workflows/crawler.yml` | 执行频率：控制多久运行一次（⚠️ 谨慎修改） |
 
    👉 **详细配置教程**：[配置详解](#配置详解)
 
    <br>
 
-5️⃣ **GitHub Actions 签到续期机制 & 远程云存储配置**：
+### 5️⃣ 第五步：远程云存储 & 签到配置
 
    **v4.0.0 重要变更**：引入「活跃度检测」机制，GitHub Actions 需定期签到以维持运行。
 
@@ -1557,26 +1702,21 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    ---
 
-   **你也可以不配置远程云存储**，但此时项目处于**轻量模式**，部分高级功能不可用。
+   **关于远程云存储配置（请根据部署方式选择）：**
 
-   **两种部署模式对比：**
+   - **GitHub Actions 用户**：
+     - **现状**：Actions 每次运行都是全新环境，不保存文件。如果不配置云存储，项目将运行在**轻量模式**（无增量推送、无历史追踪）。
+     - **建议**：配置远程云存储以获得完整体验。
 
-   | 模式 | 配置要求 | 功能范围 |
-   |------|---------|---------|
-   | **轻量模式** | 无需配置存储 | 实时抓取 + 关键词筛选 + 多渠道推送 |
-   | **完整模式** | 配置远程云存储 | 轻量模式 + 新增检测 + 趋势追踪 + 增量推送 + AI分析 |
-
-   **轻量模式说明**：
-   - ✅ 可用：实时新闻抓取、关键词筛选、热点权重排序、当前榜单推送
-   - ❌ 不可用：新增新闻检测(🆕)、热度趋势追踪、增量模式、每日汇总累积、MCP AI分析
-
-   **完整模式说明**：配置远程云存储后即可解锁全部功能，继续按下方步骤配置即可。
+   - **Docker / 本地用户**：
+     - **现状**：数据默认保存在本地硬盘。
+     - **建议**：云存储为可选项，可作为异地备份。
 
    <details>
-   <summary>👉 点击展开：<strong>远程云存储配置（决定功能完整性）（可选）</strong></summary>
+   <summary>👉 点击展开：<strong>远程云存储配置教程（以 Cloudflare R2 为例）</strong></summary>
    <br>
 
-   **⚠️ 以 Cloudflare R2 为例的配置前置条件：**
+   **⚠️ 前置条件（重要）：**
 
    根据 Cloudflare 平台规则，开通 R2 需绑定支付方式。
 
@@ -1586,9 +1726,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    ---
 
-   **GitHub Secret 配置：**
-
-   **必需配置（4 项）：**
+   **GitHub Secret 配置（需添加 4 项）：**
 
    | Name（名称） | Secret（值）说明 |
    |-------------|-----------------|
@@ -1607,7 +1745,7 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    <br>
 
-   **如何获取凭据（以 Cloudflare R2 为例）：**
+   **详细操作步骤（获取凭据）：**
 
    1. **进入 R2 概览**：
       - 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)。
@@ -1633,30 +1771,40 @@ GitHub 一键 Fork 即可使用，无需编程基础。
 
    <br>
 
-6️⃣ **🎉 部署成功！分享你的使用体验**
+### 6️⃣ 第六步：开启 AI 分析推送
 
-   恭喜你完成了 TrendRadar 的配置！现在你可以开始追踪热点资讯了。
+   这是 v5.0.0 的核心功能，让 AI 帮你总结和分析新闻，建议尝试。
 
-   💬 有更多小伙伴在公众号交流使用心得，期待你的分享~
+   **配置方法：**
+   在 GitHub Secrets (或 `.env` / `config.yaml`) 中添加：
+   - `AI_API_KEY`: 你的 API Key（支持 DeepSeek、OpenAI 等）
+   - `AI_PROVIDER`: 服务商名称（如 `deepseek`, `openai`）
 
-   - 想了解更多玩法和高级技巧？
-   - 遇到问题需要快速解答？
-   - 有好的想法想要交流？
-
-   👉 欢迎关注公众号「**[硅基茶水间](#问题答疑与交流)**」，你的点赞和留言都是项目持续更新的动力。
+   就这样，无需复杂部署，下次推送时你就会看到智能分析报告了。
 
    <br>
 
-7️⃣ **想要更智能的分析？试试 AI 增强功能**（可选）
+### 7️⃣ 第七步：🎉 部署成功！
 
-   基础配置已经能满足日常使用，但如果你想要：
+   恭喜！现在你可以开始享受 TrendRadar 带来的高效信息流了。
 
-   - 让 AI 自动分析热点趋势和数据洞察
-   - 通过自然语言搜索和查询新闻
-   - 获得情感分析、话题预测等深度分析
-   - 在 Claude、Cursor 等 AI 工具中直接调用数据
+   💬 **加入社区**：欢迎关注公众号「**[硅基茶水间](#问题答疑与交流)**」，分享你的使用心得和高级玩法。
 
-   👉 **了解更多**：[AI 智能分析](#-ai-智能分析) — 解锁项目的隐藏能力，让热点追踪更高效！
+   <br>
+
+### 8️⃣ 第八步：进阶：选择你的 AI 助手
+
+   TrendRadar 提供了两种 AI 使用方式，满足不同需求：
+
+   | 特性 | ✨ AI 分析推送 | 🧠 AI 智能分析 |
+   | :--- | :--- | :--- |
+   | **模式** | **被动接收** (每日日报) | **主动对话** (深度调研) |
+   | **场景** | "今天有什么大事？" | "分析一下过去一周 AI 行业的变化" |
+   | **部署** | 极简 (填 Key 即可) | 进阶 (需本地运行/Docker) |
+   | **客户端** | 手机 |  电脑 |
+  
+
+   👉 **结论**：先用 **AI 分析推送** 满足日常需求；如果你是数据分析师或需要深度挖掘，再尝试 **[AI 智能分析](#-ai-智能分析)**。
 
 <br>
 
@@ -1856,7 +2004,7 @@ AI
 
 **💡 不会写正则？让 AI 帮你生成！**
 
-如果你不熟悉正则表达式，可以直接让 ChatGPT / Claude / DeepSeek 帮你生成。只需告诉 AI：
+如果你不熟悉正则表达式，可以直接让 ChatGPT / Gemini / DeepSeek 帮你生成。只需告诉 AI：
 
 > 我需要一个 Python 正则表达式，用于匹配英文单词 "ai"，但不匹配 "training" 中的 "ai"。
 > 请直接给出正则表达式，格式为 `/pattern/`，不需要额外解释。
@@ -2291,6 +2439,7 @@ TrendRadar 提供两个独立的 Docker 镜像，可根据需求选择部署：
    # 下载配置文件模板
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/config.yaml -P config/
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/frequency_words.txt -P config/
+   wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/config/ai_analysis_prompt.txt -P config/
 
    # 下载 docker compose 配置
    wget https://raw.githubusercontent.com/sansan0/TrendRadar/master/docker/.env  -P docker/
@@ -2302,7 +2451,8 @@ TrendRadar 提供两个独立的 Docker 镜像，可根据需求选择部署：
 当前目录/
 ├── config/
 │   ├── config.yaml
-│   └── frequency_words.txt
+│   ├── frequency_words.txt
+│   └── ai_analysis_prompt.txt    # AI 分析提示词（v5.0.0 新增，可选）
 └── docker/
     ├── .env
     └── docker-compose.yml
@@ -2311,9 +2461,10 @@ TrendRadar 提供两个独立的 Docker 镜像，可根据需求选择部署：
 2. **配置文件说明**:
 
    **配置分工原则（v4.6.0 优化）**：
-   - `config/config.yaml` - **功能配置**（报告模式、推送设置、存储格式、推送窗口等）
+   - `config/config.yaml` - **功能配置**（报告模式、推送设置、存储格式、推送窗口、AI 分析等）
    - `config/frequency_words.txt` - **关键词配置**（设置你关心的热点词汇）
-   - `docker/.env` - **敏感信息 + Docker 特有配置**（webhook URLs、S3 密钥、定时任务）
+   - `config/ai_analysis_prompt.txt` - **AI 提示词配置**（自定义 AI 分析角色和输出格式，v5.0.0 新增）
+   - `docker/.env` - **敏感信息 + Docker 特有配置**（webhook URLs、API Key、S3 密钥、定时任务）
 
    > 💡 **配置修改生效**：修改 `config.yaml` 后，执行 `docker compose up -d` 重启容器即可生效
 
@@ -2330,6 +2481,9 @@ TrendRadar 提供两个独立的 Docker 镜像，可根据需求选择部署：
    | `ENABLE_WEBSERVER` | - | `true` / `false` | 是否自动启动 Web 服务器 |
    | `WEBSERVER_PORT` | - | `8080` | Web 服务器端口 |
    | `FEISHU_WEBHOOK_URL` | `notification.channels.feishu.webhook_url` | `https://...` | 飞书 Webhook（多账号用 `;` 分隔） |
+   | `AI_ANALYSIS_ENABLED` | `ai_analysis.enabled` | `true` / `false` | 是否启用 AI 分析（v5.0.0 新增） |
+   | `AI_API_KEY` | `ai_analysis.api_key` | `sk-xxx...` | AI API Key（v5.0.0 新增） |
+   | `AI_PROVIDER` | `ai_analysis.provider` | `deepseek` / `openai` / `gemini` | AI 提供商（v5.0.0 新增） |
    | `S3_*` | `storage.remote.*` | - | 远程存储配置（5 个参数） |
 
    **配置优先级**：环境变量 > config.yaml
@@ -2367,7 +2521,7 @@ TrendRadar 提供两个独立的 Docker 镜像，可根据需求选择部署：
 
    > 💡 **提示**：
    > - 大多数用户只需启动 `trendradar` 即可实现新闻推送功能
-   > - 只有需要使用 Claude/ChatGPT 进行 AI 对话分析时，才需启动 `trendradar-mcp`
+   > - 只有需要使用 ChatGPT/Gemini 进行 AI 对话分析时，才需启动 `trendradar-mcp`
    > - 两个服务相互独立，可根据需求灵活组合
 
 4. **查看运行状态**:
@@ -2732,6 +2886,39 @@ REVERSE_CONTENT_ORDER=true
 ```bash
 SORT_BY_POSITION_FIRST=true
 MAX_NEWS_PER_KEYWORD=10
+```
+
+#### 独立展示区配置（v5.0.0 新增）
+
+为指定平台提供完整热榜展示，不受 `frequency_words.txt` 关键词过滤影响。
+
+**配置位置：** `config/config.yaml` 的 `notification.standalone_display` 部分
+
+```yaml
+notification:
+  standalone_display:
+    enabled: false                    # 是否启用
+    platforms: ["zhihu", "weibo"]     # 热榜平台 ID 列表
+    rss_feeds: ["hacker-news"]        # RSS 源 ID 列表
+    max_items: 20                     # 每个源最多展示条数（0=不限制）
+```
+
+**适用场景：**
+- 想完整查看某个平台（如知乎）的热榜排名，而不是只看匹配关键词的内容
+- 订阅了更新较少的 RSS 源（如个人博客），希望每次更新都完整推送
+
+**效果示例：**
+```
+📋 独立展示区 (共 15 条)
+
+知乎热榜 (10 条):
+  1. [知乎] 如何看待 OpenAI 发布 Sora？
+  2. [知乎] 2024 年考研分数线公布...
+  ...
+
+Hacker News (5 条):
+  1. [Hacker News] Launch HN: TrendRadar...
+  ...
 ```
 
 </details>
@@ -3232,9 +3419,126 @@ app:
 
 </details>
 
+### 12. AI 分析配置
+
+<details id="ai-analysis-config">
+<summary>👉 点击展开：<strong>AI 分析推送配置详解</strong></summary>
 <br>
 
-## 🤖 AI 智能分析
+#### 功能概述
+
+v5.0.0 新增 AI 分析推送功能，使用 AI 大模型对推送内容进行深度分析，自动生成热点洞察报告。
+
+**分析内容包括**：
+- 热点趋势概述
+- 关键词热度分析
+- 跨平台关联分析
+- 潜在影响评估
+- 值得关注的信号
+- 总结与建议
+
+#### 配置位置
+
+**配置文件**：`config/config.yaml` 的 `ai_analysis` 部分
+
+```yaml
+ai_analysis:
+  enabled: false                    # 是否启用 AI 分析
+  provider: "deepseek"              # AI 提供商
+  api_key: ""                       # API Key（建议使用环境变量 AI_API_KEY）
+  model: "deepseek-chat"            # 模型名称
+  base_url: ""                      # 自定义 API 端点（可选）
+  timeout: 90                       # 请求超时（秒）
+  push_mode: "both"                 # 推送模式
+  max_news_for_analysis: 50         # 最多分析多少条新闻
+  include_rss: true                 # 是否包含 RSS 内容
+  prompt_file: "ai_analysis_prompt.txt"  # 提示词配置文件
+```
+
+#### 支持的 AI 提供商
+
+| 提供商 | provider 值 | 默认端点 |
+|-------|------------|---------|
+| **DeepSeek** | `deepseek` | https://api.deepseek.com/v1/chat/completions |
+| **OpenAI** | `openai` | https://api.openai.com/v1/chat/completions |
+| **Google Gemini** | `gemini` | https://generativelanguage.googleapis.com/v1beta/openai/chat/completions |
+| **自定义** | `custom` | 需填写 base_url |
+
+> 💡 **提示**：使用 `custom` 提供商时，`base_url` 需填写完整的 API 地址（如 `https://api.example.com/v1/chat/completions`）
+
+#### 推送模式说明
+
+| 模式 | 说明 |
+|------|------|
+| `only_analysis` | 仅推送 AI 分析结果，不推送原始内容 |
+| `both` | 两者都推送（默认），AI 分析追加在原始内容后 |
+
+> 💡 **提示**：如果不需要 AI 分析功能，请将 `enabled` 设为 `false`，无需使用 `push_mode` 控制
+
+#### 环境变量支持
+
+| 环境变量 | 说明 | 示例 |
+|---------|------|------|
+| `AI_ANALYSIS_ENABLED` | 是否启用 AI 分析 | `true` / `false` |
+| `AI_API_KEY` | AI API Key | `sk-xxx...` |
+| `AI_PROVIDER` | AI 提供商 | `deepseek` / `openai` / `gemini` / `custom` |
+| `AI_MODEL` | 模型名称 | `deepseek-chat` |
+| `AI_BASE_URL` | 完整 API 地址（custom 提供商必填） | `https://api.example.com/v1/chat/completions` |
+
+#### 自定义提示词
+
+编辑 `config/ai_analysis_prompt.txt` 文件可自定义 AI 分析角色和输出格式。
+
+**文件结构**：
+```
+[system]
+系统提示词，定义 AI 角色和分析原则
+...
+
+[user]
+用户提示词模板，支持变量替换
+...
+```
+
+**可用变量**：
+- `{report_mode}` - 当前报告模式
+- `{report_type}` - 报告类型描述
+- `{current_time}` - 当前时间
+- `{news_count}` - 热榜新闻条数
+- `{rss_count}` - RSS 新闻条数
+- `{keywords}` - 匹配的关键词列表
+- `{platforms}` - 数据来源平台列表
+- `{news_content}` - 新闻内容
+
+#### 快速启用示例
+
+**方式一：配置文件**
+
+```yaml
+ai_analysis:
+  enabled: true
+  provider: "deepseek"
+  api_key: "sk-your-api-key"
+  model: "deepseek-chat"
+  push_mode: "both"
+```
+
+**方式二：环境变量（推荐）**
+
+```bash
+# GitHub Actions: 添加到 Secrets
+# Docker: 添加到 .env 文件
+AI_ANALYSIS_ENABLED=true
+AI_API_KEY=sk-your-api-key
+AI_PROVIDER=deepseek
+AI_MODEL=deepseek-chat
+```
+
+</details>
+
+<br>
+
+## ✨ AI 智能分析
 
 TrendRadar v3.0.0 新增了基于 **MCP (Model Context Protocol)** 的 AI 分析功能，让你可以通过自然语言与新闻数据对话，进行深度分析。
 
@@ -3293,43 +3597,6 @@ TrendRadar MCP 服务支持标准的 Model Context Protocol (MCP) 协议，可�
 - 将 `/path/to/TrendRadar` 替换为你的项目实际路径
 - Windows 路径使用双反斜杠：`C:\\Users\\YourName\\TrendRadar`
 - 保存后记得重启
-
-<details>
-<summary>👉 点击展开：<b>Claude Desktop</b></summary>
-
-#### 配置文件方式
-
-编辑 Claude Desktop 的 MCP 配置文件：
-
-**Windows**：
-`%APPDATA%\Claude\claude_desktop_config.json`
-
-**Mac**：
-`~/Library/Application Support/Claude/claude_desktop_config.json`
-
-**配置内容**：
-```json
-{
-  "mcpServers": {
-    "trendradar": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "/path/to/TrendRadar",
-        "run",
-        "python",
-        "-m",
-        "mcp_server.server"
-      ],
-      "env": {},
-      "disabled": false,
-      "alwaysAllow": []
-    }
-  }
-}
-```
-
-</details>
 
 <details>
 <summary>👉 点击展开：<b>Cursor</b></summary>
@@ -3460,38 +3727,6 @@ TrendRadar MCP 服务支持标准的 Model Context Protocol (MCP) 协议，可�
 分析最近7天"特斯拉"的热度变化趋势
 生成今天的热点摘要报告
 搜索"比特币"相关新闻并分析情感倾向
-```
-
-</details>
-
-<details>
-<summary>👉 点击展开：<b>Claude Code CLI</b></summary>
-
-#### HTTP 模式配置
-
-```bash
-# 1. 启动 HTTP 服务
-# Windows: start-http.bat
-# Mac/Linux: ./start-http.sh
-
-# 2. 添加 MCP 服务器
-claude mcp add --transport http trendradar http://localhost:3333/mcp
-
-# 3. 验证连接（确保服务已启动）
-claude mcp list
-```
-
-#### 使用示例
-
-```bash
-# 查询新闻
-claude "搜索今天知乎的热点新闻，前10条"
-
-# 趋势分析
-claude "分析'人工智能'这个话题最近一周的热度趋势"
-
-# 数据对比
-claude "对比知乎和微博平台对'比特币'的关注度"
 ```
 
 </details>
@@ -3662,18 +3897,20 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 
 ## ☕问题答疑与交流
 
-> 如果你想支持本项目，可通过微信搜索**腾讯公益**，对里面的**助学**相关的项目随心捐助
+> 如果本项目对你有帮助，你可以选择以下方式支持：  
+> 1. **公益助学**：微信搜索**腾讯公益**，对里面的**助学**相关的项目随心捐。
 >
-> 感谢参与过**一元点赞**的朋友，已收录至顶部**致谢名单**！你们的支持让开源维护更有动力，个人打赏码现已移除。
->
-> 🎯 如果你有兴趣赞助本项目，你的 Banner 将展示在顶部赞助商位置
+> 2. **赞助开发者**：你的赞助将用于补充碳基生物的咖啡因和硅基生物的 Token 消耗。
+
 
 - **GitHub Issues**：适合针对性强的解答。提问时请提供完整信息（截图、错误日志、系统环境等）。
 - **公众号交流**：适合快速咨询。建议优先在相关文章下的公共留言区交流，如私信，请文明礼貌用语😉
 - **联系方式**：path@linux.do
 
 
-<div align="center">
+|公众号关注 |微信点赞 | 支付宝点赞 |
+|:---:|:---:|:---:| 
+| <img src="_image/weixin.png" width="300" title="硅基茶水间"/> | <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2025%2F07%2F17%2F2ae0a88d98079f7e876c2b4dc85233c6-9e8025.JPG" width="300" title="微信支付"/> | <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2025%2F07%2F17%2F1ed4f20ab8e35be51f8e84c94e6e239b4-fe4947.JPG" width="300" title="支付宝支付"/> |
 
 |公众号关注 |
 |:---:|

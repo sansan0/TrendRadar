@@ -374,11 +374,15 @@ class ParserService:
         解析关键词配置文件
 
         复用 trendradar.core.frequency 的解析逻辑，支持：
+        - # 开头的注释行
         - 空行分隔词组
+        - [组别名] 作为词组第一行，给整组指定别名
         - +前缀必须词、!前缀过滤词、@数量限制
         - /pattern/ 正则表达式语法
-        - => 备注 显示名称语法
+        - => 别名 显示名称语法
         - [GLOBAL_FILTER] 全局过滤区域
+
+        显示名称优先级：组别名 > 行别名拼接 > 关键词拼接
 
         Args:
             words_file: 关键词文件路径，默认为 config/frequency_words.txt

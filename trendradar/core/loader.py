@@ -33,6 +33,17 @@ def _get_env_int(key: str, default: int = 0) -> int:
         return default
 
 
+def _get_env_int_or_none(key: str) -> Optional[int]:
+    """从环境变量获取整数值，未设置时返回 None"""
+    value = os.environ.get(key, "").strip()
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
 def _get_env_str(key: str, default: str = "") -> str:
     """从环境变量获取字符串值"""
     return os.environ.get(key, "").strip() or default
@@ -46,6 +57,7 @@ def _load_app_config(config_data: Dict) -> Dict:
         "VERSION_CHECK_URL": advanced.get("version_check_url", ""),
         "SHOW_VERSION_UPDATE": app_config.get("show_version_update", True),
         "TIMEZONE": _get_env_str("TIMEZONE") or app_config.get("timezone", "Asia/Shanghai"),
+        "DEBUG": _get_env_bool("DEBUG") if _get_env_bool("DEBUG") is not None else advanced.get("debug", False),
     }
 
 
@@ -174,6 +186,40 @@ def _load_rss_config(config_data: Dict) -> Dict:
     }
 
 
+def _load_standalone_display_config(config_data: Dict) -> Dict:
+    """加载独立展示区配置"""
+    notification = config_data.get("notification", {})
+    standalone = notification.get("standalone_display", {})
+
+    return {
+        "ENABLED": standalone.get("enabled", False),
+        "PLATFORMS": standalone.get("platforms", []),
+        "RSS_FEEDS": standalone.get("rss_feeds", []),
+        "MAX_ITEMS": standalone.get("max_items", 20),
+    }
+
+
+def _load_ai_analysis_config(config_data: Dict) -> Dict:
+    """加载 AI 分析配置"""
+    ai_config = config_data.get("ai_analysis", {})
+
+    enabled_env = _get_env_bool("AI_ANALYSIS_ENABLED")
+    timeout_env = _get_env_int_or_none("AI_TIMEOUT")
+
+    return {
+        "ENABLED": enabled_env if enabled_env is not None else ai_config.get("enabled", False),
+        "PROVIDER": _get_env_str("AI_PROVIDER") or ai_config.get("provider", "deepseek"),
+        "API_KEY": _get_env_str("AI_API_KEY") or ai_config.get("api_key", ""),
+        "MODEL": _get_env_str("AI_MODEL") or ai_config.get("model", "deepseek-chat"),
+        "BASE_URL": _get_env_str("AI_BASE_URL") or ai_config.get("base_url", ""),
+        "TIMEOUT": timeout_env if timeout_env is not None else ai_config.get("timeout", 90),
+        "PUSH_MODE": _get_env_str("AI_PUSH_MODE") or ai_config.get("push_mode", "both"),
+        "MAX_NEWS_FOR_ANALYSIS": ai_config.get("max_news_for_analysis", 50),
+        "INCLUDE_RSS": ai_config.get("include_rss", True),
+        "PROMPT_FILE": ai_config.get("prompt_file", "ai_analysis_prompt.txt"),
+    }
+
+
 def _load_storage_config(config_data: Dict) -> Dict:
     """加载存储配置"""
     storage = config_data.get("storage", {})
@@ -226,6 +272,7 @@ def _load_webhook_config(config_data: Dict) -> Dict:
     ntfy = channels.get("ntfy", {})
     bark = channels.get("bark", {})
     slack = channels.get("slack", {})
+    generic = channels.get("generic_webhook", {})
 
     return {
         # 飞书
@@ -252,6 +299,9 @@ def _load_webhook_config(config_data: Dict) -> Dict:
         "BARK_URL": _get_env_str("BARK_URL") or bark.get("url", ""),
         # Slack
         "SLACK_WEBHOOK_URL": _get_env_str("SLACK_WEBHOOK_URL") or slack.get("webhook_url", ""),
+        # 通用 Webhook
+        "GENERIC_WEBHOOK_URL": _get_env_str("GENERIC_WEBHOOK_URL") or generic.get("url", ""),
+        "GENERIC_WEBHOOK_TEMPLATE": _get_env_str("GENERIC_WEBHOOK_TEMPLATE") or generic.get("template", ""),
     }
 
 
@@ -324,6 +374,12 @@ def _print_notification_sources(config: Dict) -> None:
         slack_source = "环境变量" if os.environ.get("SLACK_WEBHOOK_URL") else "配置文件"
         notification_sources.append(f"Slack({slack_source}, {count}个账号)")
 
+    if config.get("GENERIC_WEBHOOK_URL"):
+        accounts = parse_multi_account_config(config["GENERIC_WEBHOOK_URL"])
+        count = min(len(accounts), max_accounts)
+        source = "环境变量" if os.environ.get("GENERIC_WEBHOOK_URL") else "配置文件"
+        notification_sources.append(f"通用Webhook({source}, {count}个账号)")
+
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")
         print(f"每个渠道最大账号数: {max_accounts}")
@@ -381,6 +437,12 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 
     # RSS 配置
     config["RSS"] = _load_rss_config(config_data)
+
+    # AI 分析配置
+    config["AI_ANALYSIS"] = _load_ai_analysis_config(config_data)
+
+    # 独立展示区配置
+    config["STANDALONE_DISPLAY"] = _load_standalone_display_config(config_data)
 
     # 存储配置
     config["STORAGE"] = _load_storage_config(config_data)

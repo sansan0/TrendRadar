@@ -382,16 +382,26 @@ class DataService:
         for platform_id, titles in titles_to_process.items():
             for title in titles.keys():
                 if extract_mode == "keywords":
-                    # 基于预设关键词统计
+                    # 基于预设关键词统计（支持正则匹配）
+                    from trendradar.core.frequency import _word_matches
+
                     word_groups = self.parser.parse_frequency_words()
+                    title_lower = title.lower()
+
                     for group in word_groups:
                         all_words = group.get("required", []) + group.get("normal", [])
-                        for word in all_words:
-                            if word and word in title:
-                                word_frequency[word] += 1
-                                if word not in keyword_to_news:
-                                    keyword_to_news[word] = []
-                                keyword_to_news[word].append(title)
+                        # 检查是否匹配词组中的任意一个词
+                        matched = any(_word_matches(word_config, title_lower) for word_config in all_words)
+
+                        if matched:
+                            # 使用组的 display_name（组别名或行别名拼接）
+                            display_key = group.get("display_name") or group.get("group_key", "")
+
+                            word_frequency[display_key] += 1
+                            if display_key not in keyword_to_news:
+                                keyword_to_news[display_key] = []
+                            keyword_to_news[display_key].append(title)
+                            break  # 每个标题只计入第一个匹配的词组
 
                 elif extract_mode == "auto_extract":
                     # 自动提取关键词
@@ -674,62 +684,82 @@ class DataService:
     def get_latest_rss(
         self,
         feeds: Optional[List[str]] = None,
+        days: int = 1,
         limit: int = 50,
         include_summary: bool = False
     ) -> List[Dict]:
         """
-        获取最新的 RSS 数据
+        获取最新的 RSS 数据（支持多日查询）
 
         Args:
             feeds: RSS 源 ID 列表，None 表示所有源
+            days: 获取最近 N 天的数据，默认 1（仅今天），最大 30 天
             limit: 返回条数限制
             include_summary: 是否包含摘要，默认 False（节省 token）
 
         Returns:
-            RSS 条目列表
+            RSS 条目列表（按 URL 去重）
 
         Raises:
             DataNotFoundError: 数据不存在
         """
-        cache_key = f"latest_rss:{','.join(feeds or [])}:{limit}:{include_summary}"
+        days = min(max(days, 1), 30)  # 限制 1-30 天
+        cache_key = f"latest_rss:{','.join(feeds or [])}:{days}:{limit}:{include_summary}"
         cached = self.cache.get(cache_key, ttl=900)
         if cached:
             return cached
 
-        # 读取今天的 RSS 数据
-        all_items, id_to_name, timestamps = self.parser.read_all_titles_for_date(
-            date=None,
-            platform_ids=feeds,
-            db_type="rss"
-        )
-
-        # 获取最新的抓取时间
-        if timestamps:
-            latest_timestamp = max(timestamps.values())
-            fetch_time = datetime.fromtimestamp(latest_timestamp)
-        else:
-            fetch_time = datetime.now()
-
-        # 转换为列表
         rss_list = []
-        for feed_id, items in all_items.items():
-            feed_name = id_to_name.get(feed_id, feed_id)
+        seen_urls = set()  # 跨日期 URL 去重
+        today = datetime.now()
 
-            for title, info in items.items():
-                rss_item = {
-                    "title": title,
-                    "feed_id": feed_id,
-                    "feed_name": feed_name,
-                    "url": info.get("url", ""),
-                    "published_at": info.get("published_at", ""),
-                    "author": info.get("author", ""),
-                    "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S")
-                }
+        for i in range(days):
+            target_date = today - timedelta(days=i)
 
-                if include_summary:
-                    rss_item["summary"] = info.get("summary", "")
+            try:
+                all_items, id_to_name, timestamps = self.parser.read_all_titles_for_date(
+                    date=target_date,
+                    platform_ids=feeds,
+                    db_type="rss"
+                )
 
-                rss_list.append(rss_item)
+                # 获取抓取时间
+                if timestamps:
+                    latest_timestamp = max(timestamps.values())
+                    fetch_time = datetime.fromtimestamp(latest_timestamp)
+                else:
+                    fetch_time = target_date
+
+                # 转换为列表
+                for feed_id, items in all_items.items():
+                    feed_name = id_to_name.get(feed_id, feed_id)
+
+                    for title, info in items.items():
+                        # 跨日期 URL 去重
+                        url = info.get("url", "")
+                        if url and url in seen_urls:
+                            continue
+                        if url:
+                            seen_urls.add(url)
+
+                        rss_item = {
+                            "title": title,
+                            "feed_id": feed_id,
+                            "feed_name": feed_name,
+                            "url": url,
+                            "published_at": info.get("published_at", ""),
+                            "author": info.get("author", ""),
+                            "date": target_date.strftime("%Y-%m-%d"),
+                            "fetch_time": fetch_time.strftime("%Y-%m-%d %H:%M:%S") if isinstance(fetch_time, datetime) else target_date.strftime("%Y-%m-%d")
+                        }
+
+                        if include_summary:
+                            rss_item["summary"] = info.get("summary", "")
+
+                        rss_list.append(rss_item)
+
+            except DataNotFoundError:
+                continue
 
         # 按发布时间排序（最新的在前）
         rss_list.sort(key=lambda x: x.get("published_at", ""), reverse=True)
@@ -751,7 +781,7 @@ class DataService:
         include_summary: bool = False
     ) -> List[Dict]:
         """
-        搜索 RSS 数据
+        搜索 RSS 数据（跨日期自动去重）
 
         Args:
             keyword: 搜索关键词
@@ -761,7 +791,7 @@ class DataService:
             include_summary: 是否包含摘要
 
         Returns:
-            匹配的 RSS 条目列表
+            匹配的 RSS 条目列表（按 URL 去重）
         """
         cache_key = f"search_rss:{keyword}:{','.join(feeds or [])}:{days}:{limit}:{include_summary}"
         cached = self.cache.get(cache_key, ttl=900)
@@ -769,6 +799,7 @@ class DataService:
             return cached
 
         results = []
+        seen_urls = set()  # 用于 URL 去重
         today = datetime.now()
 
         for i in range(days):
@@ -785,6 +816,13 @@ class DataService:
                     feed_name = id_to_name.get(feed_id, feed_id)
 
                     for title, info in items.items():
+                        # 跨日期去重：如果 URL 已出现过则跳过
+                        url = info.get("url", "")
+                        if url and url in seen_urls:
+                            continue
+                        if url:
+                            seen_urls.add(url)
+
                         # 关键词匹配（标题或摘要）
                         summary = info.get("summary", "")
                         if keyword.lower() in title.lower() or keyword.lower() in summary.lower():
@@ -792,7 +830,7 @@ class DataService:
                                 "title": title,
                                 "feed_id": feed_id,
                                 "feed_name": feed_name,
-                                "url": info.get("url", ""),
+                                "url": url,
                                 "published_at": info.get("published_at", ""),
                                 "author": info.get("author", ""),
                                 "date": target_date.strftime("%Y-%m-%d")

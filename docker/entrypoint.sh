@@ -2,8 +2,27 @@
 set -e
 
 # 检查配置文件
-if [ ! -f "/app/config/config.yaml" ] || [ ! -f "/app/config/frequency_words.txt" ]; then
-    echo "❌ 配置文件缺失"
+CONFIG_DIR="/app/config"
+MISSING_FILES=""
+
+if [ ! -f "${CONFIG_DIR}/config.yaml" ]; then
+    MISSING_FILES="${MISSING_FILES} ${CONFIG_DIR}/config.yaml"
+fi
+
+if [ ! -f "${CONFIG_DIR}/frequency_words.txt" ]; then
+    MISSING_FILES="${MISSING_FILES} ${CONFIG_DIR}/frequency_words.txt"
+fi
+
+if [ -n "${MISSING_FILES}" ]; then
+    echo "❌ 配置文件缺失: ${MISSING_FILES}"
+    echo ""
+    echo "请确保已挂载配置文件目录:"
+    echo "  - ${CONFIG_DIR}/config.yaml (主配置文件)"
+    echo "  - ${CONFIG_DIR}/frequency_words.txt (关键词配置文件)"
+    echo ""
+    echo "参考配置示例:"
+    echo "  volumes:"
+    echo "    - /path/to/your/config:/app/config:ro"
     exit 1
 fi
 

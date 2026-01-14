@@ -39,6 +39,7 @@ from trendradar.notification import (
     PushRecordManager,
 )
 from trendradar.storage import get_storage_manager
+from extensions import get_extension_manager
 
 
 class AppContext:
@@ -72,6 +73,7 @@ class AppContext:
         """
         self.config = config
         self._storage_manager = None
+        self._extension_manager = None
 
     # === 配置访问 ===
 
@@ -173,6 +175,14 @@ class AppContext:
             )
         return self._storage_manager
 
+    # === 扩展管理 ===
+
+    def get_extension_manager(self):
+        """获取扩展管理器（延迟初始化，单例）"""
+        if self._extension_manager is None:
+            self._extension_manager = get_extension_manager()
+        return self._extension_manager
+
     def get_output_path(self, subfolder: str, filename: str) -> str:
         """获取输出路径"""
         output_dir = Path("output") / self.format_date() / subfolder
@@ -184,19 +194,25 @@ class AppContext:
     def save_titles(self, results: Dict, id_to_name: Dict, failed_ids: List) -> str:
         """保存标题到文件"""
         output_path = self.get_output_path("txt", f"{self.format_time()}.txt")
-        return save_titles_to_file(results, id_to_name, failed_ids, output_path, clean_title)
+        return save_titles_to_file(
+            results, id_to_name, failed_ids, output_path, clean_title
+        )
 
     def read_today_titles(
         self, platform_ids: Optional[List[str]] = None, quiet: bool = False
     ) -> Tuple[Dict, Dict, Dict]:
         """读取当天所有标题"""
-        return read_all_today_titles(self.get_storage_manager(), platform_ids, quiet=quiet)
+        return read_all_today_titles(
+            self.get_storage_manager(), platform_ids, quiet=quiet
+        )
 
     def detect_new_titles(
         self, platform_ids: Optional[List[str]] = None, quiet: bool = False
     ) -> Dict:
         """检测最新批次的新增标题"""
-        return detect_latest_new_titles(self.get_storage_manager(), platform_ids, quiet=quiet)
+        return detect_latest_new_titles(
+            self.get_storage_manager(), platform_ids, quiet=quiet
+        )
 
     def is_first_crawl(self) -> bool:
         """检测是否是当天第一次爬取"""
@@ -302,7 +318,9 @@ class AppContext:
             output_dir="output",
             date_folder=self.format_date(),
             time_filename=self.format_time(),
-            render_html_func=lambda *args, **kwargs: self.render_html(*args, rss_items=rss_items, rss_new_items=rss_new_items, **kwargs),
+            render_html_func=lambda *args, **kwargs: self.render_html(
+                *args, rss_items=rss_items, rss_new_items=rss_new_items, **kwargs
+            ),
             matches_word_groups_func=self.matches_word_groups,
             load_frequency_words_func=self.load_frequency_words,
             enable_index_copy=True,
@@ -319,7 +337,7 @@ class AppContext:
         rss_new_items: Optional[List[Dict]] = None,
     ) -> str:
         """渲染HTML内容"""
-        return render_html_content(
+        html_content = render_html_content(
             report_data=report_data,
             total_titles=total_titles,
             is_daily_summary=is_daily_summary,
@@ -331,6 +349,12 @@ class AppContext:
             rss_new_items=rss_new_items,
             display_mode=self.display_mode,
         )
+
+        # Apply HTML post-processing from extensions
+        extension_manager = get_extension_manager()
+        html_content = extension_manager.apply_html_post_processing(html_content, self)
+
+        return html_content
 
     # === 通知内容渲染 ===
 

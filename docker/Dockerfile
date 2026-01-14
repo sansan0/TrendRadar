@@ -68,4 +68,19 @@ ENV PYTHONUNBUFFERED=1 \
     CONFIG_PATH=/app/config/config.yaml \
     FREQUENCY_WORDS_PATH=/app/config/frequency_words.txt
 
+# Default environment variables bundled in the image
+# These can be overridden in Container Manager GUI
+ENV TZ=America/Phoenix
+ENV CRON_SCHEDULE=*/30\ *\ *\ *\ *
+ENV RUN_MODE=cron
+ENV IMMEDIATE_RUN=true
+ENV ENABLE_WEBSERVER=true
+ENV WEBSERVER_PORT=8080
+
+# Note: Sensitive variables (webhooks, tokens, passwords) are NOT included
+# Configure them in Container Manager GUI when creating the container
+
+# Expose web server port for Synology Container Manager/WebStation recognition
+EXPOSE 8080
+
 ENTRYPOINT ["/entrypoint.sh"]

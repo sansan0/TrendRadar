@@ -3766,6 +3766,7 @@ python -m mcp_server
 
 - 主配置文件：`config/config.yaml`（敏感，请勿提交）
 - 配置示例：`docs/config-examples/config.example.yaml`
+- 扩展配置：`config/extensions/`（去重、AI 分析等插件配置）
 - 关键词文件：`config/frequency_words.txt`
 
 更多文档请查看 `docs/` 目录。

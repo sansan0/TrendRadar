@@ -6,6 +6,7 @@ All notable changes to this project are documented in separate version files.
 
 | Version                       | Date       | Summary                                          |
 | ----------------------------- | ---------- | ------------------------------------------------ |
+| [5.0.3](./changelog/5.0.3.md) | 2026-01-15 | ChannelFilter extension, notification scheduler  |
 | [5.0.2](./changelog/5.0.2.md) | 2026-01-14 | Documentation reorganization, naming consistency |
 | [5.0.1](./changelog/5.0.1.md) | 2026-01-14 | Extension plugin system, enhanced deduplication  |
 

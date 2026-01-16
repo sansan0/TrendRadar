@@ -2,15 +2,16 @@
 """
 Extension Base Classes
 
-Provides abstract base classes for the extension system with 4 extension points:
+Provides abstract base classes for the extension system with 5 extension points:
 - ReportDataTransform: Transform report data after stats calculation
 - HTMLRenderHook: Modify data before HTML rendering
 - KeywordMatcher: Custom keyword matching logic
 - NotificationEnhancer: Enhance notifications before sending
+- ChannelFilter: Filter notification channels before sending
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 class ExtensionPoint(ABC):
@@ -35,7 +36,7 @@ class ExtensionPoint(ABC):
     @property
     def enabled(self) -> bool:
         """Whether the plugin is enabled"""
-        return True
+        return getattr(self, "_enabled", True)
 
     def apply_config(self, config: Dict) -> None:
         """
@@ -45,7 +46,62 @@ class ExtensionPoint(ABC):
             config: Plugin configuration dictionary
         """
         self.config = config
-        self.enabled = config.get("enabled", True) if config else True
+        self._enabled = config.get("enabled", True) if config else True
+
+
+class ChannelFilter(ExtensionPoint):
+    """
+    Extension point for filtering notification channels.
+
+    This is called BEFORE notifications are sent, allowing plugins to:
+    - Filter channels based on schedule (time-based gating)
+    - Filter channels based on content type
+    - Implement custom channel selection logic
+    - Override channel-specific settings (e.g., email recipient)
+
+    Use cases:
+    - Schedule-based notifications (only send at specific times)
+    - Channel allowlist/blocklist
+    - Conditional channel selection
+    - Email recipient override per schedule
+
+    Example: A scheduler plugin could enable only feishu and telegram
+    during 9:00-10:00, and all channels during 18:00-20:00.
+    """
+
+    @abstractmethod
+    def get_enabled_channels(
+        self,
+        config: Dict[str, Any],
+        context: Any,
+    ) -> Tuple[Optional[List[str]], Optional[Dict[str, Any]], Optional[str]]:
+        """
+        Get the list of enabled notification channels, channel overrides, and frequency_words path.
+
+        This method is called before dispatching notifications, allowing
+        the plugin to filter which channels should receive notifications
+        and optionally specify a custom frequency_words configuration.
+
+        Args:
+            config: Plugin configuration dictionary
+            context: Application context (AppContext instance)
+
+        Returns:
+            Tuple of (enabled_channels, channel_overrides, frequency_words_path):
+            - enabled_channels: List of channel names to enable, or None to use default behavior
+              (all configured channels).
+              Channel names: feishu, dingtalk, wework, telegram, email, ntfy, bark, slack, generic_webhook
+            - channel_overrides: Dict with channel-specific overrides, or None.
+              Format: {"email": {"to": "recipient@example.com"}, ...}
+            - frequency_words_path: Custom frequency_words file path, or None to use default.
+              When specified, statistics will be recalculated using this file.
+
+        Note:
+            For backward compatibility, implementations may return a 2-tuple
+            (enabled_channels, channel_overrides) and ExtensionManager will
+            handle it gracefully by treating frequency_words_path as None.
+        """
+        pass
 
 
 class ReportDataTransform(ExtensionPoint):

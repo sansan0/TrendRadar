@@ -12,12 +12,45 @@ Usage:
     config = em.load_plugin_config('my_plugin')
 """
 
+import os
+import sys
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import yaml
 from loguru import logger
+
+
+def _configure_logger():
+    """Configure loguru log level based on environment or config."""
+    # Check environment variable first (highest priority for Docker)
+    log_level = os.environ.get("LOG_LEVEL", "").upper()
+
+    # If not set, try to read from config file
+    if not log_level:
+        try:
+            config_path = Path("config/config.yaml")
+            if not config_path.exists():
+                config_path = Path("/app/config/config.yaml")
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = yaml.safe_load(f) or {}
+                    debug = config.get("advanced", {}).get("debug", False)
+                    log_level = "DEBUG" if debug else "INFO"
+        except Exception:
+            log_level = "INFO"
+
+    if not log_level:
+        log_level = "INFO"
+
+    # Remove default handler and add new one with configured level
+    logger.remove()
+    logger.add(sys.stderr, level=log_level)
+
+
+# Configure logger on module import
+_configure_logger()
 
 from .base import (
     ExtensionPoint,
@@ -25,6 +58,7 @@ from .base import (
     HTMLRenderHook,
     KeywordMatcher,
     NotificationEnhancer,
+    ChannelFilter,
 )
 
 
@@ -74,7 +108,9 @@ class ExtensionManager:
                     plugin.apply_config(config)
                     logger.info(
                         "[Extension] Loaded plugin: {} v{} (enabled={})",
-                        plugin.name, plugin.version, plugin.enabled
+                        plugin.name,
+                        plugin.version,
+                        plugin.enabled,
                     )
                 else:
                     logger.warning(
@@ -204,9 +240,15 @@ class ExtensionManager:
                 try:
                     if plugin.enabled:
                         config = self.load_plugin_config(plugin.name)
-                        html_content = plugin.after_render(html_content, config, context)
+                        html_content = plugin.after_render(
+                            html_content, config, context
+                        )
                 except Exception as e:
-                    logger.error("[Extension] HTML post-processing error in {}: {}", plugin.name, e)
+                    logger.error(
+                        "[Extension] HTML post-processing error in {}: {}",
+                        plugin.name,
+                        e,
+                    )
 
         return html_content
 
@@ -280,6 +322,88 @@ class ExtensionManager:
                     logger.error("[Extension] Error in {}: {}", plugin.name, e)
 
         return content
+
+    def apply_channel_filter(
+        self,
+        config: Dict[str, Any],
+        context: Any,
+    ) -> Tuple[Optional[List[str]], Optional[Dict[str, Any]], Optional[str]]:
+        """
+        Apply all ChannelFilter plugins to get enabled channels, overrides, and frequency_words path.
+
+        This is called before dispatching notifications to allow plugins
+        to filter which channels should receive notifications and optionally
+        specify a custom frequency_words configuration.
+
+        Plugins are applied in order, and results are combined (union).
+        If any plugin returns a list of channels, those channels are included.
+        If all plugins return None, default behavior (all configured channels) is used.
+
+        Args:
+            config: Plugin configuration (shared across all ChannelFilter plugins)
+            context: Application context (AppContext instance)
+
+        Returns:
+            Tuple of (enabled_channels, channel_overrides, frequency_words_path):
+            - enabled_channels: List of enabled channel names, or None if no filtering
+            - channel_overrides: Dict with channel-specific overrides, or None
+              Format: {"email": {"to": "recipient@example.com"}, ...}
+            - frequency_words_path: Custom frequency_words file path, or None to use default.
+              The first plugin that specifies a frequency_words path will be used.
+        """
+        self._discover_plugins()
+
+        filters = [p for p in self.plugins.values() if isinstance(p, ChannelFilter)]
+        if not filters:
+            return None, None, None
+
+        all_enabled_channels: List[str] = []
+        all_channel_overrides: Dict[str, Any] = {}
+        frequency_words_path: Optional[str] = None
+
+        for plugin in filters:
+            try:
+                if plugin.enabled:
+                    plugin_config = self.load_plugin_config(plugin.name)
+                    # Merge plugin-specific config with global config
+                    merged_config = {**(config or {}), **(plugin_config or {})}
+                    result = plugin.get_enabled_channels(merged_config, context)
+                    if result is not None:
+                        # Handle both 2-tuple and 3-tuple for backward compatibility
+                        if len(result) == 2:
+                            enabled, channel_overrides = result
+                            freq_words = None
+                        else:
+                            enabled, channel_overrides, freq_words = result
+
+                        if enabled is not None:
+                            # Add enabled channels to the union
+                            for channel in enabled:
+                                if channel not in all_enabled_channels:
+                                    all_enabled_channels.append(channel)
+                        # Merge channel overrides
+                        if channel_overrides is not None:
+                            all_channel_overrides.update(channel_overrides)
+                        # First plugin that specifies frequency_words wins
+                        if freq_words and frequency_words_path is None:
+                            frequency_words_path = freq_words
+            except Exception as e:
+                logger.error(
+                    "[Extension] Error in ChannelFilter {}: {}", plugin.name, e
+                )
+
+        if not all_enabled_channels:
+            return (
+                None,
+                None if not all_channel_overrides else all_channel_overrides,
+                frequency_words_path,
+            )
+
+        return (
+            all_enabled_channels,
+            all_channel_overrides if all_channel_overrides else None,
+            frequency_words_path,
+        )
 
     def get_plugin(self, name: str) -> Optional[ExtensionPoint]:
         """

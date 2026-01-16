@@ -6,6 +6,8 @@ This plugin merges similar news titles from different platforms, reducing duplic
 and presenting cleaner, more focused results.
 """
 
+import hashlib
+import json
 import re
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -18,6 +20,23 @@ from .ollama_client import OllamaClient
 ALNUM_RE = re.compile(r"[a-zA-Z0-9]+")
 # Regex to match Chinese characters (will be split individually)
 CHINESE_RE = re.compile(r"[\u4e00-\u9fff]")
+
+# Module-level cache for deduplication results
+_dedupe_cache = {}
+
+
+def _generate_cache_key(report_data: Dict[str, Any]) -> str:
+    """
+    Generate a unique cache key from report data using MD5 hash.
+
+    Args:
+        report_data: Report data dictionary
+
+    Returns:
+        MD5 hash string of the serialized report data
+    """
+    data_str = json.dumps(report_data, sort_keys=True).encode()
+    return hashlib.md5(data_str).hexdigest()
 
 
 def transform_report_data(
@@ -50,26 +69,41 @@ def transform_report_data(
 
     logger.debug(
         "[report_dedupe] Config: strategy={}, threshold={}, max_ai_checks={}",
-        strategy, threshold, max_ai_checks
+        strategy,
+        threshold,
+        max_ai_checks,
     )
 
     client = None
     if strategy in ("ollama", "auto"):
         ollama_config = config.get("ollama", {})
+        prompt_file = config.get("prompt_file")
         client = OllamaClient(
             ollama_config.get("base_url", "http://localhost:11434"),
             ollama_config.get("model", "qwen2.5:14b-instruct"),  # Default to qwen2.5
         )
         if not client.is_available():
             client = None
-            logger.warning("[report_dedupe] Ollama not available at {}, falling back to heuristic-only mode",
-                          ollama_config.get("base_url", "http://localhost:11434"))
+            logger.warning(
+                "[report_dedupe] Ollama not available at {}, falling back to heuristic-only mode",
+                ollama_config.get("base_url", "http://localhost:11434"),
+            )
 
     ai_state = {"remaining": max_ai_checks, "client": client}
 
     # Count original titles before deduplication
     original_count = sum(len(stat.get("titles", [])) for stat in stats)
-    logger.debug("[report_dedupe] Processing {} stats with {} total titles", len(stats), original_count)
+    logger.debug(
+        "[report_dedupe] Processing {} stats with {} total titles",
+        len(stats),
+        original_count,
+    )
+
+    # Check cache before deduplication
+    cache_key = _generate_cache_key(report_data)
+    if cache_key in _dedupe_cache:
+        logger.debug("[report_dedupe] Using cached deduplication result")
+        return _dedupe_cache[cache_key]
 
     updated_stats = []
     for stat in stats:
@@ -97,10 +131,16 @@ def transform_report_data(
     merged_count = total_count
     logger.info(
         "[report_dedupe] Deduplicated {} -> {} titles ({} removed)",
-        original_count, merged_count, original_count - merged_count
+        original_count,
+        merged_count,
+        original_count - merged_count,
     )
 
     report_data["stats"] = updated_stats
+
+    # Cache the result
+    _dedupe_cache[cache_key] = report_data
+
     return report_data
 
 
@@ -116,8 +156,12 @@ def _dedupe_titles(
     if len(titles) > 1:
         logger.debug("[report_dedupe] Processing {} titles in group", len(titles))
         for i, t in enumerate(titles[:5]):  # Log first 5 titles
-            logger.debug("[report_dedupe]   {}. {} | '{}'",
-                        i+1, t.get("source_name", "?"), t.get("title", "")[:40])
+            logger.debug(
+                "[report_dedupe]   {}. {} | '{}'",
+                i + 1,
+                t.get("source_name", "?"),
+                t.get("title", "")[:40],
+            )
 
     groups: List[List[Dict[str, Any]]] = []
     for item in titles:
@@ -137,7 +181,9 @@ def _dedupe_titles(
     if multi_groups:
         for g in multi_groups:
             sources = [i.get("source_name", "?") for i in g]
-            logger.debug("[report_dedupe] Merged {} items from: {}", len(g), ", ".join(sources))
+            logger.debug(
+                "[report_dedupe] Merged {} items from: {}", len(g), ", ".join(sources)
+            )
 
     merged = [_merge_group(group, merge_config) for group in groups if group]
     merged.sort(key=_title_rank)
@@ -159,7 +205,9 @@ def _is_same_title(
     normalized_a = _normalize_title(title_a)
     normalized_b = _normalize_title(title_b)
     if normalized_a and normalized_a == normalized_b:
-        logger.debug("[report_dedupe] Exact match: '{}' == '{}'", title_a[:30], title_b[:30])
+        logger.debug(
+            "[report_dedupe] Exact match: '{}' == '{}'", title_a[:30], title_b[:30]
+        )
         return True
 
     tokens_a = _tokenize(normalized_a)
@@ -167,8 +215,12 @@ def _is_same_title(
     jaccard = _jaccard_similarity(tokens_a, tokens_b)
 
     if jaccard >= threshold:
-        logger.debug("[report_dedupe] Jaccard match ({:.3f}): '{}' ~ '{}'",
-                    jaccard, title_a[:30], title_b[:30])
+        logger.debug(
+            "[report_dedupe] Jaccard match ({:.3f}): '{}' ~ '{}'",
+            jaccard,
+            title_a[:30],
+            title_b[:30],
+        )
         return True
 
     if strategy == "heuristic":
@@ -183,10 +235,23 @@ def _is_same_title(
         return False
 
     # Use AI for borderline cases
-    logger.debug("[report_dedupe] AI check (jaccard={:.3f}): '{}' vs '{}'",
-                jaccard, title_a[:30], title_b[:30])
+    logger.debug(
+        "[report_dedupe] AI check (jaccard={:.3f}): '{}' vs '{}'",
+        jaccard,
+        title_a[:30],
+        title_b[:30],
+    )
     ai_state["remaining"] -= 1
-    result = client.judge_similarity(title_a, title_b)
+    result = client.judge_similarity(
+        title_a,
+        title_b,
+        source_a=first.get("source_name", ""),
+        source_b=second.get("source_name", ""),
+        time_a=first.get("time_display", ""),
+        time_b=second.get("time_display", ""),
+        count_a=str(first.get("count", 1)),
+        count_b=str(second.get("count", 1)),
+    )
     if not result:
         logger.debug("[report_dedupe] AI returned no result")
         return False
@@ -198,12 +263,17 @@ def _is_same_title(
         confidence = 0
 
     if same and confidence >= threshold:
-        logger.debug("[report_dedupe] AI match (confidence={:.2f}): '{}' ~ '{}'",
-                    confidence, title_a[:30], title_b[:30])
+        logger.debug(
+            "[report_dedupe] AI match (confidence={:.2f}): '{}' ~ '{}'",
+            confidence,
+            title_a[:30],
+            title_b[:30],
+        )
         return True
     else:
-        logger.debug("[report_dedupe] AI no match (same={}, conf={:.2f})",
-                    same, confidence)
+        logger.debug(
+            "[report_dedupe] AI no match (same={}, conf={:.2f})", same, confidence
+        )
         return False
 
 

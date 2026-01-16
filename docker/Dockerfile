@@ -58,6 +58,10 @@ COPY version .
 COPY trendradar/ ./trendradar/
 COPY extensions/ ./extensions/
 
+# Copy pyproject.toml and install package to register entry points for plugins
+COPY pyproject.toml .
+RUN pip install --no-cache-dir --no-deps .
+
 # 复制 entrypoint.sh 并强制转换为 LF 格式
 COPY docker/entrypoint.sh /entrypoint.sh.tmp
 RUN sed -i 's/\r$//' /entrypoint.sh.tmp && \

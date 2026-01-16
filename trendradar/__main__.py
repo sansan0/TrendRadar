@@ -21,6 +21,7 @@ from trendradar.crawler import DataFetcher
 from trendradar.storage import convert_crawl_results_to_news_data
 from trendradar.utils.time import is_within_days
 from trendradar.ai import AIAnalyzer, AIAnalysisResult
+from extensions import get_extension_manager
 
 
 def check_version_update(
@@ -602,8 +603,27 @@ class NewsAnalyzer:
             total_count = news_count + rss_count
             print(f"[推送] 准备发送：{' + '.join(content_parts)}，合计 {total_count} 条")
 
-            # 推送窗口控制
-            if cfg["PUSH_WINDOW"]["ENABLED"]:
+            # 应用 ChannelFilter 扩展点获取启用的通知渠道
+            # 注意：ChannelFilter 需要在 push_window 之前检查，因为 notification_scheduler
+            # 可以覆盖 push_window 的时间控制逻辑
+            extension_manager = get_extension_manager()
+            filter_result = extension_manager.apply_channel_filter(cfg, self.ctx)
+            # Handle both 2-tuple and 3-tuple returns for backward compatibility
+            if filter_result:
+                if len(filter_result) == 3:
+                    enabled_channels, channel_overrides, frequency_words_path = filter_result
+                else:
+                    enabled_channels, channel_overrides = filter_result
+                    frequency_words_path = None
+            else:
+                enabled_channels, channel_overrides, frequency_words_path = None, None, None
+
+            # 当 notification_scheduler 匹配了调度时间（enabled_channels 不为 None）时，
+            # 跳过 push_window 的时间窗口和 once_per_day 检查，直接使用调度器的控制
+            scheduler_matched = enabled_channels is not None
+
+            # 推送窗口控制（仅当没有 ChannelFilter 匹配时生效）
+            if cfg["PUSH_WINDOW"]["ENABLED"] and not scheduler_matched:
                 push_manager = self.ctx.create_push_manager()
                 time_range_start = cfg["PUSH_WINDOW"]["TIME_RANGE"]["START"]
                 time_range_end = cfg["PUSH_WINDOW"]["TIME_RANGE"]["END"]
@@ -621,6 +641,8 @@ class NewsAnalyzer:
                         return False
                     else:
                         print(f"推送窗口控制：今天首次推送")
+            elif scheduler_matched:
+                print(f"[通知调度] 调度器已匹配，跳过 push_window 检查")
 
             # AI 分析：优先使用传入的结果，避免重复分析
             if ai_result is None:
@@ -636,8 +658,119 @@ class NewsAnalyzer:
             # 是否发送版本更新信息
             update_info_to_send = self.update_info if cfg["SHOW_VERSION_UPDATE"] else None
 
+            # 如果指定了自定义 frequency_words，重新计算统计数据
+            if frequency_words_path:
+                print(f"[通知调度] 使用自定义关键词配置: {frequency_words_path}")
+                try:
+                    # 重新加载 frequency_words
+                    word_groups, filter_words, global_filters = self.ctx.load_frequency_words(
+                        frequency_words_path
+                    )
+
+                    # 重新读取原始数据
+                    current_platform_ids = self.ctx.platform_ids
+                    all_results, id_to_name_new, title_info = self.ctx.read_today_titles(
+                        current_platform_ids, quiet=True
+                    )
+                    new_titles_new = self.ctx.detect_new_titles(current_platform_ids, quiet=True)
+
+                    # 重新计算统计
+                    stats_new, total_titles = self.ctx.count_frequency(
+                        all_results, word_groups, filter_words, id_to_name_new,
+                        title_info, new_titles_new, mode=mode,
+                        global_filters=global_filters, quiet=True,
+                    )
+
+                    # 如果是 platform 模式，转换数据结构
+                    if self.ctx.display_mode == "platform" and stats_new:
+                        stats_new = convert_keyword_stats_to_platform_stats(
+                            stats_new,
+                            self.ctx.weight_config,
+                            self.ctx.rank_threshold,
+                        )
+
+                    # 应用扩展转换（如报告去重）
+                    report_data_new = {
+                        "stats": stats_new,
+                        "new_titles": new_titles_new or {},
+                        "failed_ids": failed_ids or [],
+                        "total_new_count": 0,
+                    }
+                    report_data_new = extension_manager.apply_transforms(report_data_new, self.ctx)
+                    stats_new = report_data_new.get("stats", stats_new)
+
+                    # 重新检查是否有有效内容
+                    has_news_content_new = self._has_valid_content(stats_new, new_titles_new)
+                    if not has_news_content_new and not has_rss_content:
+                        print("[通知调度] 自定义关键词配置下无匹配内容，跳过推送")
+                        return False
+
+                    # 更新局部变量用于后续处理
+                    stats = stats_new
+                    new_titles = new_titles_new
+                    id_to_name = id_to_name_new
+
+                    # 重新计算内容数量
+                    news_count = sum(len(stat.get("titles", [])) for stat in stats) if stats else 0
+                    print(f"[通知调度] 自定义关键词配置匹配 {news_count} 条热榜内容")
+
+                    # 重新准备报告数据
+                    report_data = self.ctx.prepare_report(stats, failed_ids, new_titles, id_to_name, mode)
+
+                except Exception as e:
+                    print(f"[通知调度] 加载自定义关键词配置失败: {e}，使用默认配置继续")
+                    # 继续使用原始的 stats 和 report_data
+
+            # 如果有启用的渠道列表，构建过滤后的配置
+            dispatcher_config = cfg.copy()
+            if enabled_channels is not None:
+                # 定义渠道配置键映射
+                channel_config_keys = {
+                    "feishu": "FEISHU_WEBHOOK_URL",
+                    "dingtalk": "DINGTALK_WEBHOOK_URL",
+                    "wework": "WEWORK_WEBHOOK_URL",
+                    "telegram": ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"),
+                    "email": ("EMAIL_FROM", "EMAIL_PASSWORD", "EMAIL_TO"),
+                    "ntfy": ("NTFY_SERVER_URL", "NTFY_TOPIC", "NTFY_TOKEN"),
+                    "bark": "BARK_URL",
+                    "slack": "SLACK_WEBHOOK_URL",
+                    "generic_webhook": (
+                        "GENERIC_WEBHOOK_URL",
+                        "GENERIC_WEBHOOK_TEMPLATE",
+                    ),
+                }
+
+                # 构建过滤后的配置，只包含启用的渠道
+                filtered_config = {}
+                for channel in enabled_channels:
+                    if channel in channel_config_keys:
+                        keys = channel_config_keys[channel]
+                        if isinstance(keys, tuple):
+                            for key in keys:
+                                if key in cfg:
+                                    filtered_config[key] = cfg[key]
+                        else:
+                            if keys in cfg:
+                                filtered_config[keys] = cfg[keys]
+
+                # 使用过滤后的配置，但保留其他必要配置
+                dispatcher_config = {**cfg, **filtered_config}
+                print(f"[通知调度] 筛选后的通知渠道: {', '.join(enabled_channels)}")
+
+            # 应用渠道配置覆盖（如邮件接收者覆盖）
+            if channel_overrides:
+                for channel, overrides in channel_overrides.items():
+                    if isinstance(overrides, dict):
+                        for key, value in overrides.items():
+                            # 构建覆盖键名，如 EMAIL_TO
+                            override_key = f"{channel.upper()}_{key}"
+                            dispatcher_config[override_key] = value
+                            if channel == "email" and key == "to":
+                                print(f"[通知调度] 邮件接收者覆盖: {value}")
+
             # 使用 NotificationDispatcher 发送到所有渠道（合并热榜+RSS+AI分析+独立展示区）
             dispatcher = self.ctx.create_notification_dispatcher()
+            dispatcher.config = dispatcher_config
             results = dispatcher.dispatch_all(
                 report_data=report_data,
                 report_type=report_type,

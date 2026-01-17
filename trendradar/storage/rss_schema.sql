@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS rss_items (
     published_at TEXT,                        -- RSS 发布时间（ISO 格式）
     summary TEXT,                             -- 摘要/描述
     author TEXT,                              -- 作者
+    crawl_date TEXT NOT NULL DEFAULT '',      -- 抓取日期（YYYY-MM-DD，用于分区查询）
     first_crawl_time TEXT NOT NULL,           -- 首次抓取时间
     last_crawl_time TEXT NOT NULL,            -- 最后抓取时间
     crawl_count INTEGER DEFAULT 1,            -- 抓取次数
@@ -75,6 +76,16 @@ CREATE TABLE IF NOT EXISTS rss_push_records (
 );
 
 -- ============================================
+-- 数据库元数据表
+-- 用于 Rolling Window 模式跟踪数据库类型和日期范围
+-- ============================================
+CREATE TABLE IF NOT EXISTS db_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- 索引定义
 -- ============================================
 
@@ -96,3 +107,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_rss_url_feed
 
 -- 抓取状态索引
 CREATE INDEX IF NOT EXISTS idx_rss_crawl_status_record ON rss_crawl_status(crawl_record_id);
+
+-- 日期索引（用于 Rolling Window 分区查询）
+CREATE INDEX IF NOT EXISTS idx_rss_crawl_date ON rss_items(crawl_date);
+
+-- 复合索引：日期+源（用于按日期和源过滤）
+CREATE INDEX IF NOT EXISTS idx_rss_date_feed ON rss_items(crawl_date, feed_id);

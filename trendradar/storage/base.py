@@ -21,6 +21,7 @@ class NewsItem:
     url: str = ""                       # 链接 URL
     mobile_url: str = ""                # 移动端 URL
     crawl_time: str = ""                # 抓取时间（HH:MM 格式）
+    crawl_date: str = ""                # 抓取日期（YYYY-MM-DD，用于 Rolling Window 分区）
 
     # 统计信息（用于分析）
     ranks: List[int] = field(default_factory=list)  # 历史排名列表
@@ -41,6 +42,7 @@ class NewsItem:
             "url": self.url,
             "mobile_url": self.mobile_url,
             "crawl_time": self.crawl_time,
+            "crawl_date": self.crawl_date,
             "ranks": self.ranks,
             "first_time": self.first_time,
             "last_time": self.last_time,
@@ -59,6 +61,7 @@ class NewsItem:
             url=data.get("url", ""),
             mobile_url=data.get("mobile_url", ""),
             crawl_time=data.get("crawl_time", ""),
+            crawl_date=data.get("crawl_date", ""),
             ranks=data.get("ranks", []),
             first_time=data.get("first_time", ""),
             last_time=data.get("last_time", ""),
@@ -79,6 +82,7 @@ class RSSItem:
     summary: str = ""                   # 摘要/描述
     author: str = ""                    # 作者
     crawl_time: str = ""                # 抓取时间（HH:MM 格式）
+    crawl_date: str = ""                # 抓取日期（YYYY-MM-DD，用于 Rolling Window 分区）
 
     # 统计信息
     first_time: str = ""                # 首次抓取时间
@@ -96,6 +100,7 @@ class RSSItem:
             "summary": self.summary,
             "author": self.author,
             "crawl_time": self.crawl_time,
+            "crawl_date": self.crawl_date,
             "first_time": self.first_time,
             "last_time": self.last_time,
             "count": self.count,
@@ -113,6 +118,7 @@ class RSSItem:
             summary=data.get("summary", ""),
             author=data.get("author", ""),
             crawl_time=data.get("crawl_time", ""),
+            crawl_date=data.get("crawl_date", ""),
             first_time=data.get("first_time", ""),
             last_time=data.get("last_time", ""),
             count=data.get("count", 1),
@@ -358,6 +364,28 @@ class StorageBackend(ABC):
         """
         pass
 
+    def detect_new_titles_sql(
+        self,
+        platform_ids: Optional[List[str]] = None,
+        date: Optional[str] = None,
+    ) -> Dict[str, Dict]:
+        """
+        使用 SQL 检测新增标题（优化版本，可选实现）
+
+        通过 SQL 子查询直接在数据库中识别新标题，避免加载全量数据到内存。
+        子类可以覆盖此方法提供优化实现。
+
+        Args:
+            platform_ids: 要检测的平台 ID 列表，None 表示所有平台
+            date: 日期字符串，默认为今天
+
+        Returns:
+            新增的标题数据 {source_id: {title: {ranks, url, mobileUrl}}}
+            如果不支持返回空字典
+        """
+        # 默认实现返回空，子类可覆盖
+        return {}
+
     @abstractmethod
     def save_txt_snapshot(self, data: NewsData) -> Optional[str]:
         """
@@ -512,6 +540,7 @@ def convert_crawl_results_to_news_data(
                 url=url,
                 mobile_url=mobile_url,
                 crawl_time=crawl_time,
+                crawl_date=crawl_date,
                 ranks=ranks,
                 first_time=crawl_time,
                 last_time=crawl_time,

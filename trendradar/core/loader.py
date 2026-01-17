@@ -270,10 +270,12 @@ def _load_storage_config(config_data: Dict) -> Dict:
     local = storage.get("local", {})
     remote = storage.get("remote", {})
     pull = storage.get("pull", {})
+    rolling_window = storage.get("rolling_window", {})
 
     txt_enabled_env = _get_env_bool("STORAGE_TXT_ENABLED")
     html_enabled_env = _get_env_bool("STORAGE_HTML_ENABLED")
     pull_enabled_env = _get_env_bool("PULL_ENABLED")
+    rolling_window_enabled_env = _get_env_bool("ROLLING_WINDOW_ENABLED")
 
     return {
         "BACKEND": _get_env_str("STORAGE_BACKEND") or storage.get("backend", "auto"),
@@ -297,6 +299,12 @@ def _load_storage_config(config_data: Dict) -> Dict:
         "PULL": {
             "ENABLED": pull_enabled_env if pull_enabled_env is not None else pull.get("enabled", False),
             "DAYS": _get_env_int("PULL_DAYS") or pull.get("days", 7),
+        },
+        "ROLLING_WINDOW": {
+            "ENABLED": rolling_window_enabled_env if rolling_window_enabled_env is not None else rolling_window.get("enabled", False),
+            "HOT_DAYS": _get_env_int("ROLLING_WINDOW_HOT_DAYS") or rolling_window.get("hot_days", 7),
+            "ARCHIVE_RETENTION_DAYS": _get_env_int("ROLLING_WINDOW_ARCHIVE_DAYS") or rolling_window.get("archive_retention_days", 90),
+            "AUTO_MAINTENANCE": rolling_window.get("auto_maintenance", True),
         },
     }
 

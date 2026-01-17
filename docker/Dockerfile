@@ -57,6 +57,7 @@ COPY docker/manage.py .
 COPY version .
 COPY trendradar/ ./trendradar/
 COPY extensions/ ./extensions/
+COPY scripts/ ./scripts/
 
 # Copy pyproject.toml and install package to register entry points for plugins
 COPY pyproject.toml .
@@ -90,3 +91,4 @@ ENV WEBSERVER_PORT=8080
 EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh"]
+CMD []

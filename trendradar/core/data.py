@@ -188,6 +188,38 @@ def detect_latest_new_titles_from_storage(
     """
     从存储后端检测最新批次的新增标题
 
+    优先使用 SQL 优化版本（如果后端支持），否则回退到 Python 内存处理。
+
+    Args:
+        storage_manager: 存储管理器实例
+        current_platform_ids: 当前监控的平台 ID 列表（用于过滤）
+
+    Returns:
+        Dict: 新增标题 {source_id: {title: title_data}}
+    """
+    try:
+        # 优先尝试 SQL 优化版本
+        if hasattr(storage_manager, 'detect_new_titles_sql'):
+            result = storage_manager.detect_new_titles_sql(current_platform_ids)
+            if result:  # 如果有结果，直接返回
+                return result
+            # 空结果可能是第一次抓取或真的没有新标题，继续检查
+
+        # 回退到原始 Python 版本
+        return _detect_latest_new_titles_python(storage_manager, current_platform_ids)
+
+    except Exception as e:
+        print(f"[存储] 从存储后端检测新标题失败: {e}")
+        return {}
+
+
+def _detect_latest_new_titles_python(
+    storage_manager,
+    current_platform_ids: Optional[List[str]] = None,
+) -> Dict:
+    """
+    使用 Python 内存处理检测新增标题（原始实现）
+
     Args:
         storage_manager: 存储管理器实例
         current_platform_ids: 当前监控的平台 ID 列表（用于过滤）
@@ -260,7 +292,7 @@ def detect_latest_new_titles_from_storage(
         return new_titles
 
     except Exception as e:
-        print(f"[存储] 从存储后端检测新标题失败: {e}")
+        print(f"[存储] Python 检测新标题失败: {e}")
         return {}
 
 

@@ -163,9 +163,24 @@ class AppContext:
             remote_config = storage_config.get("REMOTE", {})
             local_config = storage_config.get("LOCAL", {})
             pull_config = storage_config.get("PULL", {})
+            rolling_window_config = storage_config.get("ROLLING_WINDOW", {})
+
+            # Determine backend type: if rolling_window is enabled, use it
+            backend_type = storage_config.get("BACKEND", "auto")
+            if rolling_window_config.get("ENABLED", False):
+                backend_type = "rolling_window"
+
+            # Prepare rolling_window config if enabled
+            rw_config = None
+            if backend_type == "rolling_window":
+                rw_config = {
+                    "hot_days": rolling_window_config.get("HOT_DAYS", 7),
+                    "archive_retention_days": rolling_window_config.get("ARCHIVE_RETENTION_DAYS", 90),
+                    "auto_maintenance": rolling_window_config.get("AUTO_MAINTENANCE", True),
+                }
 
             self._storage_manager = get_storage_manager(
-                backend_type=storage_config.get("BACKEND", "auto"),
+                backend_type=backend_type,
                 data_dir=local_config.get("DATA_DIR", "output"),
                 enable_txt=storage_config.get("FORMATS", {}).get("TXT", True),
                 enable_html=storage_config.get("FORMATS", {}).get("HTML", True),
@@ -181,6 +196,7 @@ class AppContext:
                 pull_enabled=pull_config.get("ENABLED", False),
                 pull_days=pull_config.get("DAYS", 7),
                 timezone=self.timezone,
+                rolling_window_config=rw_config,
             )
         return self._storage_manager
 
@@ -466,9 +482,42 @@ class AppContext:
 
     # === 资源清理 ===
 
+    def run_rolling_window_maintenance(self) -> bool:
+        """Run rolling window maintenance if enabled
+
+        Returns:
+            True if maintenance was run, False otherwise
+        """
+        storage_config = self.config.get("STORAGE", {})
+        rolling_window_config = storage_config.get("ROLLING_WINDOW", {})
+
+        if not rolling_window_config.get("ENABLED", False):
+            return False
+
+        if not rolling_window_config.get("AUTO_MAINTENANCE", True):
+            return False
+
+        storage_manager = self.get_storage_manager()
+        if hasattr(storage_manager, 'run_rolling_window_maintenance'):
+            try:
+                result = storage_manager.run_rolling_window_maintenance()
+                if result:
+                    migrated = result.get('news_migrated', 0) + result.get('rss_migrated', 0)
+                    cleaned = result.get('news_cleaned', 0) + result.get('rss_cleaned', 0)
+                    if migrated > 0 or cleaned > 0:
+                        print(f"[滚动窗口] 维护完成: 归档 {migrated} 条, 清理 {cleaned} 条")
+                return True
+            except Exception as e:
+                print(f"[滚动窗口] 维护失败: {e}")
+                return False
+        return False
+
     def cleanup(self):
         """清理资源"""
         if self._storage_manager:
+            # Run rolling window maintenance before cleanup
+            self.run_rolling_window_maintenance()
+
             self._storage_manager.cleanup_old_data()
             self._storage_manager.cleanup()
             self._storage_manager = None

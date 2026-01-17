@@ -618,9 +618,10 @@ class NewsAnalyzer:
             else:
                 enabled_channels, channel_overrides, frequency_words_path = None, None, None
 
-            # 当 notification_scheduler 匹配了调度时间（enabled_channels 不为 None）时，
+            # 当 notification_scheduler 匹配了调度时间（enabled_channels 不为 None 且非空列表）时，
             # 跳过 push_window 的时间窗口和 once_per_day 检查，直接使用调度器的控制
-            scheduler_matched = enabled_channels is not None
+            # 注意：push 记录仍会正常执行，用于分析统计
+            scheduler_matched = enabled_channels is not None and len(enabled_channels) > 0
 
             # 推送窗口控制（仅当没有 ChannelFilter 匹配时生效）
             if cfg["PUSH_WINDOW"]["ENABLED"] and not scheduler_matched:
@@ -641,8 +642,12 @@ class NewsAnalyzer:
                         return False
                     else:
                         print(f"推送窗口控制：今天首次推送")
-            elif scheduler_matched:
-                print(f"[通知调度] 调度器已匹配，跳过 push_window 检查")
+            elif enabled_channels is not None:
+                # notification_scheduler 返回了结果（可能是空列表或非空列表）
+                if len(enabled_channels) > 0:
+                    print(f"[通知调度] 调度器已匹配，跳过 push_window 时间检查，但仍记录推送用于分析")
+                else:
+                    print(f"[通知调度] 调度器未匹配活跃时段，使用常规 push_window 检查")
 
             # AI 分析：优先使用传入的结果，避免重复分析
             if ai_result is None:

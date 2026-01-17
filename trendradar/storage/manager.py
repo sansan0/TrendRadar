@@ -6,7 +6,7 @@
 """
 
 import os
-from typing import Optional
+from typing import List, Optional
 
 from trendradar.storage.base import StorageBackend, NewsData, RSSData
 
@@ -21,7 +21,7 @@ class StorageManager:
 
     功能：
     - 自动检测运行环境（GitHub Actions / Docker / 本地）
-    - 根据配置选择存储后端（local / remote / auto）
+    - 根据配置选择存储后端（local / remote / auto / rolling_window）
     - 提供统一的存储接口
     - 支持从远程拉取数据到本地
     """
@@ -38,12 +38,13 @@ class StorageManager:
         pull_enabled: bool = False,
         pull_days: int = 0,
         timezone: str = "Asia/Shanghai",
+        rolling_window_config: Optional[dict] = None,
     ):
         """
         初始化存储管理器
 
         Args:
-            backend_type: 存储后端类型 (local / remote / auto)
+            backend_type: 存储后端类型 (local / remote / auto / rolling_window)
             data_dir: 本地数据目录
             enable_txt: 是否启用 TXT 快照
             enable_html: 是否启用 HTML 报告
@@ -53,6 +54,7 @@ class StorageManager:
             pull_enabled: 是否启用启动时自动拉取
             pull_days: 拉取最近 N 天的数据
             timezone: 时区配置（默认 Asia/Shanghai）
+            rolling_window_config: 滚动窗口配置（hot_days, archive_retention_days）
         """
         self.backend_type = backend_type
         self.data_dir = data_dir
@@ -64,6 +66,7 @@ class StorageManager:
         self.pull_enabled = pull_enabled
         self.pull_days = pull_days
         self.timezone = timezone
+        self.rolling_window_config = rolling_window_config or {}
 
         self._backend: Optional[StorageBackend] = None
         self._remote_backend: Optional[StorageBackend] = None
@@ -159,6 +162,22 @@ class StorageManager:
                     print("[存储管理器] 回退到本地存储")
                     resolved_type = "local"
 
+            if resolved_type == "rolling_window":
+                from trendradar.storage.local import RollingWindowLocalBackend
+
+                hot_days = self.rolling_window_config.get("hot_days", 7)
+                archive_retention_days = self.rolling_window_config.get("archive_retention_days", 90)
+
+                self._backend = RollingWindowLocalBackend(
+                    data_dir=self.data_dir,
+                    enable_txt=self.enable_txt,
+                    enable_html=self.enable_html,
+                    timezone=self.timezone,
+                    hot_days=hot_days,
+                    archive_retention_days=archive_retention_days,
+                )
+                print(f"[存储管理器] 使用滚动窗口存储后端 (热数据 {hot_days} 天，归档保留 {archive_retention_days} 天)")
+
             if resolved_type == "local" or self._backend is None:
                 from trendradar.storage.local import LocalStorageBackend
 
@@ -228,6 +247,23 @@ class StorageManager:
     def detect_new_titles(self, current_data: NewsData) -> dict:
         """检测新增标题"""
         return self.get_backend().detect_new_titles(current_data)
+
+    def detect_new_titles_sql(
+        self,
+        platform_ids: Optional[List[str]] = None,
+        date: Optional[str] = None,
+    ) -> dict:
+        """
+        使用 SQL 检测新增标题（优化版本）
+
+        Args:
+            platform_ids: 要检测的平台 ID 列表
+            date: 日期字符串
+
+        Returns:
+            新增的标题数据
+        """
+        return self.get_backend().detect_new_titles_sql(platform_ids, date)
 
     def save_txt_snapshot(self, data: NewsData) -> Optional[str]:
         """保存 TXT 快照"""
@@ -307,6 +343,36 @@ class StorageManager:
         """
         return self.get_backend().record_push(report_type, date)
 
+    # === 滚动窗口维护相关方法 ===
+
+    def run_rolling_window_maintenance(self) -> Optional[dict]:
+        """
+        运行滚动窗口维护任务
+
+        仅当使用滚动窗口后端时有效
+
+        Returns:
+            维护统计，如果不是滚动窗口后端则返回 None
+        """
+        backend = self.get_backend()
+        if hasattr(backend, "run_maintenance"):
+            return backend.run_maintenance()
+        return None
+
+    def get_rolling_window_stats(self) -> Optional[dict]:
+        """
+        获取滚动窗口存储统计
+
+        仅当使用滚动窗口后端时有效
+
+        Returns:
+            存储统计，如果不是滚动窗口后端则返回 None
+        """
+        backend = self.get_backend()
+        if hasattr(backend, "get_storage_stats"):
+            return backend.get_storage_stats()
+        return None
+
 
 def get_storage_manager(
     backend_type: str = "auto",
@@ -319,13 +385,14 @@ def get_storage_manager(
     pull_enabled: bool = False,
     pull_days: int = 0,
     timezone: str = "Asia/Shanghai",
+    rolling_window_config: Optional[dict] = None,
     force_new: bool = False,
 ) -> StorageManager:
     """
     获取存储管理器单例
 
     Args:
-        backend_type: 存储后端类型
+        backend_type: 存储后端类型 (local / remote / auto / rolling_window)
         data_dir: 本地数据目录
         enable_txt: 是否启用 TXT 快照
         enable_html: 是否启用 HTML 报告
@@ -335,6 +402,7 @@ def get_storage_manager(
         pull_enabled: 是否启用启动时自动拉取
         pull_days: 拉取最近 N 天的数据
         timezone: 时区配置（默认 Asia/Shanghai）
+        rolling_window_config: 滚动窗口配置（hot_days, archive_retention_days）
         force_new: 是否强制创建新实例
 
     Returns:
@@ -354,6 +422,7 @@ def get_storage_manager(
             pull_enabled=pull_enabled,
             pull_days=pull_days,
             timezone=timezone,
+            rolling_window_config=rolling_window_config,
         )
 
     return _storage_manager

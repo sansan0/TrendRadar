@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS news_items (
     rank INTEGER NOT NULL,
     url TEXT DEFAULT '',
     mobile_url TEXT DEFAULT '',
+    crawl_date TEXT NOT NULL DEFAULT '',  -- 抓取日期（YYYY-MM-DD，用于分区查询）
     first_crawl_time TEXT NOT NULL,      -- 首次抓取时间
     last_crawl_time TEXT NOT NULL,       -- 最后抓取时间
     crawl_count INTEGER DEFAULT 1,       -- 抓取次数
@@ -94,6 +95,16 @@ CREATE TABLE IF NOT EXISTS push_records (
 );
 
 -- ============================================
+-- 数据库元数据表
+-- 用于 Rolling Window 模式跟踪数据库类型和日期范围
+-- ============================================
+CREATE TABLE IF NOT EXISTS db_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- 索引定义
 -- ============================================
 
@@ -115,3 +126,9 @@ CREATE INDEX IF NOT EXISTS idx_crawl_status_record ON crawl_source_status(crawl_
 
 -- 排名历史索引
 CREATE INDEX IF NOT EXISTS idx_rank_history_news ON rank_history(news_item_id);
+
+-- 日期索引（用于 Rolling Window 分区查询）
+CREATE INDEX IF NOT EXISTS idx_news_crawl_date ON news_items(crawl_date);
+
+-- 复合索引：日期+平台（用于按日期和平台过滤）
+CREATE INDEX IF NOT EXISTS idx_news_date_platform ON news_items(crawl_date, platform_id);

@@ -75,6 +75,76 @@ def truncate_to_bytes(text: str, max_bytes: int) -> str:
     return ""
 
 
+def split_content_by_bytes(text: str, max_bytes: int) -> List[str]:
+    """
+    Split text into batches by byte size, respecting paragraph boundaries.
+
+    Splits content at paragraph boundaries (\n\n) when possible, falling back
+    to line boundaries (\n) if paragraphs are too large.
+
+    Args:
+        text: The text to split
+        max_bytes: Maximum bytes per batch
+
+    Returns:
+        List of text batches, each within max_bytes limit
+    """
+    if len(text.encode("utf-8")) <= max_bytes:
+        return [text]
+
+    batches = []
+    current_batch = ""
+
+    # Split by paragraphs first
+    paragraphs = text.split("\n\n")
+
+    for para in paragraphs:
+        para_with_sep = para + "\n\n" if para != paragraphs[-1] else para
+        para_bytes = len(para_with_sep.encode("utf-8"))
+
+        # Check if adding this paragraph would exceed limit
+        current_bytes = len(current_batch.encode("utf-8"))
+
+        if current_bytes + para_bytes <= max_bytes:
+            current_batch += para_with_sep
+        else:
+            # Save current batch if not empty
+            if current_batch.strip():
+                batches.append(current_batch.rstrip())
+                current_batch = ""
+
+            # If single paragraph is too large, split by lines
+            if para_bytes > max_bytes:
+                lines = para.split("\n")
+                for line in lines:
+                    line_with_sep = line + "\n"
+                    line_bytes = len(line_with_sep.encode("utf-8"))
+                    current_line_bytes = len(current_batch.encode("utf-8"))
+
+                    if current_line_bytes + line_bytes <= max_bytes:
+                        current_batch += line_with_sep
+                    else:
+                        if current_batch.strip():
+                            batches.append(current_batch.rstrip())
+                        # If single line is still too large, truncate it
+                        if line_bytes > max_bytes:
+                            current_batch = truncate_to_bytes(line, max_bytes - 10) + "...\n"
+                        else:
+                            current_batch = line_with_sep
+
+                # Add paragraph separator if there are more paragraphs
+                if para != paragraphs[-1]:
+                    current_batch += "\n"
+            else:
+                current_batch = para_with_sep
+
+    # Don't forget the last batch
+    if current_batch.strip():
+        batches.append(current_batch.rstrip())
+
+    return batches if batches else [text[:max_bytes]]
+
+
 def add_batch_headers(
     batches: List[str], format_type: str, max_bytes: int
 ) -> List[str]:

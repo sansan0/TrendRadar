@@ -92,7 +92,7 @@
 
 ### 推广助力
 
-> 感谢以下平台和个人的推荐(按时间排列)
+> 感谢以下平台和个人的推荐(按时间排列)，谢谢
 
 - [小众软件](https://mp.weixin.qq.com/s/fvutkJ_NPUelSW9OGK39aA) - 开源软件推荐平台
 - [LinuxDo 社区](https://linux.do/) - 技术爱好者的聚集地

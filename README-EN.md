@@ -718,6 +718,7 @@ This update refactors the push message structure into five distinct core section
 
 **Config File Description**:
 - `config/config.yaml` - Main config file (application settings, crawler config, notification config, platform config, etc.)
+  > ⚠️ **Note**: For first-time use, please copy `config/config.example.yaml` to `config/config.yaml`, then modify the configuration as needed. `config.yaml` is ignored by `.gitignore` and will not be committed to the repository.
 - `config/frequency_words.txt` - Keyword config (monitoring vocabulary settings)
 
 

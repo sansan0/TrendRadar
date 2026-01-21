@@ -1,10 +1,11 @@
-from nicegui import ui
+from nicegui import ui, app
 from fastapi import Request
 from app.models.user import User, InviteCode
 from app.core.database import AsyncSessionLocal
 from sqlalchemy import select
 from passlib.context import CryptContext
 import logging
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,8 +36,11 @@ class AuthManager:
 
                     if user and user.verify_password(password.value):
                          ui.notify("Login successful!", type='positive')
-                         # In a real app we'd set a cookie/session here
-                         # For this single-page app demo, we just navigate
+                         # Store user in session
+                         app.storage.user['user_id'] = user.id
+                         app.storage.user['username'] = user.username
+                         app.storage.user['role'] = user.role
+
                          ui.navigate.to('/')
                     else:
                         ui.notify("Invalid credentials", color='negative')

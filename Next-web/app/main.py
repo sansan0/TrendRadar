@@ -41,11 +41,9 @@ async def startup():
 # Main Layout
 @ui.page('/')
 async def index():
-    # Simple Auth Check (Mock)
-    # In real app, check session storage or cookie
-    # user = app.storage.user.get('user_id')
-    # if not user:
-    #     return ui.navigate.to('/login')
+    # Auth Check
+    if not app.storage.user.get('user_id'):
+        return ui.navigate.to('/login')
 
     with ui.header().classes(replace='row items-center') as header:
         ui.button(on_click=lambda: left_drawer.toggle(), icon='menu').props('flat color=white')
@@ -57,7 +55,11 @@ async def index():
         dark = ui.dark_mode()
         ui.button(icon='dark_mode', on_click=dark.toggle).props('flat color=white')
 
-        ui.button(icon='logout', on_click=lambda: ui.notify("Logout mocked")).props('flat color=white')
+        def logout():
+            app.storage.user.clear()
+            ui.navigate.to('/login')
+
+        ui.button(icon='logout', on_click=logout).props('flat color=white')
 
     with ui.left_drawer(value=True).classes('bg-slate-100 dark:bg-slate-800') as left_drawer:
         ui.label("Menu").classes('text-gray-500 text-sm font-bold px-4 py-2')

@@ -6,6 +6,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.config import config
 from app.models.news import NewsItem, AIAnalysis
 from sqlalchemy import select, func, text
+import litellm
 
 async def news_page():
     ui.label("News Management").classes('text-2xl font-bold mb-4')
@@ -100,6 +101,9 @@ async def news_page():
     await load_data()
 
     # AI Polish & TTS Logic (Popup)
+    # State container for current dialog context
+    dialog_context = {'news_id': None, 'tts_text': ''}
+
     def on_row_click(e):
         if not e.args or 'data' not in e.args:
             return
@@ -124,7 +128,15 @@ async def news_page():
                 tts_status = ui.label("Ready to generate audio.")
                 audio_player = ui.audio('').classes('w-full hidden')
 
-                async def generate_audio(text_content, news_id):
+                async def generate_audio():
+                    # Read from context
+                    news_id = dialog_context['news_id']
+                    text_content = dialog_context['tts_text']
+
+                    if not news_id or not text_content:
+                         tts_status.text = "No content to synthesize."
+                         return
+
                     tts_status.text = "Generating audio..."
                     try:
                         # Ensure output dir exists
@@ -139,7 +151,6 @@ async def news_page():
                         await communicate.save(filepath)
 
                         # Set audio source (assuming static mount)
-                        # Add random query param to bypass browser cache if file changed
                         import time
                         audio_url = f"/static/audio/{filename}?t={int(time.time())}"
                         audio_player.props(f'src={audio_url}')
@@ -150,11 +161,12 @@ async def news_page():
                     except Exception as e:
                         tts_status.text = f"Error: {e}"
 
-                btn_generate_tts = ui.button('Generate Audio', icon='mic')
+                btn_generate_tts = ui.button('Generate Audio', icon='mic', on_click=generate_audio)
 
 
         async def run_ai(row):
             news_id = row['id']
+            dialog_context['news_id'] = news_id
             dialog_content.content = "Checking cache..."
 
             async with AsyncSessionLocal() as session:
@@ -168,32 +180,48 @@ async def news_page():
                     dialog_content.content = analysis_text
                 else:
                     dialog_content.content = "Generating AI Analysis..."
-                    # Mock AI call (simulate delay)
-                    await asyncio.sleep(1.5)
 
-                    # Generate content
-                    analysis_text = f"**AI Summary for {row['title']}:**\n\n" \
-                                    f"This article from {row['platform']} discusses key trends. " \
-                                    f"Our analysis indicates high relevance to the current tech landscape. " \
-                                    f"\n\n*Analyzed by TrendRadar AI*"
+                    # Call LiteLLM
+                    try:
+                         # Check if API Key is set
+                         api_key = os.getenv("OPENAI_API_KEY") or os.getenv("AI_API_KEY")
+                         if not api_key:
+                             # Fallback to mock if no key
+                             await asyncio.sleep(1.5)
+                             analysis_text = f"**AI Summary for {row['title']}:**\n\n" \
+                                             f"This is a mocked analysis because 'AI_API_KEY' is not set.\n" \
+                                             f"Platform: {row['platform']}\n" \
+                                             f"Source Date: {row['source_db_date']}"
+                         else:
+                             # Real Call
+                             # Use a default model or env var
+                             model = os.getenv("AI_MODEL", "gpt-3.5-turbo")
+                             response = await litellm.acompletion(
+                                 model=model,
+                                 messages=[
+                                     {"role": "system", "content": "You are a helpful news analyst. Summarize this news title and context in Chinese."},
+                                     {"role": "user", "content": f"Title: {row['title']}\nSummary: {row.get('summary', '')}"}
+                                 ],
+                                 api_key=api_key
+                             )
+                             analysis_text = response.choices[0].message.content
+
+                    except Exception as e:
+                        analysis_text = f"AI Generation Failed: {str(e)}"
 
                     # Save to Cache
                     new_analysis = AIAnalysis(
                         news_id=news_id,
                         analysis_text=analysis_text,
-                        model_used="mock-model-v1"
+                        model_used=os.getenv("AI_MODEL", "mock") if api_key else "mock"
                     )
                     session.add(new_analysis)
                     await session.commit()
 
                     dialog_content.content = analysis_text
 
-            # Update TTS button action
-            tts_text = f"{row['title']}。{analysis_text.replace('*', '')}"
-            # Remove existing listeners to avoid duplicates if reopened?
-            # NiceGUI button click handlers accumulate if added repeatedly on same instance?
-            # Re-creating button or cleaning up is safer.
-            btn_generate_tts.on('click', lambda: generate_audio(tts_text, row['id']), replace=True)
+            # Update TTS text in context
+            dialog_context['tts_text'] = f"{row['title']}。{analysis_text.replace('*', '')}"
 
         ui.button('Close', on_click=dialog.close)
 

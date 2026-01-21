@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua
 COPY . .
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8086
 
 # Environment variables
 ENV PYTHONPATH=/app

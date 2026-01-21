@@ -20,7 +20,7 @@ docker-compose up -d --build
 ```
 
 ### 3. 访问系统
-- Web 界面: http://localhost:8080
+- Web 界面: http://localhost:8086
 - 默认管理员账号: `admin` / `123456`
 
 ## 开发说明

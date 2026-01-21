@@ -105,5 +105,5 @@ ui.run(
     title="TrendRadar Next",
     favicon="🚀",
     storage_secret=config.SECRET_KEY,
-    port=8080,
+    port=8086,
 )

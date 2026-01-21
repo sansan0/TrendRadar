@@ -771,6 +771,7 @@
 
 **配置文件说明**：
 - `config/config.yaml` - 主配置文件（应用设置、爬虫配置、通知配置、平台配置等）
+  > ⚠️ **注意**：首次使用请复制 `config/config.example.yaml` 为 `config/config.yaml`，然后根据需要修改配置。`config.yaml` 已被 `.gitignore` 忽略，不会提交到仓库。
 - `config/frequency_words.txt` - 关键词配置（监控词汇设置）
 
 ### 2025/07/09 - v1.4.1

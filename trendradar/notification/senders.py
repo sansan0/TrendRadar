@@ -1382,3 +1382,151 @@ def send_to_generic_webhook(
     print(f"{log_prefix}所有 {len(batches)} 批次发送完成 [{report_type}]")
 
     return True
+
+def send_to_langbot(
+    api_base: str,
+    bot_uuid: str,
+    api_key: str,
+    target_type: str,
+    target_id: str,
+    report_data: Dict,
+    report_type: str,
+    update_info: Optional[Dict] = None,
+    proxy_url: Optional[str] = None,
+    mode: str = "daily",
+    account_label: str = "",
+    *,
+    batch_size: int = 4000,
+    batch_interval: float = 1.0,
+    split_content_func: Optional[Callable] = None,
+    rss_items: Optional[list] = None,
+    rss_new_items: Optional[list] = None,
+    ai_analysis: Any = None,
+    display_regions: Optional[Dict] = None,
+    standalone_data: Optional[Dict] = None,
+) -> bool:
+    """
+    发送到 Langbot（支持分批发送，支持热榜+RSS合并+独立展示区）
+
+    Args:
+        api_base: Langbot API 地址
+        bot_uuid: Langbot Bot UUID
+        api_key: Langbot API Key
+        target_type: 目标类型（group/private）
+        target_id: 目标 ID
+        report_data: 报告数据
+        report_type: 报告类型
+        update_info: 更新信息（可选）
+        proxy_url: 代理 URL（可选）
+        mode: 报告模式 (daily/current)
+        account_label: 账号标签（多账号时显示）
+        batch_size: 批次大小（字节）
+        batch_interval: 批次发送间隔（秒）
+        split_content_func: 内容分批函数
+        rss_items: RSS 统计条目列表（可选，用于合并推送）
+        rss_new_items: RSS 新增条目列表（可选，用于新增区块）
+
+    Returns:
+        bool: 发送是否成功
+    """
+    if split_content_func is None:
+        raise ValueError("split_content_func is required")
+
+    headers = {
+        "X-Api-Key": api_key,
+        "Content-Type": "application/json"
+    }
+
+    # 构建完整的 API URL
+    api_url = f"{api_base.rstrip('/')}/api/v1/platform/bots/{bot_uuid}/send_message"
+
+    proxies = None
+    if proxy_url:
+        proxies = {"http": proxy_url, "https": proxy_url}
+
+    # 日志前缀
+    log_prefix = f"Langbot{account_label}" if account_label else "Langbot"
+
+    # 渲染 AI 分析内容（如果有）
+    ai_content = None
+    ai_stats = None
+    if ai_analysis:
+        # Langbot 使用 markdown 格式渲染 AI 分析
+        ai_content = _render_ai_analysis(ai_analysis, "wework")
+        # 提取 AI 分析统计数据
+        if getattr(ai_analysis, "success", False):
+            ai_stats = {
+                "total_news": getattr(ai_analysis, "total_news", 0),
+                "analyzed_news": getattr(ai_analysis, "analyzed_news", 0),
+                "max_news_limit": getattr(ai_analysis, "max_news_limit", 0),
+                "hotlist_count": getattr(ai_analysis, "hotlist_count", 0),
+                "rss_count": getattr(ai_analysis, "rss_count", 0),
+            }
+
+    # 获取分批内容
+    # 使用 'wework' 作为 format_type 以获取 markdown 格式的通用输出
+    # 预留一定空间给模板外壳
+    template_overhead = 200
+    batches = split_content_func(
+        report_data, "wework", update_info, max_bytes=batch_size - template_overhead, mode=mode,
+        rss_items=rss_items,
+        rss_new_items=rss_new_items,
+        ai_content=ai_content,
+        standalone_data=standalone_data,
+        ai_stats=ai_stats,
+        report_type=report_type,
+    )
+
+    # 统一添加批次头部
+    batches = add_batch_headers(batches, "wework", batch_size)
+
+    print(f"{log_prefix}消息分为 {len(batches)} 批次发送 [{report_type}]")
+
+    # 逐批发送
+    for i, batch_content in enumerate(batches, 1):
+        content_size = len(batch_content.encode("utf-8"))
+        print(
+            f"发送{log_prefix}第 {i}/{len(batches)} 批次，大小：{content_size} 字节 [{report_type}]"
+        )
+
+        # 构建 Langbot payload
+        payload = {
+            "target_type": target_type,
+            "target_id": target_id,
+            "message_chain": [
+                {
+                    "type": "Plain",
+                    "text": batch_content
+                }
+            ]
+        }
+
+        try:
+            response = requests.post(
+                api_url, headers=headers, json=payload, proxies=proxies, timeout=30
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                # 检查 Langbot 的响应
+                if result.get("code") == 0 and result.get("data", {}).get("sent"):
+                    print(f"{log_prefix}第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
+                    if i < len(batches):
+                        time.sleep(batch_interval)
+                else:
+                    print(
+                        f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{result.get('msg', '未知错误')}"
+                    )
+                    return False
+            else:
+                print(
+                    f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}, 响应: {response.text}"
+                )
+                return False
+        except Exception as e:
+            print(f"{log_prefix}第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
+            return False
+
+    print(f"{log_prefix}所有 {len(batches)} 批次发送完成 [{report_type}]")
+
+    return True

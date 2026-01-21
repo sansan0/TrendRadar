@@ -26,6 +26,7 @@ from .senders import (
     send_to_dingtalk,
     send_to_email,
     send_to_feishu,
+    send_to_langbot,
     send_to_ntfy,
     send_to_slack,
     send_to_telegram,
@@ -245,6 +246,18 @@ class NotificationDispatcher:
         # Slack
         if self.config.get("SLACK_WEBHOOK_URL"):
             results["slack"] = self._send_slack(
+                report_data, report_type, update_info, proxy_url, mode, rss_items, rss_new_items,
+                ai_analysis, display_regions, standalone_data
+            )
+
+        # Langbot
+        if (
+            self.config.get("LANGBOT_API_BASE")
+            and self.config.get("LANGBOT_BOT_UUID")
+            and self.config.get("LANGBOT_API_KEY")
+            and self.config.get("LANGBOT_TARGET_ID")
+        ):
+            results["langbot"] = self._send_langbot(
                 report_data, report_type, update_info, proxy_url, mode, rss_items, rss_new_items,
                 ai_analysis, display_regions, standalone_data
             )
@@ -631,6 +644,85 @@ class NotificationDispatcher:
                 standalone_data=standalone_data if display_regions.get("STANDALONE", False) else None,
             ),
         )
+
+    def _send_langbot(
+        self,
+        report_data: Dict,
+        report_type: str,
+        update_info: Optional[Dict],
+        proxy_url: Optional[str],
+        mode: str,
+        rss_items: Optional[List[Dict]] = None,
+        rss_new_items: Optional[List[Dict]] = None,
+        ai_analysis: Optional[AIAnalysisResult] = None,
+        display_regions: Optional[Dict] = None,
+        standalone_data: Optional[Dict] = None,
+    ) -> bool:
+        """发送到 Langbot（多账号，需验证配置，支持热榜+RSS合并+AI分析+独立展示区）"""
+        display_regions = display_regions or {}
+        if not display_regions.get("HOTLIST", True):
+            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+
+        # 解析多账号配置
+        api_bases = parse_multi_account_config(self.config.get("LANGBOT_API_BASE", ""))
+        bot_uuids = parse_multi_account_config(self.config.get("LANGBOT_BOT_UUID", ""))
+        api_keys = parse_multi_account_config(self.config.get("LANGBOT_API_KEY", ""))
+        target_ids = parse_multi_account_config(self.config.get("LANGBOT_TARGET_ID", ""))
+
+        if not api_bases or not bot_uuids or not api_keys or not target_ids:
+            return False
+
+        # 验证配对
+        valid, count = validate_paired_configs(
+            {
+                "api_base": api_bases,
+                "bot_uuid": bot_uuids,
+                "api_key": api_keys,
+                "target_id": target_ids,
+            },
+            "Langbot",
+            required_keys=["api_base", "bot_uuid", "api_key", "target_id"],
+        )
+        if not valid or count == 0:
+            return False
+
+        # 限制账号数量
+        api_bases = limit_accounts(api_bases, self.max_accounts, "Langbot")
+        bot_uuids = bot_uuids[: len(api_bases)]
+        api_keys = api_keys[: len(api_bases)]
+        target_ids = target_ids[: len(api_bases)]
+
+        # 获取 target_type 配置（单值，所有账号共用）
+        target_type = self.config.get("LANGBOT_TARGET_TYPE", "group")
+
+        results = []
+        for i in range(len(api_bases)):
+            if api_bases[i] and bot_uuids[i] and api_keys[i] and target_ids[i]:
+                account_label = f"账号{i+1}" if len(api_bases) > 1 else ""
+                result = send_to_langbot(
+                    api_base=api_bases[i],
+                    bot_uuid=bot_uuids[i],
+                    api_key=api_keys[i],
+                    target_type=target_type,
+                    target_id=target_ids[i],
+                    report_data=report_data,
+                    report_type=report_type,
+                    update_info=update_info,
+                    proxy_url=proxy_url,
+                    mode=mode,
+                    account_label=account_label,
+                    batch_size=self.config.get("LANGBOT_BATCH_SIZE", 20000),
+                    batch_interval=self.config.get("BATCH_SEND_INTERVAL", 1.0),
+                    split_content_func=self.split_content_func,
+                    rss_items=rss_items if display_regions.get("RSS", True) else None,
+                    rss_new_items=rss_new_items if display_regions.get("RSS", True) else None,
+                    ai_analysis=ai_analysis if display_regions.get("AI_ANALYSIS", True) else None,
+                    display_regions=display_regions,
+                    standalone_data=standalone_data if display_regions.get("STANDALONE", False) else None,
+                )
+                results.append(result)
+
+        return any(results) if results else False
 
     def _send_generic_webhook(
         self,

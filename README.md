@@ -406,7 +406,7 @@
 **🎉 核心功能增强**
 
 1. **多账号推送支持**
-   - 所有推送渠道（飞书、钉钉、企业微信、Telegram、ntfy、Bark、Slack）支持多账号配置
+   - 所有推送渠道（飞书、钉钉、企业微信、Telegram、ntfy、Bark、Slack、Langbot）支持多账号配置
    - 使用分号 `;` 分隔多个账号，例如：`FEISHU_WEBHOOK_URL=url1;url2`
    - 自动验证配对配置（如 Telegram 的 token 和 chat_id）数量一致性
 
@@ -944,7 +944,7 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 ### **多渠道多账号推送**
 
-支持**企业微信**(+ 微信推送方案)、**飞书**、**钉钉**、**Telegram**、**邮件**、**ntfy**、**Bark**、**Slack**，消息直达手机和邮箱
+支持**企业微信**(+ 微信推送方案)、**飞书**、**钉钉**、**Telegram**、**邮件**、**ntfy**、**Bark**、**Slack**、**Langbot**，消息直达手机和邮箱
 
 > 💡 详细配置教程见 [推送到多个群/设备](#10-推送到多个群设备)
 
@@ -1739,6 +1739,118 @@ ai_translation:
    - ✅ 支持多账号配置（用 `;` 分隔）
    - ⚠️ 模板必须是有效的 JSON 格式
    - ⚠️ 不同平台对消息格式要求不同，请参考目标平台文档
+
+   </details>
+
+   <details>
+   <summary>👉 点击展开：<strong>Langbot 推送</strong>（支持 QQ/微信/Telegram 等多平台聊天机器人）</summary>
+   <br>
+
+   **GitHub Secret 配置（⚠️ Name 名称必须严格一致）：**
+   - **Name（名称）**：`LANGBOT_API_BASE`（请复制粘贴此名称，不要手打）
+   - **Secret（值）**：Langbot API 地址（如 `http://192.168.1.100:5301`）
+
+   - **Name（名称）**：`LANGBOT_BOT_UUID`（请复制粘贴此名称，不要手打）
+   - **Secret（值）**：你的 Bot UUID
+
+   - **Name（名称）**：`LANGBOT_API_KEY`（请复制粘贴此名称，不要手打）
+   - **Secret（值）**：你的 API Key（格式：`lbk_xxx`）
+
+   - **Name（名称）**：`LANGBOT_TARGET_TYPE`（请复制粘贴此名称，不要手打）
+   - **Secret（值）**：目标类型（`group` 或 `private`）
+
+   - **Name（名称）**：`LANGBOT_TARGET_ID`（请复制粘贴此名称，不要手打）
+   - **Secret（值）**：目标 ID（群号或用户 ID）
+
+   **说明**：Langbot 需要配置**5个** Secret，请分别点击五次"New repository secret"按钮添加
+
+   <br>
+
+   **Langbot 简介：**
+
+   Langbot 是一个多平台聊天机器人框架，支持：
+   - **QQ**：通过 QQ 机器人推送到 QQ 群或私聊
+   - **微信**：通过微信机器人推送（需配合 WeChat Hook）
+   - **Telegram**：直接推送到 Telegram 群组或用户
+   - **其他平台**：支持扩展接入更多平台
+
+   **设置步骤：**
+
+   ### 步骤 1：部署 Langbot 服务
+
+   1. **安装 Langbot**：
+      - 访问 [Langbot 官网](https://langbot.app/) 或 GitHub 仓库
+      - 按照官方文档部署 Langbot 服务
+      - 记录下服务地址（如 `http://192.168.1.100:5301`）
+
+   2. **创建机器人**：
+      - 登录 Langbot 管理后台
+      - 创建新的机器人实例
+      - 配置机器人连接到目标平台（QQ/微信/Telegram 等）
+      - 获取 Bot UUID 和 API Key
+
+   ### 步骤 2：获取目标 ID
+
+   **QQ 群推送**：
+   - `target_type`：`group`
+   - `target_id`：QQ 群号（如 `123456789`）
+
+   **QQ 私聊推送**：
+   - `target_type`：`private`
+   - `target_id`：QQ 号（如 `987654321`）
+
+   **微信群推送**：
+   - `target_type`：`group`
+   - `target_id`：微信群 ID（从 Langbot 管理后台获取）
+
+   ### 步骤 3：配置到 TrendRadar
+
+   **GitHub Actions**：
+   在 GitHub Secrets 中添加上述 5 个配置项
+
+   **Docker 部署**：
+   在 `docker/.env` 文件中添加：
+   ```env
+   LANGBOT_API_BASE=http://192.168.1.100:5301
+   LANGBOT_BOT_UUID=your_bot_uuid
+   LANGBOT_API_KEY=lbk_your_api_key
+   LANGBOT_TARGET_TYPE=group
+   LANGBOT_TARGET_ID=123456789
+   ```
+
+   **本地运行**：
+   在 `config/config.yaml` 中配置：
+   ```yaml
+   notification:
+     channels:
+       langbot:
+         api_base: "http://192.168.1.100:5301"
+         bot_uuid: "your_bot_uuid"
+         api_key: "lbk_your_api_key"
+         target_type: "group"
+         target_id: "123456789"
+   ```
+
+   ---
+
+   **注意事项：**
+   - ✅ 支持 Markdown 格式（纯文本显示）
+   - ✅ 支持自动分批推送
+   - ✅ 支持热榜+RSS合并+独立展示区
+   - ✅ 支持 AI 分析内容推送
+   - ⚠️ 需要自行部署 Langbot 服务
+   - ⚠️ API Base 地址必须能从运行环境访问（GitHub Actions 需要公网地址）
+   - ⚠️ 建议使用内网部署，配合 Docker 版本使用
+
+   **使用场景：**
+   - 想在 QQ 群接收热点推送
+   - 需要微信机器人推送（企业微信之外的选择）
+   - 已有 Langbot 机器人，希望复用现有基础设施
+   - 需要统一管理多个平台的机器人推送
+
+   **相关链接：**
+   - [Langbot 官方网站](https://langbot.app/)
+   - [Langbot GitHub](https://github.com/langgenius/langbot)（如有开源版本）
 
    </details>
 

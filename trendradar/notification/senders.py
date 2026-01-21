@@ -1412,7 +1412,7 @@ def send_to_langbot(
         api_base: Langbot API 地址
         bot_uuid: Langbot Bot UUID
         api_key: Langbot API Key
-        target_type: 目标类型（group/private）
+        target_type: 目标类型（group/person）
         target_id: 目标 ID
         report_data: 报告数据
         report_type: 报告类型

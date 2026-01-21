@@ -8,10 +8,10 @@ import re
 from collections import Counter
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from ..services.data_service import DataService
-from ..utils.validators import validate_keyword, validate_limit
+from ..utils.validators import validate_keyword, validate_limit, validate_threshold, normalize_date_range
 from ..utils.errors import MCPError, InvalidParameterError, DataNotFoundError
 
 
@@ -26,28 +26,22 @@ class SearchTools:
             project_root: 项目根目录
         """
         self.data_service = DataService(project_root)
-        # 中文停用词列表
-        self.stopwords = {
-            '的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一',
-            '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有',
-            '看', '好', '自己', '这', '那', '来', '被', '与', '为', '对', '将', '从',
-            '以', '及', '等', '但', '或', '而', '于', '中', '由', '可', '可以', '已',
-            '已经', '还', '更', '最', '再', '因为', '所以', '如果', '虽然', '然而'
-        }
 
     def search_news_unified(
         self,
         query: str,
         search_mode: str = "keyword",
-        date_range: Optional[Dict[str, str]] = None,
+        date_range: Optional[Union[Dict[str, str], str]] = None,
         platforms: Optional[List[str]] = None,
         limit: int = 50,
         sort_by: str = "relevance",
         threshold: float = 0.6,
-        include_url: bool = False
+        include_url: bool = False,
+        include_rss: bool = False,
+        rss_limit: int = 20
     ) -> Dict:
         """
-        统一新闻搜索工具 - 整合多种搜索模式
+        统一新闻搜索工具 - 整合多种搜索模式，支持同时搜索热榜和RSS
 
         Args:
             query: 查询内容（必需）- 关键词、内容片段或实体名称
@@ -61,21 +55,24 @@ class SearchTools:
                        - **默认**: 不指定时默认查询今天
                        - **注意**: start和end可以相同（表示单日查询）
             platforms: 平台过滤列表，如 ['zhihu', 'weibo']
-            limit: 返回条数限制，默认50
+            limit: 热榜返回条数限制，默认50
             sort_by: 排序方式，可选值：
                 - "relevance": 按相关度排序（默认）
                 - "weight": 按新闻权重排序
                 - "date": 按日期排序
             threshold: 相似度阈值（仅fuzzy模式有效），0-1之间，默认0.6
             include_url: 是否包含URL链接，默认False（节省token）
+            include_rss: 是否同时搜索RSS数据，默认False
+            rss_limit: RSS返回条数限制，默认20
 
         Returns:
-            搜索结果字典，包含匹配的新闻列表
+            搜索结果字典，包含匹配的新闻列表（热榜和RSS分开展示）
 
         Examples:
             - search_news_unified(query="人工智能", search_mode="keyword")
             - search_news_unified(query="特斯拉降价", search_mode="fuzzy", threshold=0.4)
             - search_news_unified(query="马斯克", search_mode="entity", limit=20)
+            - search_news_unified(query="AI", include_rss=True)  # 同时搜索热榜和RSS
             - search_news_unified(query="iPhone 16", date_range={"start": "2025-01-01", "end": "2025-01-07"})
         """
         try:
@@ -95,7 +92,7 @@ class SearchTools:
                 )
 
             limit = validate_limit(limit, default=50)
-            threshold = max(0.0, min(1.0, threshold))
+            threshold = validate_threshold(threshold, default=0.6, min_value=0.0, max_value=1.0)
 
             # 处理日期范围
             if date_range:
@@ -206,8 +203,9 @@ class SearchTools:
             result = {
                 "success": True,
                 "summary": {
+                    "description": f"新闻搜索结果（{search_mode}模式）",
                     "total_found": len(all_matches),
-                    "returned_count": len(results),
+                    "returned": len(results),
                     "requested_limit": limit,
                     "search_mode": search_mode,
                     "query": query,
@@ -215,13 +213,28 @@ class SearchTools:
                     "time_range": time_range_desc,
                     "sort_by": sort_by
                 },
-                "results": results
+                "data": results
             }
 
             if search_mode == "fuzzy":
                 result["summary"]["threshold"] = threshold
                 if len(all_matches) < limit:
                     result["note"] = f"模糊搜索模式下，相似度阈值 {threshold} 仅匹配到 {len(all_matches)} 条结果"
+
+            # 如果启用 RSS 搜索，同时搜索 RSS 数据
+            if include_rss:
+                rss_results = self._search_rss_by_keyword(
+                    query=query,
+                    start_date=start_date,
+                    end_date=end_date,
+                    limit=rss_limit,
+                    include_url=include_url
+                )
+                result["rss"] = rss_results["items"]
+                result["rss_total"] = rss_results["total"]
+                result["summary"]["include_rss"] = True
+                result["summary"]["rss_found"] = rss_results["total"]
+                result["summary"]["rss_returned"] = len(rss_results["items"])
 
             return result
 
@@ -457,11 +470,8 @@ class SearchTools:
         # 使用正则表达式分词（中文和英文）
         words = re.findall(r'[\w]+', text)
 
-        # 过滤停用词和短词
-        keywords = [
-            word for word in words
-            if word and len(word) >= min_length and word not in self.stopwords
-        ]
+        # 过滤短词
+        keywords = [word for word in words if word and len(word) >= min_length]
 
         return keywords
 
@@ -491,9 +501,34 @@ class SearchTools:
 
         return intersection / union
 
+    def _jaccard_similarity(self, list1: List[str], list2: List[str]) -> float:
+        """
+        计算两个列表的 Jaccard 相似度
+
+        Args:
+            list1: 列表1
+            list2: 列表2
+
+        Returns:
+            Jaccard 相似度 (0-1之间)
+        """
+        if not list1 or not list2:
+            return 0.0
+
+        set1 = set(list1)
+        set2 = set(list2)
+
+        intersection = len(set1 & set2)
+        union = len(set1 | set2)
+
+        if union == 0:
+            return 0.0
+
+        return intersection / union
+
     def search_related_news_history(
         self,
-        reference_text: str,
+        reference_title: str,
         time_preset: str = "yesterday",
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
@@ -505,7 +540,7 @@ class SearchTools:
         在历史数据中搜索与给定新闻相关的新闻
 
         Args:
-            reference_text: 参考新闻标题或内容
+            reference_title: 参考新闻标题或内容
             time_preset: 时间范围预设值，可选：
                 - "yesterday": 昨天
                 - "last_week": 上周 (7天)
@@ -523,7 +558,7 @@ class SearchTools:
         Example:
             >>> tools = SearchTools()
             >>> result = tools.search_related_news_history(
-            ...     reference_text="人工智能技术突破",
+            ...     reference_title="人工智能技术突破",
             ...     time_preset="last_week",
             ...     threshold=0.4,
             ...     limit=50
@@ -533,8 +568,8 @@ class SearchTools:
         """
         try:
             # 参数验证
-            reference_text = validate_keyword(reference_text)
-            threshold = max(0.0, min(1.0, threshold))
+            reference_title = validate_keyword(reference_title)
+            threshold = validate_threshold(threshold, default=0.4, min_value=0.0, max_value=1.0)
             limit = validate_limit(limit, default=50)
 
             # 确定查询日期范围
@@ -564,7 +599,7 @@ class SearchTools:
                 )
 
             # 提取参考文本的关键词
-            reference_keywords = self._extract_keywords(reference_text)
+            reference_keywords = self._extract_keywords(reference_title)
 
             if not reference_keywords:
                 raise InvalidParameterError(
@@ -587,7 +622,7 @@ class SearchTools:
 
                         for title, info in titles.items():
                             # 计算标题相似度
-                            title_similarity = self._calculate_similarity(reference_text, title)
+                            title_similarity = self._calculate_similarity(reference_title, title)
 
                             # 提取标题关键词
                             title_keywords = self._extract_keywords(title)
@@ -636,7 +671,7 @@ class SearchTools:
                     "success": True,
                     "results": [],
                     "total": 0,
-                    "query": reference_text,
+                    "query": reference_title,
                     "time_preset": time_preset,
                     "date_range": {
                         "start": search_start.strftime("%Y-%m-%d"),
@@ -658,11 +693,12 @@ class SearchTools:
             result = {
                 "success": True,
                 "summary": {
+                    "description": "历史相关新闻搜索结果",
                     "total_found": len(all_related_news),
-                    "returned_count": len(results),
+                    "returned": len(results),
                     "requested_limit": limit,
                     "threshold": threshold,
-                    "reference_text": reference_text,
+                    "reference_title": reference_title,
                     "reference_keywords": reference_keywords,
                     "time_preset": time_preset,
                     "date_range": {
@@ -670,7 +706,7 @@ class SearchTools:
                         "end": search_end.strftime("%Y-%m-%d")
                     }
                 },
-                "results": results,
+                "data": results,
                 "statistics": {
                     "platform_distribution": dict(platform_distribution),
                     "date_distribution": dict(date_distribution),
@@ -699,3 +735,237 @@ class SearchTools:
                     "message": str(e)
                 }
             }
+
+    def find_related_news_unified(
+        self,
+        reference_title: str,
+        date_range: Optional[Union[Dict[str, str], str]] = None,
+        threshold: float = 0.5,
+        limit: int = 50,
+        include_url: bool = False
+    ) -> Dict:
+        """
+        统一的相关新闻查找工具 - 整合相似新闻和历史相关搜索
+
+        Args:
+            reference_title: 参考新闻标题
+            date_range: 日期范围（可选）
+                - 不指定: 只查询今天的数据
+                - {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}: 查询指定日期范围
+                - "today": 今天
+                - "yesterday": 昨天
+                - "last_week": 最近7天
+                - "last_month": 最近30天
+            threshold: 相似度阈值，0-1之间，默认0.5
+            limit: 返回条数限制，默认50
+            include_url: 是否包含URL链接，默认False
+
+        Returns:
+            相关新闻列表，按相似度排序
+        """
+        try:
+            # 参数验证
+            reference_title = validate_keyword(reference_title)
+            threshold = validate_threshold(threshold, default=0.5, min_value=0.0, max_value=1.0)
+            limit = validate_limit(limit, default=50)
+
+            # 确定日期范围
+            today = datetime.now()
+
+            # 规范化 date_range（处理 JSON 字符串序列化问题）
+            date_range = normalize_date_range(date_range)
+
+            if date_range is None or date_range == "today":
+                # 只查询今天
+                search_dates = [today]
+            elif isinstance(date_range, str):
+                # 预设时间范围
+                if date_range == "yesterday":
+                    search_dates = [today - timedelta(days=1)]
+                elif date_range == "last_week":
+                    search_dates = [today - timedelta(days=i) for i in range(7)]
+                elif date_range == "last_month":
+                    search_dates = [today - timedelta(days=i) for i in range(30)]
+                else:
+                    # 单日字符串格式
+                    try:
+                        single_date = datetime.strptime(date_range, "%Y-%m-%d")
+                        search_dates = [single_date]
+                    except ValueError:
+                        search_dates = [today]
+            elif isinstance(date_range, dict):
+                # 日期范围对象
+                start_str = date_range.get("start")
+                end_str = date_range.get("end")
+                if start_str and end_str:
+                    start_date = datetime.strptime(start_str, "%Y-%m-%d")
+                    end_date = datetime.strptime(end_str, "%Y-%m-%d")
+                    search_dates = []
+                    current = start_date
+                    while current <= end_date:
+                        search_dates.append(current)
+                        current += timedelta(days=1)
+                else:
+                    search_dates = [today]
+            else:
+                search_dates = [today]
+
+            # 提取参考标题的关键词
+            reference_keywords = self._extract_keywords(reference_title)
+
+            # 收集所有相关新闻
+            all_related_news = []
+            
+            for search_date in search_dates:
+                try:
+                    all_titles, id_to_name, _ = self.data_service.parser.read_all_titles_for_date(search_date)
+                    
+                    for platform_id, titles in all_titles.items():
+                        platform_name = id_to_name.get(platform_id, platform_id)
+                        
+                        for title, info in titles.items():
+                            if title == reference_title:
+                                continue
+                            
+                            # 计算相似度（使用混合算法）
+                            text_similarity = self._calculate_similarity(reference_title, title)
+                            
+                            # 如果有关键词，也计算关键词重合度
+                            if reference_keywords:
+                                title_keywords = self._extract_keywords(title)
+                                keyword_similarity = self._jaccard_similarity(reference_keywords, title_keywords)
+                                # 混合相似度：70% 文本 + 30% 关键词
+                                similarity = 0.7 * text_similarity + 0.3 * keyword_similarity
+                            else:
+                                similarity = text_similarity
+                            
+                            if similarity >= threshold:
+                                news_item = {
+                                    "title": title,
+                                    "platform": platform_id,
+                                    "platform_name": platform_name,
+                                    "date": search_date.strftime("%Y-%m-%d"),
+                                    "similarity": round(similarity, 3),
+                                    "rank": info["ranks"][0] if info["ranks"] else 0
+                                }
+                                
+                                if include_url:
+                                    news_item["url"] = info.get("url", "")
+                                
+                                all_related_news.append(news_item)
+                                
+                except Exception:
+                    # 某天数据读取失败，跳过
+                    continue
+
+            # 按相似度排序
+            all_related_news.sort(key=lambda x: x["similarity"], reverse=True)
+            
+            # 限制数量
+            results = all_related_news[:limit]
+
+            # 统计信息
+            from collections import Counter
+            platform_dist = Counter([n["platform_name"] for n in all_related_news])
+            date_dist = Counter([n["date"] for n in all_related_news])
+
+            return {
+                "success": True,
+                "summary": {
+                    "description": "相关新闻搜索结果",
+                    "total_found": len(all_related_news),
+                    "returned": len(results),
+                    "reference_title": reference_title,
+                    "threshold": threshold,
+                    "date_range": {
+                        "start": min(search_dates).strftime("%Y-%m-%d"),
+                        "end": max(search_dates).strftime("%Y-%m-%d")
+                    } if search_dates else None
+                },
+                "data": results,
+                "statistics": {
+                    "platform_distribution": dict(platform_dist),
+                    "date_distribution": dict(date_dist)
+                }
+            }
+
+        except MCPError as e:
+            return {"success": False, "error": e.to_dict()}
+        except Exception as e:
+            return {"success": False, "error": {"code": "INTERNAL_ERROR", "message": str(e)}}
+
+    def _search_rss_by_keyword(
+        self,
+        query: str,
+        start_date: datetime,
+        end_date: datetime,
+        limit: int = 20,
+        include_url: bool = False
+    ) -> Dict:
+        """
+        在 RSS 数据中搜索关键词
+
+        Args:
+            query: 搜索关键词
+            start_date: 开始日期
+            end_date: 结束日期
+            limit: 返回条数限制
+            include_url: 是否包含 URL
+
+        Returns:
+            RSS 搜索结果字典
+        """
+        all_rss_matches = []
+        query_lower = query.lower()
+        current_date = start_date
+
+        while current_date <= end_date:
+            try:
+                # 读取该日期的 RSS 数据
+                all_titles, id_to_name, _ = self.data_service.parser.read_all_titles_for_date(
+                    date=current_date,
+                    platform_ids=None,
+                    db_type="rss"
+                )
+
+                for feed_id, items in all_titles.items():
+                    feed_name = id_to_name.get(feed_id, feed_id)
+
+                    for title, info in items.items():
+                        # 关键词匹配（标题或摘要）
+                        title_match = query_lower in title.lower()
+                        summary = info.get("summary", "")
+                        summary_match = query_lower in summary.lower() if summary else False
+
+                        if title_match or summary_match:
+                            rss_item = {
+                                "title": title,
+                                "feed_id": feed_id,
+                                "feed_name": feed_name,
+                                "date": current_date.strftime("%Y-%m-%d"),
+                                "published_at": info.get("published_at", ""),
+                                "author": info.get("author", ""),
+                                "match_in": "title" if title_match else "summary"
+                            }
+
+                            if include_url:
+                                rss_item["url"] = info.get("url", "")
+
+                            all_rss_matches.append(rss_item)
+
+            except DataNotFoundError:
+                # 该日期没有 RSS 数据，继续下一天
+                pass
+            except Exception:
+                # 其他错误，跳过
+                pass
+
+            current_date += timedelta(days=1)
+
+        # 按发布时间排序（最新的在前）
+        all_rss_matches.sort(key=lambda x: x.get("published_at", ""), reverse=True)
+
+        return {
+            "items": all_rss_matches[:limit],
+            "total": len(all_rss_matches)
+        }

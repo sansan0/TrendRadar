@@ -4,7 +4,7 @@
 实现P0核心的数据查询工具。
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from ..services.data_service import DataService
 from ..utils.validators import (
@@ -14,7 +14,8 @@ from ..utils.validators import (
     validate_date_range,
     validate_top_n,
     validate_mode,
-    validate_date_query
+    validate_date_query,
+    normalize_date_range
 )
 from ..utils.errors import MCPError
 
@@ -67,10 +68,14 @@ class DataQueryTools:
             )
 
             return {
-                "news": news_list,
-                "total": len(news_list),
-                "platforms": platforms,
-                "success": True
+                "success": True,
+                "summary": {
+                    "description": "最新一批爬取的新闻数据",
+                    "total": len(news_list),
+                    "returned": len(news_list),
+                    "platforms": platforms or "全部平台"
+                },
+                "data": news_list
             }
 
         except MCPError as e:
@@ -90,7 +95,7 @@ class DataQueryTools:
     def search_news_by_keyword(
         self,
         keyword: str,
-        date_range: Optional[Dict] = None,
+        date_range: Optional[Union[Dict, str]] = None,
         platforms: Optional[List[str]] = None,
         limit: Optional[int] = None
     ) -> Dict:
@@ -154,39 +159,55 @@ class DataQueryTools:
     def get_trending_topics(
         self,
         top_n: Optional[int] = None,
-        mode: Optional[str] = None
+        mode: Optional[str] = None,
+        extract_mode: Optional[str] = None
     ) -> Dict:
         """
-        获取个人关注词的新闻出现频率统计
-
-        注意：本工具基于 config/frequency_words.txt 中的个人关注词列表进行统计，
-        而不是自动从新闻中提取热点话题。这是一个个人可定制的关注词列表，
-        用户可以根据自己的兴趣添加或删除关注词。
+        获取热点话题统计
 
         Args:
-            top_n: 返回TOP N关注词，默认10
-            mode: 模式 - daily(当日累计), current(最新一批), incremental(增量)
+            top_n: 返回TOP N话题，默认10
+            mode: 时间模式
+                - "daily": 当日累计数据统计
+                - "current": 最新一批数据统计（默认）
+            extract_mode: 提取模式
+                - "keywords": 统计预设关注词（基于 config/frequency_words.txt，默认）
+                - "auto_extract": 自动从新闻标题提取高频词
 
         Returns:
-            关注词频率统计字典，包含每个关注词在新闻中出现的次数
+            话题频率统计字典
 
         Example:
             >>> tools = DataQueryTools()
+            >>> # 使用预设关注词
             >>> result = tools.get_trending_topics(top_n=5, mode="current")
-            >>> print(len(result['topics']))
-            5
-            >>> # 返回的是你在 frequency_words.txt 中设置的关注词的频率统计
+            >>> # 自动提取高频词
+            >>> result = tools.get_trending_topics(top_n=10, extract_mode="auto_extract")
         """
         try:
             # 参数验证
             top_n = validate_top_n(top_n, default=10)
-            valid_modes = ["daily", "current", "incremental"]
+            valid_modes = ["daily", "current"]
             mode = validate_mode(mode, valid_modes, default="current")
+
+            # 验证 extract_mode
+            if extract_mode is None:
+                extract_mode = "keywords"
+            elif extract_mode not in ["keywords", "auto_extract"]:
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "INVALID_PARAMETER",
+                        "message": f"不支持的提取模式: {extract_mode}",
+                        "suggestion": "支持的模式: keywords, auto_extract"
+                    }
+                }
 
             # 获取趋势话题
             trending_result = self.data_service.get_trending_topics(
                 top_n=top_n,
-                mode=mode
+                mode=mode,
+                extract_mode=extract_mode
             )
 
             return {
@@ -210,7 +231,7 @@ class DataQueryTools:
 
     def get_news_by_date(
         self,
-        date_query: Optional[str] = None,
+        date_range: Optional[Union[Dict[str, str], str]] = None,
         platforms: Optional[List[str]] = None,
         limit: Optional[int] = None,
         include_url: bool = False
@@ -219,10 +240,10 @@ class DataQueryTools:
         按日期查询新闻，支持自然语言日期
 
         Args:
-            date_query: 日期查询字符串（可选，默认"今天"），支持：
-                - 相对日期：今天、昨天、前天、3天前、yesterday、3 days ago
-                - 星期：上周一、本周三、last monday、this friday
-                - 绝对日期：2025-10-10、10月10日、2025年10月10日
+            date_range: 日期范围（可选，默认"今天"），支持：
+                - 范围对象：{"start": "2025-01-01", "end": "2025-01-07"}
+                - 相对日期：今天、昨天、前天、3天前
+                - 单日字符串：2025-10-10
             platforms: 平台ID列表，如 ['zhihu', 'weibo']
             limit: 返回条数限制，默认50
             include_url: 是否包含URL链接，默认False（节省token）
@@ -236,7 +257,7 @@ class DataQueryTools:
             >>> result = tools.get_news_by_date(platforms=['zhihu'], limit=20)
             >>> # 指定日期
             >>> result = tools.get_news_by_date(
-            ...     date_query="昨天",
+            ...     date_range="昨天",
             ...     platforms=['zhihu'],
             ...     limit=20
             ... )
@@ -245,9 +266,19 @@ class DataQueryTools:
         """
         try:
             # 参数验证 - 默认今天
-            if date_query is None:
-                date_query = "今天"
-            target_date = validate_date_query(date_query)
+            if date_range is None:
+                date_range = "今天"
+
+            # 规范化 date_range（处理 JSON 字符串序列化问题）
+            date_range = normalize_date_range(date_range)
+
+            # 处理 date_range：支持字符串或对象
+            if isinstance(date_range, dict):
+                # 范围对象，取 start 日期
+                date_str = date_range.get('start', '今天')
+            else:
+                date_str = date_range
+            target_date = validate_date_query(date_str)
             platforms = validate_platforms(platforms)
             limit = validate_limit(limit, default=50)
 
@@ -260,11 +291,166 @@ class DataQueryTools:
             )
 
             return {
-                "news": news_list,
-                "total": len(news_list),
-                "date": target_date.strftime("%Y-%m-%d"),
-                "date_query": date_query,
-                "platforms": platforms,
+                "success": True,
+                "summary": {
+                    "description": f"按日期查询的新闻（{target_date.strftime('%Y-%m-%d')}）",
+                    "total": len(news_list),
+                    "returned": len(news_list),
+                    "date": target_date.strftime("%Y-%m-%d"),
+                    "date_range": date_range,
+                    "platforms": platforms or "全部平台"
+                },
+                "data": news_list
+            }
+
+        except MCPError as e:
+            return {
+                "success": False,
+                "error": e.to_dict()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(e)
+                }
+            }
+
+    # ========================================
+    # RSS 数据查询方法
+    # ========================================
+
+    def get_latest_rss(
+        self,
+        feeds: Optional[List[str]] = None,
+        days: int = 1,
+        limit: Optional[int] = None,
+        include_summary: bool = False
+    ) -> Dict:
+        """
+        获取最新的 RSS 数据（支持多日查询）
+
+        Args:
+            feeds: RSS 源 ID 列表，如 ['hacker-news', '36kr']
+            days: 获取最近 N 天的数据，默认 1（仅今天），最大 30 天
+            limit: 返回条数限制，默认50
+            include_summary: 是否包含摘要，默认False（节省token）
+
+        Returns:
+            RSS 条目列表字典
+        """
+        try:
+            limit = validate_limit(limit, default=50)
+
+            rss_list = self.data_service.get_latest_rss(
+                feeds=feeds,
+                days=days,
+                limit=limit,
+                include_summary=include_summary
+            )
+
+            return {
+                "success": True,
+                "summary": {
+                    "description": f"最近 {days} 天的 RSS 订阅数据" if days > 1 else "最新的 RSS 订阅数据",
+                    "total": len(rss_list),
+                    "returned": len(rss_list),
+                    "days": days,
+                    "feeds": feeds or "全部订阅源"
+                },
+                "data": rss_list
+            }
+
+        except MCPError as e:
+            return {
+                "success": False,
+                "error": e.to_dict()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(e)
+                }
+            }
+
+    def search_rss(
+        self,
+        keyword: str,
+        feeds: Optional[List[str]] = None,
+        days: int = 7,
+        limit: Optional[int] = None,
+        include_summary: bool = False
+    ) -> Dict:
+        """
+        搜索 RSS 数据
+
+        Args:
+            keyword: 搜索关键词
+            feeds: RSS 源 ID 列表
+            days: 搜索最近 N 天的数据，默认 7 天
+            limit: 返回条数限制，默认50
+            include_summary: 是否包含摘要
+
+        Returns:
+            匹配的 RSS 条目列表
+        """
+        try:
+            keyword = validate_keyword(keyword)
+            limit = validate_limit(limit, default=50)
+
+            if days < 1 or days > 30:
+                days = 7
+
+            rss_list = self.data_service.search_rss(
+                keyword=keyword,
+                feeds=feeds,
+                days=days,
+                limit=limit,
+                include_summary=include_summary
+            )
+
+            return {
+                "success": True,
+                "summary": {
+                    "description": f"RSS 搜索结果（关键词: {keyword}）",
+                    "total": len(rss_list),
+                    "returned": len(rss_list),
+                    "keyword": keyword,
+                    "feeds": feeds or "全部订阅源",
+                    "days": days
+                },
+                "data": rss_list
+            }
+
+        except MCPError as e:
+            return {
+                "success": False,
+                "error": e.to_dict()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(e)
+                }
+            }
+
+    def get_rss_feeds_status(self) -> Dict:
+        """
+        获取 RSS 源状态
+
+        Returns:
+            RSS 源状态信息
+        """
+        try:
+            status = self.data_service.get_rss_feeds_status()
+
+            return {
+                **status,
                 "success": True
             }
 

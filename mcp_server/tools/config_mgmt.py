@@ -4,11 +4,26 @@
 实现配置查询和管理功能。
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Any, TypedDict
 
 from ..services.data_service import DataService
 from ..utils.validators import validate_config_section
 from ..utils.errors import MCPError
+
+
+class ErrorInfo(TypedDict, total=False):
+    """错误信息结构"""
+    code: str
+    message: str
+    suggestion: str
+
+
+class ConfigResult(TypedDict):
+    """配置查询结果 - success 字段必需，其他字段可选"""
+    success: bool
+    config: Optional[Dict[str, Any]]
+    section: Optional[str]
+    error: Optional[ErrorInfo]
 
 
 class ConfigManagementTools:
@@ -23,7 +38,7 @@ class ConfigManagementTools:
         """
         self.data_service = DataService(project_root)
 
-    def get_current_config(self, section: Optional[str] = None) -> Dict:
+    def get_current_config(self, section: Optional[str] = None) -> ConfigResult:
         """
         获取当前系统配置
 
@@ -45,22 +60,24 @@ class ConfigManagementTools:
             # 获取配置
             config = self.data_service.get_current_config(section=section)
 
-            return {
-                "config": config,
-                "section": section,
-                "success": True
-            }
+            return ConfigResult(
+                success=True,
+                config=config,
+                section=section,
+                error=None
+            )
 
         except MCPError as e:
-            return {
-                "success": False,
-                "error": e.to_dict()
-            }
+            return ConfigResult(
+                success=False,
+                config=None,
+                section=None,
+                error=e.to_dict()
+            )
         except Exception as e:
-            return {
-                "success": False,
-                "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": str(e)
-                }
-            }
+            return ConfigResult(
+                success=False,
+                config=None,
+                section=None,
+                error={"code": "INTERNAL_ERROR", "message": str(e), "suggestion": "请查看服务日志获取详细信息"}
+            )

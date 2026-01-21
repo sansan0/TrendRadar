@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:5.7
+    platform: linux/amd64
+    container_name: next-web-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: nextweb
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  next-web:
+    build: .
+    container_name: next-web-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../output:/app/output:ro
+      - ../config:/app/config:rw
+      - ./static:/app/static
+      - ./app:/app/app
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=nextweb
+      - ENABLE_AUTO_CLEANUP=False
+      - NICEGUI_STORAGE_PATH=/app/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:

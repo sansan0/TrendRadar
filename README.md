@@ -1747,19 +1747,19 @@ ai_translation:
    <br>
 
    **GitHub Secret 配置（⚠️ Name 名称必须严格一致）：**
-   - **Name（名称）**：`LANGBOT_API_BASE`（请复制粘贴此名称，不要手打）
+   - **Name（名称）**：`LANGBOT_API_BASE`
    - **Secret（值）**：Langbot API 地址（如 `http://192.168.1.100:5301`）
 
-   - **Name（名称）**：`LANGBOT_BOT_UUID`（请复制粘贴此名称，不要手打）
+   - **Name（名称）**：`LANGBOT_BOT_UUID`
    - **Secret（值）**：你的 Bot UUID
 
-   - **Name（名称）**：`LANGBOT_API_KEY`（请复制粘贴此名称，不要手打）
+   - **Name（名称）**：`LANGBOT_API_KEY`
    - **Secret（值）**：你的 API Key（格式：`lbk_xxx`）
 
-   - **Name（名称）**：`LANGBOT_TARGET_TYPE`（请复制粘贴此名称，不要手打）
-   - **Secret（值）**：目标类型（`group` 或 `private`）
+   - **Name（名称）**：`LANGBOT_TARGET_TYPE`
+   - **Secret（值）**：目标类型（`group` 或 `person`）
 
-   - **Name（名称）**：`LANGBOT_TARGET_ID`（请复制粘贴此名称，不要手打）
+   - **Name（名称）**：`LANGBOT_TARGET_ID`
    - **Secret（值）**：目标 ID（群号或用户 ID）
 
    **说明**：Langbot 需要配置**5个** Secret，请分别点击五次"New repository secret"按钮添加

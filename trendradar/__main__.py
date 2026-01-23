@@ -1342,7 +1342,7 @@ class NewsAnalyzer:
 
 def main():
     """主程序入口"""
-    debug_mode = True
+    debug_mode = False
     try:
         analyzer = NewsAnalyzer()
         # 获取 debug 配置

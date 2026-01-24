@@ -12,7 +12,7 @@ def get_batch_header(format_type: str, batch_num: int, total_batches: int) -> st
     """根据 format_type 生成对应格式的批次头部
 
     Args:
-        format_type: 推送类型（telegram, slack, wework_text, bark, feishu, dingtalk, ntfy, wework）
+        format_type: 推送类型（telegram, slack, wework_text, bark, feishu, dingtalk, ntfy, wework, langbot）
         batch_num: 当前批次编号
         total_batches: 总批次数
 
@@ -27,7 +27,7 @@ def get_batch_header(format_type: str, batch_num: int, total_batches: int) -> st
         # 企业微信文本模式和 Bark 使用纯文本格式
         return f"[第 {batch_num}/{total_batches} 批次]\n\n"
     else:
-        # 飞书、钉钉、ntfy、企业微信 markdown 模式
+        # 飞书、钉钉、ntfy、企业微信 markdown 模式、Langbot
         return f"**[第 {batch_num}/{total_batches} 批次]**\n\n"
 
 

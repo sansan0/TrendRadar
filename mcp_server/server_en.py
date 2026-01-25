@@ -1,8 +1,8 @@
 """
-TrendRadar MCP Server - FastMCP 2.0 实现
+TrendRadar MCP Server - FastMCP 2.0 Implementation
 
-使用 FastMCP 2.0 提供生产级 MCP 工具服务器。
-支持 stdio 和 HTTP 两种传输模式。
+Provides production-grade MCP tool server using FastMCP 2.0.
+Supports both stdio and HTTP transport modes.
 """
 
 import asyncio
@@ -21,15 +21,15 @@ from .utils.date_parser import DateParser
 from .utils.errors import MCPError
 
 
-# 创建 FastMCP 2.0 应用
+# Create FastMCP 2.0 application
 mcp = FastMCP('trendradar-news')
 
-# 全局工具实例（在第一次请求时初始化）
+# Global tool instances (initialized on first request)
 _tools_instances = {}
 
 
 def _get_tools(project_root: Optional[str] = None):
-    """获取或创建工具实例（单例模式）"""
+    """Get or create tool instances (singleton pattern)"""
     if not _tools_instances:
         _tools_instances['data'] = DataQueryTools(project_root)
         _tools_instances['analytics'] = AnalyticsTools(project_root)
@@ -45,9 +45,9 @@ def _get_tools(project_root: Optional[str] = None):
 @mcp.resource("config://platforms")
 async def get_platforms_resource() -> str:
     """
-    获取支持的平台列表
+    Get list of supported platforms
 
-    返回 config.yaml 中配置的所有平台信息，包括 ID 和名称。
+    Returns information on all platforms configured in config.yaml, including IDs and names.
     """
     tools = _get_tools()
     config = await asyncio.to_thread(
@@ -55,31 +55,31 @@ async def get_platforms_resource() -> str:
     )
     return json.dumps({
         "platforms": config.get("platforms", []),
-        "description": "TrendRadar 支持的热榜平台列表"
+        "description": "List of trending platforms supported by TrendRadar"
     }, ensure_ascii=False, indent=2)
 
 
 @mcp.resource("config://rss-feeds")
 async def get_rss_feeds_resource() -> str:
     """
-    获取 RSS 订阅源列表
+    Get RSS feed list
 
-    返回当前配置的所有 RSS 源信息。
+    Returns information on all currently configured RSS sources.
     """
     tools = _get_tools()
     status = await asyncio.to_thread(tools['data'].get_rss_feeds_status)
     return json.dumps({
         "feeds": status.get("today_feeds", {}),
-        "description": "TrendRadar 支持的 RSS 订阅源列表"
+        "description": "List of RSS subscription sources supported by TrendRadar"
     }, ensure_ascii=False, indent=2)
 
 
 @mcp.resource("data://available-dates")
 async def get_available_dates_resource() -> str:
     """
-    获取可用的数据日期范围
+    Get available data date range
 
-    返回本地存储中可查询的日期列表。
+    Returns list of queryable dates in local storage.
     """
     tools = _get_tools()
     result = await asyncio.to_thread(
@@ -87,16 +87,16 @@ async def get_available_dates_resource() -> str:
     )
     return json.dumps({
         "dates": result.get("data", {}).get("local", {}).get("dates", []),
-        "description": "本地存储中可查询的日期列表"
+        "description": "List of queryable dates in local storage"
     }, ensure_ascii=False, indent=2)
 
 
 @mcp.resource("config://keywords")
 async def get_keywords_resource() -> str:
     """
-    获取关注词配置
+    Get keyword configuration
 
-    返回 frequency_words.txt 中配置的关注词分组。
+    Returns keyword groups configured in frequency_words.txt.
     """
     tools = _get_tools()
     config = await asyncio.to_thread(
@@ -105,62 +105,62 @@ async def get_keywords_resource() -> str:
     return json.dumps({
         "word_groups": config.get("word_groups", []),
         "total_groups": config.get("total_groups", 0),
-        "description": "TrendRadar 关注词配置"
+        "description": "TrendRadar keyword watchlist configuration"
     }, ensure_ascii=False, indent=2)
 
 
-# ==================== 日期解析工具（优先调用）====================
+# ==================== Date Parsing Tool (Recommended Priority) ====================
 
 @mcp.tool
 async def resolve_date_range(
     expression: str
 ) -> str:
     """
-    【推荐优先调用】将自然语言日期表达式解析为标准日期范围
+    [Recommended Priority] Parse natural language date expressions into standard date ranges
 
-    **为什么需要这个工具？**
-    用户经常使用"本周"、"最近7天"等自然语言表达日期，但 AI 模型自己计算日期
-    可能导致不一致的结果。此工具在服务器端使用精确的当前时间计算，确保所有
-    AI 模型获得一致的日期范围。
+    **Why do we need this tool?**
+    Users often use natural language like "this week" or "last 7 days" to express dates, but AI models
+    calculating dates themselves may lead to inconsistent results. This tool uses precise server-side
+    current time calculation, ensuring all AI models get consistent date ranges.
 
-    **推荐使用流程：**
-    1. 用户说"分析AI本周的情感倾向"
-    2. AI 调用 resolve_date_range("本周") → 获取精确日期范围
-    3. AI 调用 analyze_sentiment(topic="ai", date_range=上一步返回的date_range)
+    **Recommended usage workflow:**
+    1. User says "analyze AI sentiment this week"
+    2. AI calls resolve_date_range("this week") → gets precise date range
+    3. AI calls analyze_sentiment(topic="ai", date_range=date_range from previous step)
 
     Args:
-        expression: 自然语言日期表达式，支持：
-            - 单日: "今天", "昨天", "today", "yesterday"
-            - 周: "本周", "上周", "this week", "last week"
-            - 月: "本月", "上月", "this month", "last month"
-            - 最近N天: "最近7天", "最近30天", "last 7 days", "last 30 days"
-            - 动态: "最近5天", "last 10 days"（任意天数）
+        expression: Natural language date expression, supported:
+            - Single day: "today", "yesterday", "今天", "昨天"
+            - Week: "this week", "last week", "本周", "上周"
+            - Month: "this month", "last month", "本月", "上月"
+            - Recent N days: "last 7 days", "last 30 days", "最近7天", "最近30天"
+            - Dynamic: "last 5 days", "last 10 days" (any number of days)
 
     Returns:
-        JSON格式的日期范围，可直接用于其他工具的 date_range 参数：
+        JSON-formatted date range, can be used directly for date_range parameter in other tools:
         {
             "success": true,
-            "expression": "本周",
+            "expression": "this week",
             "date_range": {
                 "start": "2025-11-18",
                 "end": "2025-11-26"
             },
             "current_date": "2025-11-26",
-            "description": "本周（周一到周日，11-18 至 11-26）"
+            "description": "This week (Monday to Sunday, 11-18 to 11-26)"
         }
 
     Examples:
-        用户："分析AI本周的情感倾向"
-        AI调用步骤：
-        1. resolve_date_range("本周")
+        User: "analyze AI sentiment this week"
+        AI calling steps:
+        1. resolve_date_range("this week")
            → {"date_range": {"start": "2025-11-18", "end": "2025-11-26"}, ...}
         2. analyze_sentiment(topic="ai", date_range={"start": "2025-11-18", "end": "2025-11-26"})
 
-        用户："看看最近7天的特斯拉新闻"
-        AI调用步骤：
-        1. resolve_date_range("最近7天")
+        User: "show Tesla news from the last 7 days"
+        AI calling steps:
+        1. resolve_date_range("last 7 days")
            → {"date_range": {"start": "2025-11-20", "end": "2025-11-26"}, ...}
-        2. search_news(query="特斯拉", date_range={"start": "2025-11-20", "end": "2025-11-26"})
+        2. search_news(query="Tesla", date_range={"start": "2025-11-20", "end": "2025-11-26"})
     """
     try:
         result = await asyncio.to_thread(DateParser.resolve_date_range_expression, expression)
@@ -180,7 +180,7 @@ async def resolve_date_range(
         }, ensure_ascii=False, indent=2)
 
 
-# ==================== 数据查询工具 ====================
+# ==================== Data Query Tools ====================
 
 @mcp.tool
 async def get_latest_news(
@@ -189,20 +189,20 @@ async def get_latest_news(
     include_url: bool = False
 ) -> str:
     """
-    获取最新一批爬取的新闻数据，快速了解当前热点
+    Get latest batch of crawled news data for quick understanding of current trends
 
     Args:
-        platforms: 平台ID列表，如 ['zhihu', 'weibo']，不指定则使用所有平台
-        limit: 返回条数限制，默认50，最大1000
-        include_url: 是否包含URL链接，默认False（节省token）
+        platforms: List of platform IDs, e.g. ['zhihu', 'weibo'], if not specified uses all platforms
+        limit: Return count limit, default 50, maximum 1000
+        include_url: Whether to include URL links, default False (saves tokens)
 
     Returns:
-        JSON格式的新闻列表
+        JSON-formatted news list
 
-    **数据展示建议**
-    - 默认展示全部返回数据，除非用户明确要求总结
-    - 用户说"总结"或"挑重点"时才进行筛选
-    - 用户问"为什么只显示部分"说明需要完整数据
+    **Data Display Recommendations**
+    - Display all returned data by default, unless user explicitly requests summary
+    - Only filter when user says "summarize" or "highlights"
+    - If user asks "why only showing partial" it means they need complete data
     """
     tools = _get_tools()
     result = await asyncio.to_thread(
@@ -219,23 +219,23 @@ async def get_trending_topics(
     extract_mode: str = 'keywords'
 ) -> str:
     """
-    获取热点话题统计
+    Get trending topics statistics
 
     Args:
-        top_n: 返回TOP N话题，默认10
-        mode: 时间模式
-            - "daily": 当日累计数据统计
-            - "current": 最新一批数据统计（默认）
-        extract_mode: 提取模式
-            - "keywords": 统计预设关注词（基于 config/frequency_words.txt，默认）
-            - "auto_extract": 自动从新闻标题提取高频词（无需预设，自动发现热点）
+        top_n: Return TOP N topics, default 10
+        mode: Time mode
+            - "daily": Daily cumulative data statistics
+            - "current": Latest batch data statistics (default)
+        extract_mode: Extraction mode
+            - "keywords": Count preset watch words (based on config/frequency_words.txt, default)
+            - "auto_extract": Auto extract high-frequency words from news titles (no preset needed, auto discover trends)
 
     Returns:
-        JSON格式的话题频率统计列表
+        JSON-formatted topic frequency statistics list
 
     Examples:
-        - 使用预设关注词: get_trending_topics(mode="current")
-        - 自动提取热点: get_trending_topics(extract_mode="auto_extract", top_n=20)
+        - Use preset watch words: get_trending_topics(mode="current")
+        - Auto extract trends: get_trending_topics(extract_mode="auto_extract", top_n=20)
     """
     tools = _get_tools()
     result = await asyncio.to_thread(
@@ -245,7 +245,7 @@ async def get_trending_topics(
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-# ==================== RSS 数据查询工具 ====================
+# ==================== RSS Data Query Tools ====================
 
 @mcp.tool
 async def get_latest_rss(
@@ -255,18 +255,18 @@ async def get_latest_rss(
     include_summary: bool = False
 ) -> str:
     """
-    获取最新的 RSS 订阅数据（支持多日查询）
+    Get latest RSS subscription data (supports multi-day queries)
 
-    RSS 数据与热榜新闻分开存储，按时间流展示，适合获取特定来源的最新内容。
+    RSS data is stored separately from trending news, displayed in chronological order, suitable for getting latest content from specific sources.
 
     Args:
-        feeds: RSS 源 ID 列表，如 ['hacker-news', '36kr']，不指定则返回所有源
-        days: 获取最近 N 天的数据，默认 1（仅今天），最大 30 天
-        limit: 返回条数限制，默认50，最大500
-        include_summary: 是否包含文章摘要，默认False（节省token）
+        feeds: List of RSS source IDs, e.g. ['hacker-news', '36kr'], if not specified returns all sources
+        days: Get data from last N days, default 1 (today only), maximum 30 days
+        limit: Return count limit, default 50, maximum 500
+        include_summary: Whether to include article summaries, default False (saves tokens)
 
     Returns:
-        JSON格式的 RSS 条目列表
+        JSON-formatted RSS item list
 
     Examples:
         - get_latest_rss()
@@ -289,20 +289,20 @@ async def search_rss(
     include_summary: bool = False
 ) -> str:
     """
-    搜索 RSS 数据
+    Search RSS data
 
-    在 RSS 订阅数据中搜索包含指定关键词的文章。
+    Search articles containing specified keywords in RSS subscription data.
 
     Args:
-        keyword: 搜索关键词（必需）
-        feeds: RSS 源 ID 列表，如 ['hacker-news', '36kr']
-               - 不指定时：搜索所有 RSS 源
-        days: 搜索最近 N 天的数据，默认 7 天，最大 30 天
-        limit: 返回条数限制，默认50
-        include_summary: 是否包含文章摘要，默认False
+        keyword: Search keyword (required)
+        feeds: List of RSS source IDs, e.g. ['hacker-news', '36kr']
+               - If not specified: search all RSS sources
+        days: Search last N days of data, default 7 days, maximum 30 days
+        limit: Return count limit, default 50
+        include_summary: Whether to include article summaries, default False
 
     Returns:
-        JSON格式的匹配 RSS 条目列表
+        JSON-formatted matching RSS item list
 
     Examples:
         - search_rss(keyword="AI")
@@ -323,20 +323,20 @@ async def search_rss(
 @mcp.tool
 async def get_rss_feeds_status() -> str:
     """
-    获取 RSS 源状态信息
+    Get RSS source status information
 
-    查看当前配置的 RSS 源及其数据统计信息。
+    View currently configured RSS sources and their data statistics.
 
     Returns:
-        JSON格式的 RSS 源状态，包含：
-        - available_dates: 有 RSS 数据的日期列表
-        - total_dates: 总日期数
-        - today_feeds: 今日各 RSS 源的数据统计
+        JSON-formatted RSS source status, including:
+        - available_dates: List of dates with RSS data
+        - total_dates: Total number of dates
+        - today_feeds: Data statistics for each RSS source today
             - {feed_id}: { name, item_count }
-        - generated_at: 生成时间
+        - generated_at: Generation time
 
     Examples:
-        - get_rss_feeds_status()  # 查看所有 RSS 源状态
+        - get_rss_feeds_status()  # View all RSS source status
     """
     tools = _get_tools()
     result = await asyncio.to_thread(tools['data'].get_rss_feeds_status)
@@ -351,20 +351,20 @@ async def get_news_by_date(
     include_url: bool = False
 ) -> str:
     """
-    获取指定日期的新闻数据，用于历史数据分析和对比
+    Get news data for specified date range, for historical data analysis and comparison
 
     Args:
-        date_range: 日期范围，支持多种格式:
-            - 范围对象: {"start": "2025-01-01", "end": "2025-01-07"}
-            - 自然语言: "今天", "昨天", "本周", "最近7天"
-            - 单日字符串: "2025-01-15"
-            - 默认值: "今天"
-        platforms: 平台ID列表，如 ['zhihu', 'weibo']，不指定则使用所有平台
-        limit: 返回条数限制，默认50，最大1000
-        include_url: 是否包含URL链接，默认False（节省token）
+        date_range: Date range, supports multiple formats:
+            - Range object: {"start": "2025-01-01", "end": "2025-01-07"}
+            - Natural language: "today", "yesterday", "this week", "last 7 days"
+            - Single day string: "2025-01-15"
+            - Default: "today"
+        platforms: List of platform IDs, e.g. ['zhihu', 'weibo'], if not specified uses all platforms
+        limit: Return count limit, default 50, maximum 1000
+        include_url: Whether to include URL links, default False (saves tokens)
 
     Returns:
-        JSON格式的新闻列表，包含标题、平台、排名等信息
+        JSON-formatted news list, including title, platform, ranking and other information
     """
     tools = _get_tools()
     result = await asyncio.to_thread(
@@ -378,7 +378,7 @@ async def get_news_by_date(
 
 
 
-# ==================== 高级数据分析工具 ====================
+# ==================== Advanced Data Analysis Tools ====================
 
 @mcp.tool
 async def analyze_topic_trend(
@@ -392,30 +392,30 @@ async def analyze_topic_trend(
     confidence_threshold: float = 0.7
 ) -> str:
     """
-    统一话题趋势分析工具 - 整合多种趋势分析模式
+    Unified topic trend analysis tool - integrates multiple trend analysis modes
 
-    建议：使用自然语言日期时，先调用 resolve_date_range 获取精确日期范围。
+    Recommendation: When using natural language dates, call resolve_date_range first to get precise date range.
 
     Args:
-        topic: 话题关键词（必需）
-        analysis_type: 分析类型
-            - "trend": 热度趋势分析（默认）
-            - "lifecycle": 生命周期分析
-            - "viral": 异常热度检测
-            - "predict": 话题预测
-        date_range: 日期范围，格式 {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}，默认最近7天
-        granularity: 时间粒度，默认"day"
-        spike_threshold: 热度突增倍数阈值（viral模式），默认3.0
-        time_window: 检测时间窗口小时数（viral模式），默认24
-        lookahead_hours: 预测未来小时数（predict模式），默认6
-        confidence_threshold: 置信度阈值（predict模式），默认0.7
+        topic: Topic keyword (required)
+        analysis_type: Analysis type
+            - "trend": Heat trend analysis (default)
+            - "lifecycle": Lifecycle analysis
+            - "viral": Abnormal heat detection
+            - "predict": Topic prediction
+        date_range: Date range, format {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}, default last 7 days
+        granularity: Time granularity, default "day"
+        spike_threshold: Heat surge multiple threshold (viral mode), default 3.0
+        time_window: Detection time window hours (viral mode), default 24
+        lookahead_hours: Predict future hours (predict mode), default 6
+        confidence_threshold: Confidence threshold (predict mode), default 0.7
 
     Returns:
-        JSON格式的趋势分析结果
+        JSON-formatted trend analysis results
 
     Examples:
         - analyze_topic_trend(topic="AI", date_range={"start": "2025-01-01", "end": "2025-01-07"})
-        - analyze_topic_trend(topic="特斯拉", analysis_type="lifecycle")
+        - analyze_topic_trend(topic="Tesla", analysis_type="lifecycle")
     """
     tools = _get_tools()
     result = await asyncio.to_thread(
@@ -441,26 +441,26 @@ async def analyze_data_insights(
     top_n: int = 20
 ) -> str:
     """
-    统一数据洞察分析工具 - 整合多种数据分析模式
+    Unified data insights analysis tool - integrates multiple data analysis modes
 
     Args:
-        insight_type: 洞察类型，可选值：
-            - "platform_compare": 平台对比分析（对比不同平台对话题的关注度）
-            - "platform_activity": 平台活跃度统计（统计各平台发布频率和活跃时间）
-            - "keyword_cooccur": 关键词共现分析（分析关键词同时出现的模式）
-        topic: 话题关键词（可选，platform_compare模式适用）
-        date_range: **【对象类型】** 日期范围（可选）
-                    - **格式**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
-                    - **示例**: {"start": "2025-01-01", "end": "2025-01-07"}
-                    - **重要**: 必须是对象格式，不能传递整数
-        min_frequency: 最小共现频次（keyword_cooccur模式），默认3
-        top_n: 返回TOP N结果（keyword_cooccur模式），默认20
+        insight_type: Insight type, options:
+            - "platform_compare": Platform comparison analysis (compare platform attention to topics)
+            - "platform_activity": Platform activity statistics (count platform publishing frequency and active times)
+            - "keyword_cooccur": Keyword co-occurrence analysis (analyze keyword co-occurrence patterns)
+        topic: Topic keyword (optional, applies to platform_compare mode)
+        date_range: **[Object Type]** Date range (optional)
+                    - **Format**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
+                    - **Example**: {"start": "2025-01-01", "end": "2025-01-07"}
+                    - **Important**: Must be object format, cannot pass integer
+        min_frequency: Minimum co-occurrence frequency (keyword_cooccur mode), default 3
+        top_n: Return TOP N results (keyword_cooccur mode), default 20
 
     Returns:
-        JSON格式的数据洞察分析结果
+        JSON-formatted data insights analysis results
 
     Examples:
-        - analyze_data_insights(insight_type="platform_compare", topic="人工智能")
+        - analyze_data_insights(insight_type="platform_compare", topic="AI")
         - analyze_data_insights(insight_type="platform_activity", date_range={"start": "2025-01-01", "end": "2025-01-07"})
         - analyze_data_insights(insight_type="keyword_cooccur", min_frequency=5, top_n=15)
     """
@@ -486,20 +486,20 @@ async def analyze_sentiment(
     include_url: bool = False
 ) -> str:
     """
-    分析新闻的情感倾向和热度趋势
+    Analyze news sentiment and heat trends
 
-    建议：使用自然语言日期时，先调用 resolve_date_range 获取精确日期范围。
+    Recommendation: When using natural language dates, call resolve_date_range first to get precise date range.
 
     Args:
-        topic: 话题关键词（可选）
-        platforms: 平台ID列表，如 ['zhihu', 'weibo']，不指定则使用所有平台
-        date_range: 日期范围，格式 {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}，默认今天
-        limit: 返回新闻数量，默认50，最大100（会对标题去重）
-        sort_by_weight: 是否按热度权重排序，默认True
-        include_url: 是否包含URL链接，默认False（节省token）
+        topic: Topic keyword (optional)
+        platforms: List of platform IDs, e.g. ['zhihu', 'weibo'], if not specified uses all platforms
+        date_range: Date range, format {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}, default today
+        limit: News count to return, default 50, maximum 100 (will deduplicate titles)
+        sort_by_weight: Whether to sort by heat weight, default True
+        include_url: Whether to include URL links, default False (saves tokens)
 
     Returns:
-        JSON格式的分析结果，包含情感分布、热度趋势和相关新闻
+        JSON-formatted analysis results, including sentiment distribution, heat trends and related news
 
     Examples:
         - analyze_sentiment(topic="AI", date_range={"start": "2025-01-01", "end": "2025-01-07"})
@@ -526,24 +526,24 @@ async def find_related_news(
     include_url: bool = False
 ) -> str:
     """
-    查找与指定新闻标题相关的其他新闻（支持当天和历史数据）
+    Find other news related to specified news title (supports current and historical data)
 
     Args:
-        reference_title: 参考新闻标题（完整或部分）
-        date_range: 日期范围（可选）
-            - 不指定: 只查询今天的数据
-            - "today", "yesterday", "last_week", "last_month": 预设值
-            - {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}: 自定义范围
-        threshold: 相似度阈值，0-1之间，默认0.5（越高匹配越严格）
-        limit: 返回条数限制，默认50
-        include_url: 是否包含URL链接，默认False（节省token）
+        reference_title: Reference news title (full or partial)
+        date_range: Date range (optional)
+            - Not specified: only query today's data
+            - "today", "yesterday", "last_week", "last_month": preset values
+            - {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}: custom range
+        threshold: Similarity threshold, between 0-1, default 0.5 (higher is stricter matching)
+        limit: Return count limit, default 50
+        include_url: Whether to include URL links, default False (saves tokens)
 
     Returns:
-        JSON格式的相关新闻列表，按相似度排序
+        JSON-formatted related news list, sorted by similarity
 
     Examples:
-        - find_related_news(reference_title="特斯拉降价")
-        - find_related_news(reference_title="AI突破", date_range="last_week")
+        - find_related_news(reference_title="Tesla price cut")
+        - find_related_news(reference_title="AI breakthrough", date_range="last_week")
     """
     tools = _get_tools()
     result = await asyncio.to_thread(
@@ -563,17 +563,17 @@ async def generate_summary_report(
     date_range: Optional[Union[Dict[str, str], str]] = None
 ) -> str:
     """
-    每日/每周摘要生成器 - 自动生成热点摘要报告
+    Daily/weekly summary generator - automatically generate trending summary reports
 
     Args:
-        report_type: 报告类型（daily/weekly）
-        date_range: **【对象类型】** 自定义日期范围（可选）
-                    - **格式**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
-                    - **示例**: {"start": "2025-01-01", "end": "2025-01-07"}
-                    - **重要**: 必须是对象格式，不能传递整数
+        report_type: Report type (daily/weekly)
+        date_range: **[Object Type]** Custom date range (optional)
+                    - **Format**: {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}
+                    - **Example**: {"start": "2025-01-01", "end": "2025-01-07"}
+                    - **Important**: Must be object format, cannot pass integer
 
     Returns:
-        JSON格式的摘要报告，包含Markdown格式内容
+        JSON-formatted summary report, including Markdown format content
     """
     tools = _get_tools()
     result = await asyncio.to_thread(
@@ -593,19 +593,19 @@ async def aggregate_news(
     include_url: bool = False
 ) -> str:
     """
-    跨平台新闻聚合 - 对相似新闻进行去重合并
+    Cross-platform news aggregation - deduplicate and merge similar news
 
-    将不同平台报道的同一事件合并为一条聚合新闻，显示跨平台覆盖情况和综合热度。
+    Merge the same event reported by different platforms into one aggregated news item, showing cross-platform coverage and combined heat.
 
     Args:
-        date_range: 日期范围，不指定则查询今天
-        platforms: 平台ID列表，如 ['zhihu', 'weibo']，不指定则使用所有平台
-        similarity_threshold: 相似度阈值，0.3-1.0，默认0.7（越高越严格）
-        limit: 返回聚合新闻数量，默认50
-        include_url: 是否包含URL链接，默认False
+        date_range: Date range, if not specified queries today
+        platforms: List of platform IDs, e.g. ['zhihu', 'weibo'], if not specified uses all platforms
+        similarity_threshold: Similarity threshold, 0.3-1.0, default 0.7 (higher is stricter)
+        limit: Return aggregated news count, default 50
+        include_url: Whether to include URL links, default False
 
     Returns:
-        JSON格式的聚合结果，包含去重统计、聚合新闻列表和平台覆盖统计
+        JSON-formatted aggregation results, including deduplication statistics, aggregated news list and platform coverage statistics
 
     Examples:
         - aggregate_news()
@@ -633,41 +633,41 @@ async def compare_periods(
     top_n: int = 10
 ) -> str:
     """
-    时期对比分析 - 比较两个时间段的新闻数据
+    Period comparison analysis - compare news data from two time periods
 
-    对比不同时期的热点话题、平台活跃度、新闻数量等维度。
+    Compare trending topics, platform activity, news volume and other dimensions across different time periods.
 
-    **使用场景：**
-    - 对比本周和上周的热点变化
-    - 分析某个话题在两个时期的热度差异
-    - 查看各平台活跃度的周期性变化
+    **Use Cases:**
+    - Compare this week vs last week's trending changes
+    - Analyze topic heat difference across two periods
+    - View periodic changes in platform activity
 
     Args:
-        period1: 第一个时间段（基准期）
-            - {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}: 日期范围
-            - "today", "yesterday", "this_week", "last_week", "this_month", "last_month": 预设值
-        period2: 第二个时间段（对比期，格式同 period1）
-        topic: 可选的话题关键词（聚焦特定话题的对比）
-        compare_type: 对比类型
-            - "overview": 总体概览（默认）- 新闻数量、关键词变化、TOP新闻
-            - "topic_shift": 话题变化分析 - 上升话题、下降话题、新出现话题
-            - "platform_activity": 平台活跃度对比 - 各平台新闻数量变化
-        platforms: 平台过滤列表，如 ['zhihu', 'weibo']
-        top_n: 返回 TOP N 结果，默认10
+        period1: First time period (baseline)
+            - {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}: date range
+            - "today", "yesterday", "this_week", "last_week", "this_month", "last_month": preset values
+        period2: Second time period (comparison, same format as period1)
+        topic: Optional topic keyword (focus comparison on specific topic)
+        compare_type: Comparison type
+            - "overview": General overview (default) - news count, keyword changes, TOP news
+            - "topic_shift": Topic shift analysis - rising topics, declining topics, new topics
+            - "platform_activity": Platform activity comparison - platform news count changes
+        platforms: Platform filter list, e.g. ['zhihu', 'weibo']
+        top_n: Return TOP N results, default 10
 
     Returns:
-        JSON格式的对比分析结果，包含：
-        - periods: 两个时期的日期范围
-        - compare_type: 对比类型
-        - overview/topic_shift/platform_comparison: 具体对比结果（根据类型）
+        JSON-formatted comparison analysis results, including:
+        - periods: Date ranges for both periods
+        - compare_type: Comparison type
+        - overview/topic_shift/platform_comparison: Specific comparison results (based on type)
 
     Examples:
-        - compare_periods(period1="last_week", period2="this_week")  # 周环比
+        - compare_periods(period1="last_week", period2="this_week")  # Week-over-week
         - compare_periods(period1="last_month", period2="this_month", compare_type="topic_shift")
         - compare_periods(
             period1={"start": "2025-01-01", "end": "2025-01-07"},
             period2={"start": "2025-01-08", "end": "2025-01-14"},
-            topic="人工智能"
+            topic="AI"
           )
     """
     tools = _get_tools()
@@ -683,7 +683,7 @@ async def compare_periods(
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-# ==================== 智能检索工具 ====================
+# ==================== Intelligent Search Tools ====================
 
 @mcp.tool
 async def search_news(
@@ -699,32 +699,32 @@ async def search_news(
     rss_limit: int = 20
 ) -> str:
     """
-    统一搜索接口，支持多种搜索模式，可同时搜索热榜和RSS
+    Unified search interface, supports multiple search modes, can search both trending and RSS simultaneously
 
-    建议：使用自然语言日期时，先调用 resolve_date_range 获取精确日期范围。
+    Recommendation: When using natural language dates, call resolve_date_range first to get precise date range.
 
     Args:
-        query: 搜索关键词或内容片段
-        search_mode: 搜索模式
-            - "keyword": 精确关键词匹配（默认）
-            - "fuzzy": 模糊内容匹配
-            - "entity": 实体名称搜索（人物/地点/机构）
-        date_range: 日期范围，格式 {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}，默认今天
-        platforms: 平台ID列表，如 ['zhihu', 'weibo']，不指定则使用所有平台
-        limit: 热榜返回条数限制，默认50
-        sort_by: 排序方式 - "relevance"（相关度）/ "weight"（权重）/ "date"（日期）
-        threshold: 相似度阈值（仅fuzzy模式），0-1，默认0.6
-        include_url: 是否包含URL链接，默认False
-        include_rss: 是否同时搜索RSS数据，默认False
-        rss_limit: RSS返回条数限制，默认20
+        query: Search keyword or content snippet
+        search_mode: Search mode
+            - "keyword": Exact keyword matching (default)
+            - "fuzzy": Fuzzy content matching
+            - "entity": Entity name search (people/places/organizations)
+        date_range: Date range, format {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}, default today
+        platforms: List of platform IDs, e.g. ['zhihu', 'weibo'], if not specified uses all platforms
+        limit: Trending list return count limit, default 50
+        sort_by: Sort method - "relevance" (relevance) / "weight" (weight) / "date" (date)
+        threshold: Similarity threshold (fuzzy mode only), 0-1, default 0.6
+        include_url: Whether to include URL links, default False
+        include_rss: Whether to also search RSS data, default False
+        rss_limit: RSS return count limit, default 20
 
     Returns:
-        JSON格式的搜索结果，包含热榜新闻列表和可选的RSS结果
+        JSON-formatted search results, including trending news list and optional RSS results
 
     Examples:
         - search_news(query="AI")
         - search_news(query="AI", include_rss=True)
-        - search_news(query="特斯拉", date_range={"start": "2025-01-01", "end": "2025-01-07"})
+        - search_news(query="Tesla", date_range={"start": "2025-01-01", "end": "2025-01-07"})
     """
     tools = _get_tools()
     result = await asyncio.to_thread(
@@ -743,25 +743,25 @@ async def search_news(
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-# ==================== 配置与系统管理工具 ====================
+# ==================== Configuration & System Management Tools ====================
 
 @mcp.tool
 async def get_current_config(
     section: str = "all"
 ) -> str:
     """
-    获取当前系统配置
+    Get current system configuration
 
     Args:
-        section: 配置节，可选值：
-            - "all": 所有配置（默认）
-            - "crawler": 爬虫配置
-            - "push": 推送配置
-            - "keywords": 关键词配置
-            - "weights": 权重配置
+        section: Configuration section, options:
+            - "all": All configuration (default)
+            - "crawler": Crawler configuration
+            - "push": Push configuration
+            - "keywords": Keywords configuration
+            - "weights": Weights configuration
 
     Returns:
-        JSON格式的配置信息
+        JSON-formatted configuration information
     """
     tools = _get_tools()
     result = await asyncio.to_thread(tools['config'].get_current_config, section=section)
@@ -771,12 +771,12 @@ async def get_current_config(
 @mcp.tool
 async def get_system_status() -> str:
     """
-    获取系统运行状态和健康检查信息
+    Get system runtime status and health check information
 
-    返回系统版本、数据统计、缓存状态等信息
+    Returns system version, data statistics, cache status and other information
 
     Returns:
-        JSON格式的系统状态信息
+        JSON-formatted system status information
     """
     tools = _get_tools()
     result = await asyncio.to_thread(tools['system'].get_system_status)
@@ -788,15 +788,15 @@ async def check_version(
     proxy_url: Optional[str] = None
 ) -> str:
     """
-    检查版本更新（同时检查 TrendRadar 和 MCP Server）
+    Check for version updates (checks both TrendRadar and MCP Server)
 
-    比较本地版本与 GitHub 远程版本，判断是否需要更新。
+    Compare local version with GitHub remote version to determine if updates are needed.
 
     Args:
-        proxy_url: 可选的代理URL，用于访问 GitHub（如 http://127.0.0.1:7890）
+        proxy_url: Optional proxy URL for accessing GitHub (e.g. http://127.0.0.1:7890)
 
     Returns:
-        JSON格式的版本检查结果，包含两个组件的版本对比和是否需要更新
+        JSON-formatted version check results, including version comparison and update recommendations for both components
 
     Examples:
         - check_version()
@@ -814,15 +814,15 @@ async def trigger_crawl(
     include_url: bool = False
 ) -> str:
     """
-    手动触发一次爬取任务（可选持久化）
+    Manually trigger a crawling task (optional persistence)
 
     Args:
-        platforms: 平台ID列表，如 ['zhihu', 'weibo']，不指定则使用所有平台
-        save_to_local: 是否保存到本地 output 目录，默认 False
-        include_url: 是否包含URL链接，默认False（节省token）
+        platforms: List of platform IDs, e.g. ['zhihu', 'weibo'], if not specified uses all platforms
+        save_to_local: Whether to save to local output directory, default False
+        include_url: Whether to include URL links, default False (saves tokens)
 
     Returns:
-        JSON格式的任务状态信息，包含成功/失败平台列表和新闻数据
+        JSON-formatted task status information, including success/failure platform lists and news data
 
     Examples:
         - trigger_crawl(platforms=['zhihu'])
@@ -836,43 +836,43 @@ async def trigger_crawl(
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-# ==================== 存储同步工具 ====================
+# ==================== Storage Sync Tools ====================
 
 @mcp.tool
 async def sync_from_remote(
     days: int = 7
 ) -> str:
     """
-    从远程存储拉取数据到本地
+    Pull data from remote storage to local
 
-    用于 MCP Server 等场景：爬虫存到远程云存储（如 Cloudflare R2），
-    MCP Server 拉取到本地进行分析查询。
+    For MCP Server scenarios: crawler saves to remote cloud storage (like Cloudflare R2),
+    MCP Server pulls to local for analysis and queries.
 
     Args:
-        days: 拉取最近 N 天的数据，默认 7 天
-              - 0: 不拉取
-              - 7: 拉取最近一周的数据
-              - 30: 拉取最近一个月的数据
+        days: Pull data from last N days, default 7 days
+              - 0: Don't pull
+              - 7: Pull data from the last week
+              - 30: Pull data from the last month
 
     Returns:
-        JSON格式的同步结果，包含：
-        - success: 是否成功
-        - synced_files: 成功同步的文件数量
-        - synced_dates: 成功同步的日期列表
-        - skipped_dates: 跳过的日期（本地已存在）
-        - failed_dates: 失败的日期及错误信息
-        - message: 操作结果描述
+        JSON-formatted sync results, including:
+        - success: Whether successful
+        - synced_files: Number of successfully synced files
+        - synced_dates: List of successfully synced dates
+        - skipped_dates: Skipped dates (already exist locally)
+        - failed_dates: Failed dates and error messages
+        - message: Operation result description
 
     Examples:
-        - sync_from_remote()  # 拉取最近7天
-        - sync_from_remote(days=30)  # 拉取最近30天
+        - sync_from_remote()  # Pull last 7 days
+        - sync_from_remote(days=30)  # Pull last 30 days
 
     Note:
-        需要在 config/config.yaml 中配置远程存储（storage.remote）或设置环境变量：
-        - S3_ENDPOINT_URL: 服务端点
-        - S3_BUCKET_NAME: 存储桶名称
-        - S3_ACCESS_KEY_ID: 访问密钥 ID
-        - S3_SECRET_ACCESS_KEY: 访问密钥
+        Requires remote storage configuration in config/config.yaml (storage.remote) or environment variables:
+        - S3_ENDPOINT_URL: Service endpoint
+        - S3_BUCKET_NAME: Bucket name
+        - S3_ACCESS_KEY_ID: Access key ID
+        - S3_SECRET_ACCESS_KEY: Access secret key
     """
     tools = _get_tools()
     result = await asyncio.to_thread(tools['storage'].sync_from_remote, days=days)
@@ -882,12 +882,12 @@ async def sync_from_remote(
 @mcp.tool
 async def get_storage_status() -> str:
     """
-    获取存储配置和状态
+    Get storage configuration and status
 
-    查看当前存储后端配置、本地和远程存储的状态信息。
+    View current storage backend configuration, local and remote storage status information.
 
     Returns:
-        JSON格式的存储状态信息，包含本地/远程存储状态和拉取配置
+        JSON-formatted storage status information, including local/remote storage status and pull configuration
     """
     tools = _get_tools()
     result = await asyncio.to_thread(tools['storage'].get_storage_status)
@@ -899,18 +899,18 @@ async def list_available_dates(
     source: str = "both"
 ) -> str:
     """
-    列出本地/远程可用的日期范围
+    List available date ranges in local/remote storage
 
-    查看本地和远程存储中有哪些日期的数据可用。
+    View which dates have available data in local and remote storage.
 
     Args:
-        source: 数据来源
-            - "local": 仅本地
-            - "remote": 仅远程
-            - "both": 同时列出并对比（默认）
+        source: Data source
+            - "local": Local only
+            - "remote": Remote only
+            - "both": List and compare both (default)
 
     Returns:
-        JSON格式的日期列表，包含各来源的日期信息和对比结果
+        JSON-formatted date list, including date information and comparison results from each source
 
     Examples:
         - list_available_dates()
@@ -921,7 +921,7 @@ async def list_available_dates(
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-# ==================== 启动入口 ====================
+# ==================== Startup Entry ====================
 
 def run_server(
     project_root: Optional[str] = None,
@@ -930,13 +930,13 @@ def run_server(
     port: int = 3333
 ):
     """
-    启动 MCP 服务器
+    Start MCP server
 
     Args:
-        project_root: 项目根目录路径
-        transport: 传输模式，'stdio' 或 'http'
-        host: HTTP模式的监听地址，默认 0.0.0.0
-        port: HTTP模式的监听端口，默认 3333
+        project_root: Project root directory path
+        transport: Transport mode, 'stdio' or 'http'
+        host: HTTP mode listening address, default 0.0.0.0
+        port: HTTP mode listening port, default 3333
     """
     # 初始化工具实例
     _get_tools(project_root)
@@ -946,105 +946,105 @@ def run_server(
     print("=" * 60)
     print("  TrendRadar MCP Server - FastMCP 2.0")
     print("=" * 60)
-    print(f"  传输模式: {transport.upper()}")
+    print(f"  Transport mode: {transport.upper()}")
 
     if transport == 'stdio':
-        print("  协议: MCP over stdio (标准输入输出)")
-        print("  说明: 通过标准输入输出与 MCP 客户端通信")
+        print("  Protocol: MCP over stdio (standard input/output)")
+        print("  Description: Communicate with MCP client via standard input/output")
     elif transport == 'http':
-        print(f"  协议: MCP over HTTP (生产环境)")
-        print(f"  服务器监听: {host}:{port}")
+        print(f"  Protocol: MCP over HTTP (production environment)")
+        print(f"  Server listening: {host}:{port}")
 
     if project_root:
-        print(f"  项目目录: {project_root}")
+        print(f"  Project directory: {project_root}")
     else:
-        print("  项目目录: 当前目录")
+        print("  Project directory: Current directory")
 
     print()
-    print("  已注册的工具:")
-    print("    === 日期解析工具（推荐优先调用）===")
-    print("    0. resolve_date_range       - 解析自然语言日期为标准格式")
+    print("  Registered tools:")
+    print("    === Date Parsing Tool (Recommended Priority) ===")
+    print("    0. resolve_date_range       - Parse natural language dates to standard format")
     print()
-    print("    === 基础数据查询（P0核心）===")
-    print("    1. get_latest_news        - 获取最新新闻")
-    print("    2. get_news_by_date       - 按日期查询新闻（支持自然语言）")
-    print("    3. get_trending_topics    - 获取趋势话题（支持自动提取）")
+    print("    === Basic Data Query (P0 Core) ===")
+    print("    1. get_latest_news        - Get latest news")
+    print("    2. get_news_by_date       - Query news by date (supports natural language)")
+    print("    3. get_trending_topics    - Get trending topics (supports auto extraction)")
     print()
-    print("    === RSS 数据查询 ===")
-    print("    4. get_latest_rss         - 获取最新 RSS 订阅数据")
-    print("    5. search_rss             - 搜索 RSS 数据")
-    print("    6. get_rss_feeds_status   - 获取 RSS 源状态")
+    print("    === RSS Data Query ===")
+    print("    4. get_latest_rss         - Get latest RSS subscription data")
+    print("    5. search_rss             - Search RSS data")
+    print("    6. get_rss_feeds_status   - Get RSS source status")
     print()
-    print("    === 智能检索工具 ===")
-    print("    7. search_news            - 统一新闻搜索（关键词/模糊/实体）")
-    print("    8. find_related_news      - 相关新闻查找（支持历史数据）")
+    print("    === Intelligent Search Tools ===")
+    print("    7. search_news            - Unified news search (keyword/fuzzy/entity)")
+    print("    8. find_related_news      - Find related news (supports historical data)")
     print()
-    print("    === 高级数据分析 ===")
-    print("    9. analyze_topic_trend      - 统一话题趋势分析（热度/生命周期/爆火/预测）")
-    print("    10. analyze_data_insights   - 统一数据洞察分析（平台对比/活跃度/关键词共现）")
-    print("    11. analyze_sentiment       - 情感倾向分析")
-    print("    12. aggregate_news          - 跨平台新闻聚合去重")
-    print("    13. compare_periods         - 时期对比分析（周环比/月环比）")
-    print("    14. generate_summary_report - 每日/每周摘要生成")
+    print("    === Advanced Data Analysis ===")
+    print("    9. analyze_topic_trend      - Unified topic trend analysis (heat/lifecycle/viral/prediction)")
+    print("    10. analyze_data_insights   - Unified data insights analysis (platform comparison/activity/keyword co-occurrence)")
+    print("    11. analyze_sentiment       - Sentiment analysis")
+    print("    12. aggregate_news          - Cross-platform news aggregation and deduplication")
+    print("    13. compare_periods         - Period comparison analysis (week-over-week/month-over-month)")
+    print("    14. generate_summary_report - Daily/weekly summary generation")
     print()
-    print("    === 配置与系统管理 ===")
-    print("    15. get_current_config      - 获取当前系统配置")
-    print("    16. get_system_status       - 获取系统运行状态")
-    print("    17. check_version           - 检查版本更新（对比本地与远程版本）")
-    print("    18. trigger_crawl           - 手动触发爬取任务")
+    print("    === Configuration & System Management ===")
+    print("    15. get_current_config      - Get current system configuration")
+    print("    16. get_system_status       - Get system runtime status")
+    print("    17. check_version           - Check for version updates (compare local vs remote version)")
+    print("    18. trigger_crawl           - Manually trigger crawling task")
     print()
-    print("    === 存储同步工具 ===")
-    print("    19. sync_from_remote        - 从远程存储拉取数据到本地")
-    print("    20. get_storage_status      - 获取存储配置和状态")
-    print("    21. list_available_dates    - 列出本地/远程可用日期")
+    print("    === Storage Sync Tools ===")
+    print("    19. sync_from_remote        - Pull data from remote storage to local")
+    print("    20. get_storage_status      - Get storage configuration and status")
+    print("    21. list_available_dates    - List available dates in local/remote storage")
     print("=" * 60)
     print()
 
-    # 根据传输模式运行服务器
+    # Run server based on transport mode
     if transport == 'stdio':
         mcp.run(transport='stdio')
     elif transport == 'http':
-        # HTTP 模式（生产推荐）
+        # HTTP mode (production recommended)
         mcp.run(
             transport='http',
             host=host,
             port=port,
-            path='/mcp'  # HTTP 端点路径
+            path='/mcp'  # HTTP endpoint path
         )
     else:
-        raise ValueError(f"不支持的传输模式: {transport}")
+        raise ValueError(f"Unsupported transport mode: {transport}")
 
 
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='TrendRadar MCP Server - 新闻热点聚合 MCP 工具服务器',
+        description='TrendRadar MCP Server - News Aggregation MCP Tool Server',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-详细配置教程请查看: README-Cherry-Studio.md
+For detailed configuration tutorial, see: README-Cherry-Studio.md
         """
     )
     parser.add_argument(
         '--transport',
         choices=['stdio', 'http'],
         default='stdio',
-        help='传输模式：stdio (默认) 或 http (生产环境)'
+        help='Transport mode: stdio (default) or http (production)'
     )
     parser.add_argument(
         '--host',
         default='0.0.0.0',
-        help='HTTP模式的监听地址，默认 0.0.0.0'
+        help='HTTP mode listening address, default 0.0.0.0'
     )
     parser.add_argument(
         '--port',
         type=int,
         default=3333,
-        help='HTTP模式的监听端口，默认 3333'
+        help='HTTP mode listening port, default 3333'
     )
     parser.add_argument(
         '--project-root',
-        help='项目根目录路径'
+        help='Project root directory path'
     )
 
     args = parser.parse_args()

@@ -44,6 +44,22 @@ Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only
 
 </div>
 
+## 🌐 MCP Server Language Support
+
+The MCP server supports Chinese (default) and English.
+
+**Using English:** Set environment variable `TRENDRADAR_MCP_LANG=en` in your MCP config
+
+```json
+{
+  "env": {
+    "TRENDRADAR_MCP_LANG": "en"
+  }
+}
+```
+
+**Using Chinese (default):** No configuration needed.
+
 > This project is designed to be lightweight and easy to deploy
 
 <br>

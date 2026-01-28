@@ -7,8 +7,12 @@
 - format_time_display: 格式化时间显示
 - count_word_frequency: 统计词频
 """
-
+import copy
+import math
+from collections import Counter
 from typing import Dict, List, Tuple, Optional, Callable
+
+import jieba
 
 from trendradar.core.frequency import matches_word_groups, _word_matches
 
@@ -479,6 +483,7 @@ def count_word_frequency(
         # 先按热点条数，再按配置位置（原逻辑）
         stats.sort(key=lambda x: (-x["count"], x["position"]))
 
+    stats = stats_filter(stats)
     # 打印过滤后的匹配新闻数
     matched_news_count = sum(len(stat["titles"]) for stat in stats if stat["count"] > 0)
     if not quiet and mode == "daily":
@@ -486,6 +491,95 @@ def count_word_frequency(
         print(f"频率词过滤后：{matched_news_count} 条新闻匹配")
 
     return stats, total_titles
+
+
+def sentence_similarity(text1, text2) -> float:
+    """
+    计算两个句子的相似度，使用余弦相似度方法
+
+    Args:
+        text1: 第一个句子
+        text2: 第二个句子
+
+    Returns:
+        float: 相似度值，范围在0到1之间，1表示完全相同，0表示完全不同
+    """
+    words1 = list(jieba.cut(text1))
+    words2 = list(jieba.cut(text2))
+
+    # 过滤掉空字符串和标点符号
+    words1 = [w for w in words1 if w.strip()]
+    words2 = [w for w in words2 if w.strip()]
+
+    # 统计词频
+    counter1 = Counter(words1)
+    counter2 = Counter(words2)
+
+    # 获取所有词的并集
+    all_words = set(counter1.keys()) | set(counter2.keys())
+
+    # 构建向量
+    vector1 = [counter1.get(word, 0) for word in all_words]
+    vector2 = [counter2.get(word, 0) for word in all_words]
+
+    # 计算余弦相似度
+    dot_product = sum(a * b for a, b in zip(vector1, vector2))
+    norm1 = math.sqrt(sum(a * a for a in vector1))
+    norm2 = math.sqrt(sum(b * b for b in vector2))
+
+    # 避免除以零
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+
+    similarity = dot_product / (norm1 * norm2)
+    return similarity
+
+def is_similar(text1, text2, threshold=0.9):
+    """
+    判断两个句子是否相似
+
+    Args:
+        text1: 第一个句子
+        text2: 第二个句子
+        threshold: 相似度阈值，默认为0.9
+
+    Returns:
+        bool: 如果相似度大于等于阈值返回True，否则返回False
+    """
+    similarity = sentence_similarity(text1, text2)
+    return similarity >= threshold
+
+
+def stats_filter(stats: list) -> list:
+    """
+    根据相似度，将标题类似的新闻合并成一条新闻，来源用‘|’分隔，其他信息使用第一条来源的数据
+
+    Args：
+        stats: 统计结果列表
+
+    Returns:
+        List[Dict]: 经过去重处理的统计列表
+    """
+    if not stats:
+        return []
+
+    result = []
+    for stat_dict in stats:
+        result_dict = copy.deepcopy(stat_dict)
+        filtered_stats = []
+        for stats_title in stat_dict['titles']:
+            find_similar = False
+            for merged_stat in filtered_stats:
+                if is_similar(merged_stat['title'], stats_title['title']):
+                    merged_stat['source_name'] += '|' + stats_title['source_name']
+                    find_similar = True
+                    break
+
+            if not find_similar:
+                filtered_stats.append(copy.deepcopy(stats_title))
+        result_dict['titles'] = filtered_stats
+        result.append(result_dict)
+    return result
 
 
 def count_rss_frequency(

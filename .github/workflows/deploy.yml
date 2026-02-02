@@ -1,0 +1,174 @@
+name: Deploy to GitHub Pages
+
+# ═══════════════════════════════════════════════════════════════
+# 定时运行爬虫 + 部署 HTML 报告到 GitHub Pages
+#
+# 部署完成后，可通过以下地址访问报告：
+#   https://<username>.github.io/<repo-name>/
+#
+# 首次使用前，请在仓库设置中启用 GitHub Pages：
+#   Settings → Pages → Source → GitHub Actions
+# ═══════════════════════════════════════════════════════════════
+
+on:
+  schedule:
+    # 每小时运行一次（可根据需要修改）
+    # 示例:
+    #   "0 * * * *"      → 每小时整点运行
+    #   "*/30 * * * *"   → 每30分钟运行
+    #   "0 0-14 * * *"   → 北京时间 8:00-22:00 每小时运行
+    - cron: "0 * * * *"
+
+  workflow_dispatch:
+    inputs:
+      skip_deploy:
+        description: "仅运行爬虫，不部署到 Pages"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify required files
+        run: |
+          if [ ! -f config/config.yaml ]; then
+            echo "Error: config/config.yaml missing"
+            exit 1
+          fi
+          if [ ! -f config/frequency_words.txt ]; then
+            echo "Error: config/frequency_words.txt missing"
+            exit 1
+          fi
+
+      - name: Run crawler
+        env:
+          # 通知渠道
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
+          WEWORK_WEBHOOK_URL: ${{ secrets.WEWORK_WEBHOOK_URL }}
+          WEWORK_MSG_TYPE: ${{ secrets.WEWORK_MSG_TYPE }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_SMTP_SERVER: ${{ secrets.EMAIL_SMTP_SERVER }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_SERVER_URL: ${{ secrets.NTFY_SERVER_URL }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          BARK_URL: ${{ secrets.BARK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GENERIC_WEBHOOK_URL: ${{ secrets.GENERIC_WEBHOOK_URL }}
+          GENERIC_WEBHOOK_TEMPLATE: ${{ secrets.GENERIC_WEBHOOK_TEMPLATE }}
+          # AI 配置
+          AI_ANALYSIS_ENABLED: ${{ secrets.AI_ANALYSIS_ENABLED }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_API_BASE: ${{ secrets.AI_API_BASE }}
+          # 远程存储配置
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          GITHUB_ACTIONS: true
+        run: python -m trendradar
+
+      - name: Prepare Pages content
+        run: |
+          mkdir -p _site
+
+          # 复制 HTML 报告
+          if [ -d "output/html" ]; then
+            cp -r output/html/* _site/ 2>/dev/null || true
+          fi
+
+          # 如果 latest 目录下有 index.html，复制到根目录
+          if [ -f "_site/latest/index.html" ]; then
+            cp _site/latest/index.html _site/index.html
+          elif [ -f "_site/latest/current.html" ]; then
+            cp _site/latest/current.html _site/index.html
+          elif [ -f "_site/latest/daily.html" ]; then
+            cp _site/latest/daily.html _site/index.html
+          else
+            # 生成默认首页
+            cat > _site/index.html << 'INDEXEOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>TrendRadar</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 50px auto; padding: 0 20px; color: #333; }
+              h1 { color: #1a73e8; }
+              p { color: #666; line-height: 1.6; }
+              .status { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 20px 0; }
+            </style>
+          </head>
+          <body>
+            <h1>TrendRadar</h1>
+            <div class="status">
+              <p>报告正在生成中，请稍后刷新页面。</p>
+              <p>Reports are being generated. Please refresh later.</p>
+            </div>
+          </body>
+          </html>
+          INDEXEOF
+          fi
+
+          # 添加 .nojekyll 禁用 Jekyll 处理
+          touch _site/.nojekyll
+
+          echo "=== Pages content ==="
+          find _site -type f | head -20
+          echo "Total files: $(find _site -type f | wc -l)"
+
+      - name: Setup Pages
+        if: ${{ github.event.inputs.skip_deploy != 'true' }}
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        if: ${{ github.event.inputs.skip_deploy != 'true' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        if: ${{ github.event.inputs.skip_deploy != 'true' }}
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -166,12 +166,27 @@ def send_to_feishu(
             f"发送{log_prefix}第 {i}/{len(batches)} 批次，大小：{content_size} 字节 [{report_type}]"
         )
 
-        # 飞书 webhook 只显示 content.text，所有信息都整合到 text 中
+        # 使用飞书交互式卡片（interactive）消息类型
         payload = {
-            "msg_type": "text",
-            "content": {
-                "text": batch_content,
-            },
+            "msg_type": "interactive",
+            "card": {
+                "config": {"wide_screen_mode": True},
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": "热点追踪"
+                    }
+                },
+                "elements": [
+                    {
+                        "tag": "div",
+                        "text": {
+                            "tag": "lark_md",
+                            "content": batch_content
+                        }
+                    }
+                ]
+            }
         }
 
         try:

@@ -196,6 +196,12 @@ def send_to_feishu(
                 print(
                     f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
                 )
+                try:
+                    print(f"错误详情：{response.text}")
+                except:
+                    # 注意：这里的打印仅用于日志；某些响应对象/编码异常可能导致读取 text 时报错。
+                    # 使用裸 except 是为了避免“打印错误详情”反过来覆盖掉原始失败原因。
+                    pass
                 return False
         except Exception as e:
             print(f"{log_prefix}第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
@@ -324,6 +330,12 @@ def send_to_dingtalk(
                 print(
                     f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
                 )
+                try:
+                    print(f"错误详情：{response.text}")
+                except:
+                    # 注意：这里的打印仅用于日志；某些响应对象/编码异常可能导致读取 text 时报错。
+                    # 使用裸 except 是为了避免“打印错误详情”反过来覆盖掉原始失败原因。
+                    pass
                 return False
         except Exception as e:
             print(f"{log_prefix}第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
@@ -463,6 +475,12 @@ def send_to_wework(
                 print(
                     f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
                 )
+                try:
+                    print(f"错误详情：{response.text}")
+                except:
+                    # 注意：这里的打印仅用于日志；某些响应对象/编码异常可能导致读取 text 时报错。
+                    # 使用裸 except 是为了避免“打印错误详情”反过来覆盖掉原始失败原因。
+                    pass
                 return False
         except Exception as e:
             print(f"{log_prefix}第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
@@ -590,6 +608,12 @@ def send_to_telegram(
                 print(
                     f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
                 )
+                try:
+                    print(f"错误详情：{response.text}")
+                except:
+                    # 注意：这里的打印仅用于日志；某些响应对象/编码异常可能导致读取 text 时报错。
+                    # 使用裸 except 是为了避免“打印错误详情”反过来覆盖掉原始失败原因。
+                    pass
                 return False
         except Exception as e:
             print(f"{log_prefix}第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")
@@ -940,6 +964,8 @@ def send_to_ntfy(
                 try:
                     print(f"错误详情：{response.text}")
                 except:
+                    # 注意：这里的打印仅用于日志；某些响应对象/编码异常可能导致读取 text 时报错。
+                    # 使用裸 except 是为了避免“打印错误详情”反过来覆盖掉原始失败原因。
                     pass
 
         except requests.exceptions.ConnectTimeout:
@@ -1114,6 +1140,8 @@ def send_to_bark(
                 try:
                     print(f"错误详情：{response.text}")
                 except:
+                    # 注意：这里的打印仅用于日志；某些响应对象/编码异常可能导致读取 text 时报错。
+                    # 使用裸 except 是为了避免“打印错误详情”反过来覆盖掉原始失败原因。
                     pass
 
         except requests.exceptions.ConnectTimeout:

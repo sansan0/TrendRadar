@@ -1268,7 +1268,6 @@ def render_html_content(
                             <div class="news-number">{j}</div>
                             <div class="news-content">
                                 <div class="news-header">"""
-
                 # 时间显示（格式化 ISO 时间）
                 if published_at:
                     try:
@@ -1279,10 +1278,11 @@ def render_html_content(
                         else:
                             time_display = published_at
                     except:
+                        # 注意：这里用裸 except 做容错，解析失败时回退显示原始字符串。
+                        # 这能避免单条 RSS 数据格式异常导致整页渲染中断，但也会吞掉更具体的异常信息。
                         time_display = published_at
 
                     standalone_html += f'<span class="time-info">{html_escape(time_display)}</span>'
-
                 # 作者显示
                 if author:
                     standalone_html += f'<span class="source-name">{html_escape(author)}</span>'

@@ -172,6 +172,9 @@ def detect_latest_new_titles_from_storage(
         # 在这种情况下，将所有最新批次的标题视为"新增"（用于增量模式的第一次推送）
         has_historical_data = any(len(titles) > 0 for titles in historical_titles.values())
         if not has_historical_data:
+            # 注意：此处会把“当天第一次抓取”的最新批次标题全量返回为新增。
+            # 这有助于增量模式在无历史基线时也能产生一份“新增列表”，但也可能导致首次运行推送量偏大。
+            # 如果你希望首次运行不推送或不视为新增，应在策略层对该行为进行开关/调整。
             # 第一次爬取：返回所有最新标题作为"新增"
             return latest_titles
 

@@ -152,6 +152,11 @@ def count_word_frequency(
 
     is_first_today = is_first_crawl_func()
 
+    # 注意：这里的“当天第一次爬取”会影响增量/当前榜单两种模式的口径。
+    # - incremental: 当天第一次会处理所有新闻，并将处理范围内的新闻全部标记为新增（is_new=True）。
+    #   这可能导致首次运行推送量较大；如果你希望“严格只推相对上一轮新增”，需要在策略层单独处理。
+    # - current: 当天第一次会统计匹配的“新增”数量（matched_new_count），用于日志/决策。
+
     # 确定处理的数据源和新增标记逻辑
     if mode == "incremental":
         if is_first_today:
@@ -170,6 +175,9 @@ def count_word_frequency(
                 for title_data in source_titles.values():
                     last_time = title_data.get("last_time", "")
                     if last_time:
+                        # 注意：这里使用字符串比较来找“最新时间”。
+                        # 该逻辑依赖 last_time 的格式具备可比较性（例如固定宽度、补零、且同一日期口径）。
+                        # 若未来 last_time 格式变化（或出现非补零时间），可能导致筛选批次不准确。
                         if latest_time is None or last_time > latest_time:
                             latest_time = last_time
 

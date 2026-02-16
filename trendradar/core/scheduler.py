@@ -234,6 +234,10 @@ class Scheduler:
         Returns:
             是否在范围内
         """
+        # 注意：这里使用“闭区间”判断（<= end），即 start <= now <= end。
+        # 这在两个 period 首尾相接（如 08:00-09:00 与 09:00-10:00）时，边界点 09:00 会同时命中两段，
+        # 从而触发 overlap 冲突（error_on_overlap）或依赖 last_wins 的胜出规则。
+        # 如果你希望边界更确定，通常会改为半开区间：start <= now < end（跨日逻辑同理）。
         if start <= end:
             # 正常范围，如 08:00-09:00
             return start <= now_hhmm <= end

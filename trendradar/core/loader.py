@@ -89,6 +89,9 @@ def _load_report_config(config_data: Dict) -> Dict:
         "DISPLAY_MODE": report_config.get("display_mode", "keyword"),
         "RANK_THRESHOLD": report_config.get("rank_threshold", 10),
         "SORT_BY_POSITION_FIRST": sort_by_position_env if sort_by_position_env is not None else report_config.get("sort_by_position_first", False),
+        # 注意：这里用 `max_news_env or ...` 做覆盖时，若环境变量显式设置为 0（在本项目中 0 往往表示“不限制/关闭”），
+        # 会因为 0 在 Python 中为 False 而回退到配置文件值，导致“无法用环境变量设置为 0”。
+        # 若要区分“未设置”和“设置为 0”，通常需要用 None 作为未设置标志（例如 _get_env_int_or_none）。
         "MAX_NEWS_PER_KEYWORD": max_news_env or report_config.get("max_news_per_keyword", 0),
     }
 
@@ -108,6 +111,8 @@ def _load_notification_config(config_data: Dict) -> Dict:
         "SLACK_BATCH_SIZE": batch_size.get("slack", 4000),
         "BATCH_SEND_INTERVAL": advanced.get("batch_send_interval", 1.0),
         "FEISHU_MESSAGE_SEPARATOR": advanced.get("feishu_message_separator", "---"),
+        # 注意：这里同样使用 `env_int or ...`。若环境变量设置为 0（例如想禁用或表示“不限制”），
+        # 会被当成 False 而回退到配置文件值。
         "MAX_ACCOUNTS_PER_CHANNEL": _get_env_int("MAX_ACCOUNTS_PER_CHANNEL") or advanced.get("max_accounts_per_channel", 3),
     }
 
@@ -334,6 +339,7 @@ def _load_storage_config(config_data: Dict) -> Dict:
         },
         "LOCAL": {
             "DATA_DIR": local.get("data_dir", "output"),
+            # 注意：如果你希望用环境变量把保留天数设置为 0（表示“不清理”），这里的 `env_int or ...` 会回退到配置文件值。
             "RETENTION_DAYS": _get_env_int("LOCAL_RETENTION_DAYS") or local.get("retention_days", 0),
         },
         "REMOTE": {
@@ -342,10 +348,12 @@ def _load_storage_config(config_data: Dict) -> Dict:
             "ACCESS_KEY_ID": _get_env_str("S3_ACCESS_KEY_ID") or remote.get("access_key_id", ""),
             "SECRET_ACCESS_KEY": _get_env_str("S3_SECRET_ACCESS_KEY") or remote.get("secret_access_key", ""),
             "REGION": _get_env_str("S3_REGION") or remote.get("region", ""),
+            # 注意：同上，环境变量显式设为 0 会回退到配置文件值。
             "RETENTION_DAYS": _get_env_int("REMOTE_RETENTION_DAYS") or remote.get("retention_days", 0),
         },
         "PULL": {
             "ENABLED": pull_enabled_env if pull_enabled_env is not None else pull.get("enabled", False),
+            # 注意：如果环境变量设置 PULL_DAYS=0，`env_int or ...` 会回退到配置文件值。
             "DAYS": _get_env_int("PULL_DAYS") or pull.get("days", 7),
         },
     }

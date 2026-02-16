@@ -34,6 +34,9 @@ def _parse_version(version_str: str) -> Tuple[int, int, int]:
             return int(parts[0]), int(parts[1]), int(parts[2])
         return 0, 0, 0
     except:
+        # 注意：这里使用裸 except 会捕获所有异常类型（包括 KeyboardInterrupt/SystemExit 等），
+        # 可能导致错误被静默吞掉，仅以 (0,0,0) 回退。
+        # 如果需要更精确的异常边界，建议改为 except Exception 或针对性异常。
         return 0, 0, 0
 
 

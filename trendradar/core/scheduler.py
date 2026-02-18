@@ -68,8 +68,8 @@ class Scheduler:
         if self.enabled:
             self._validate_timeline(self.timeline)
 
+    @staticmethod
     def _build_timeline(
-        self,
         schedule_config: Dict[str, Any],
         timeline_data: Dict[str, Any],
     ) -> Dict[str, Any]:
@@ -92,6 +92,21 @@ class Scheduler:
             timeline["periods"] = {}
 
         return timeline
+
+    def __new__(
+        cls,
+        schedule_config: Dict[str, Any],
+        timeline_data: Dict[str, Any],
+        storage_backend: Any,
+        get_time_func: Callable[[], datetime],
+    ):
+      timeline = cls._build_timeline(schedule_config, timeline_data)
+      if timeline.get("holiday_workday_map", None):
+        return super().__new__(ChineseHolidayScheduler)
+      else:
+        return super().__new__(cls)
+
+
 
     def resolve(self) -> ResolvedSchedule:
         """
@@ -418,3 +433,138 @@ class Scheduler:
         h, m = value.split(":")
         if not (0 <= int(h) <= 23 and 0 <= int(m) <= 59):
             raise ValueError(f"{field_name} 时间值超出范围: '{value}'")
+
+class ChineseHolidayScheduler(Scheduler):
+    def resolve(self) -> ResolvedSchedule:
+        """
+        解析当前时间对应的调度配置
+
+        Returns:
+            ResolvedSchedule 包含当前应执行的行为
+        """
+        if not self.enabled:
+            # 调度未启用时返回默认的全功能配置
+            return ResolvedSchedule(
+                period_key=None,
+                period_name=None,
+                day_plan="disabled",
+                collect=True,
+                analyze=True,
+                push=True,
+                report_mode="current",
+                ai_mode="follow_report",
+                once_analyze=False,
+                once_push=False,
+            )
+        from chinese_calendar import is_workday
+
+        now = self.get_time()
+        weekday = now.isoweekday()  # 1=周一 ... 7=周日
+        now_hhmm = now.strftime("%H:%M")
+        day_type =  'workday' if is_workday(now) else 'holiday'
+
+        # 查找当天的日计划
+        day_plan_key = self.timeline["holiday_workday_map"].get(day_type)
+        if day_plan_key is None:
+            raise ValueError(f"holiday_workday_map 缺少节假日与工作日映射: {day_type}")
+
+        day_plan = self.timeline["day_plans"].get(day_plan_key)
+        if day_plan is None:
+            raise ValueError(f"{day_type} 引用了不存在的 day_plan: {day_plan_key}")
+
+        # 查找当前活跃的时间段
+        period_key = self._find_active_period(now_hhmm, day_plan)
+
+        # 合并默认配置和时间段配置
+        merged = self._merge_with_default(period_key)
+
+        # 打印调度日志
+        weekday_names = {1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "日"}
+        period_display = "默认配置（未命中任何时间段）"
+        if period_key:
+            period_cfg = self.timeline["periods"][period_key]
+            period_name = period_cfg.get("name", period_key)
+            start = period_cfg.get("start", "?")
+            end = period_cfg.get("end", "?")
+            period_display = f"{period_name} ({start}-{end})"
+
+        print(f"[调度] 星期{weekday_names.get(weekday, '?')}，日计划: {day_plan_key}")
+        print(f"[调度] 当前时间段: {period_display}")
+
+        resolved = ResolvedSchedule(
+            period_key=period_key,
+            period_name=(
+                self.timeline["periods"][period_key].get("name")
+                if period_key
+                else None
+            ),
+            day_plan=day_plan_key,
+            collect=merged.get("collect", True),
+            analyze=merged.get("analyze", False),
+            push=merged.get("push", False),
+            report_mode=merged.get("report_mode", "current"),
+            ai_mode=self._resolve_ai_mode(merged),
+            once_analyze=merged.get("once", {}).get("analyze", False),
+            once_push=merged.get("once", {}).get("push", False),
+        )
+
+        # 打印行为摘要
+        actions = []
+        if resolved.collect:
+            actions.append("采集")
+        if resolved.analyze:
+            actions.append(f"分析(AI:{resolved.ai_mode})")
+        if resolved.push:
+            actions.append(f"推送(模式:{resolved.report_mode})")
+        print(f"[调度] 行为: {', '.join(actions) if actions else '无'}")
+
+        return resolved
+
+    def _validate_timeline(self, timeline: Dict[str, Any]) -> None:
+        """
+        启动时校验 timeline 配置
+
+        Raises:
+            ValueError: 配置不合法时抛出
+        """
+        required_top_keys = ["default", "periods", "day_plans", "holiday_workday_map"]
+        for key in required_top_keys:
+            if key not in timeline:
+                raise ValueError(f"timeline 缺少必须字段: {key}")
+
+        for day in ("workday", "holiday"):
+            if day not in timeline["holiday_workday_map"]:
+                raise ValueError(f"holiday_workday_map 缺少类型映射: {day}")
+
+        # day_plan 引用完整性
+        for day, plan_key in timeline["holiday_workday_map"].items():
+            if plan_key not in timeline["day_plans"]:
+                raise ValueError(
+                    f"{day} 引用了不存在的 day_plan: {plan_key}"
+                )
+
+        # period 引用完整性
+        for plan_key, plan in timeline["day_plans"].items():
+            for period_key in plan.get("periods", []):
+                if period_key not in timeline["periods"]:
+                    raise ValueError(
+                        f"day_plan[{plan_key}] 引用了不存在的 period: {period_key}"
+                    )
+
+        # 时间格式校验
+        for period_key, period in timeline["periods"].items():
+            if "start" not in period or "end" not in period:
+                raise ValueError(
+                    f"period '{period_key}' 缺少 start 或 end 字段"
+                )
+            self._validate_hhmm(period["start"], f"{period_key}.start")
+            self._validate_hhmm(period["end"], f"{period_key}.end")
+            if period["start"] == period["end"]:
+                raise ValueError(
+                    f"period '{period_key}' 的 start 与 end 不能相同: {period['start']}"
+                )
+
+        # 检查冲突策略下的重叠
+        policy = timeline.get("overlap", {}).get("policy", "error_on_overlap")
+        if policy == "error_on_overlap":
+            self._check_period_overlaps(timeline)

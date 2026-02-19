@@ -2635,6 +2635,7 @@ TrendRadar 提供两个独立的 Docker 镜像，可根据需求选择部署：
 当前目录/
 ├── config/
 │   ├── config.yaml
+│   ├── timeline.yaml
 │   ├── frequency_words.txt
 │   └── ai_analysis_prompt.txt    # AI 分析提示词（v5.0.0 新增，可选）
 └── docker/

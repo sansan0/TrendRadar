@@ -304,6 +304,7 @@
 - **新增 check_version 工具**：支持同时检查 TrendRadar 和 MCP Server 版本更新
 
 
+
 ### 2026/01/23 - v5.4.0
 
 - 增加 AI 分析模式的独立控制功能，可选 follow_report | daily | current | incremental 

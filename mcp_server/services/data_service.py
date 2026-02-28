@@ -555,9 +555,12 @@ class DataService:
 
         return result
 
-    def get_available_date_range(self) -> Tuple[Optional[datetime], Optional[datetime]]:
+    def get_available_date_range(self, db_type: str = "news") -> Tuple[Optional[datetime], Optional[datetime]]:
         """
         扫描 output 目录，返回实际可用的日期范围
+
+        Args:
+            db_type: 数据库类型 ("news" 或 "rss")
 
         Returns:
             (最早日期, 最新日期) 元组，如果没有数据则返回 (None, None)
@@ -567,64 +570,7 @@ class DataService:
             >>> earliest, latest = service.get_available_date_range()
             >>> print(f"可用日期范围：{earliest} 至 {latest}")
         """
-        output_dir = self.parser.project_root / "output"
-
-        if not output_dir.exists():
-            return (None, None)
-
-        available_dates = []
-
-        # 遍历日期文件夹
-        for date_folder in output_dir.iterdir():
-            if date_folder.is_dir() and not date_folder.name.startswith('.'):
-                folder_date = self._parse_date_folder_name(date_folder.name)
-                if folder_date:
-                    available_dates.append(folder_date)
-
-        if not available_dates:
-            return (None, None)
-
-        return (min(available_dates), max(available_dates))
-
-    def _parse_date_folder_name(self, folder_name: str) -> Optional[datetime]:
-        """
-        解析日期文件夹名称（兼容中文和ISO格式）
-
-        支持两种格式：
-        - 中文格式：YYYY年MM月DD日
-        - ISO格式：YYYY-MM-DD
-
-        Args:
-            folder_name: 文件夹名称
-
-        Returns:
-            datetime 对象，解析失败返回 None
-        """
-        # 尝试中文格式：YYYY年MM月DD日
-        chinese_match = re.match(r'(\d{4})年(\d{2})月(\d{2})日', folder_name)
-        if chinese_match:
-            try:
-                return datetime(
-                    int(chinese_match.group(1)),
-                    int(chinese_match.group(2)),
-                    int(chinese_match.group(3))
-                )
-            except ValueError:
-                pass
-
-        # 尝试 ISO 格式：YYYY-MM-DD
-        iso_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', folder_name)
-        if iso_match:
-            try:
-                return datetime(
-                    int(iso_match.group(1)),
-                    int(iso_match.group(2)),
-                    int(iso_match.group(3))
-                )
-            except ValueError:
-                pass
-
-        return None
+        return self.parser.get_available_date_range(db_type)
 
     def get_system_status(self) -> Dict:
         """
@@ -637,26 +583,15 @@ class DataService:
         output_dir = self.parser.project_root / "output"
 
         total_storage = 0
-        oldest_record = None
-        latest_record = None
-        total_news = 0
 
+        # 使用 parser 的方法获取日期范围
+        oldest_record, latest_record = self.get_available_date_range(db_type="news")
+
+        # 计算 output 目录总存储大小
         if output_dir.exists():
-            # 遍历日期文件夹
-            for date_folder in output_dir.iterdir():
-                if date_folder.is_dir() and not date_folder.name.startswith('.'):
-                    # 解析日期（兼容中文和ISO格式）
-                    folder_date = self._parse_date_folder_name(date_folder.name)
-                    if folder_date:
-                        if oldest_record is None or folder_date < oldest_record:
-                            oldest_record = folder_date
-                        if latest_record is None or folder_date > latest_record:
-                            latest_record = folder_date
-
-                    # 计算存储大小
-                    for item in date_folder.rglob("*"):
-                        if item.is_file():
-                            total_storage += item.stat().st_size
+            for item in output_dir.rglob("*"):
+                if item.is_file():
+                    total_storage += item.stat().st_size
 
         # 读取版本信息
         version_file = self.parser.project_root / "version"

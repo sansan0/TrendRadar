@@ -35,6 +35,10 @@ class ParserService:
 
         self.cache = get_cache()
 
+        # frequency_words.txt mtime 缓存
+        self._freq_words_cache: Optional[List[Dict]] = None
+        self._freq_words_mtime: float = 0.0
+
     @staticmethod
     def clean_title(title: str) -> str:
         """清理标题文本"""
@@ -371,7 +375,9 @@ class ParserService:
 
     def parse_frequency_words(self, words_file: str = None) -> List[Dict]:
         """
-        解析关键词配置文件
+        解析关键词配置文件（带 mtime 缓存）
+
+        仅当 frequency_words.txt 被修改时才重新解析，避免循环内重复 IO。
 
         复用 trendradar.core.frequency 的解析逻辑，支持：
         - # 开头的注释行
@@ -393,6 +399,7 @@ class ParserService:
         Raises:
             FileParseError: 文件解析错误
         """
+        import os
         from trendradar.core.frequency import load_frequency_words
 
         if words_file is None:
@@ -401,7 +408,14 @@ class ParserService:
             words_file = str(words_file)
 
         try:
+            current_mtime = os.path.getmtime(words_file)
+
+            if self._freq_words_cache is not None and current_mtime == self._freq_words_mtime:
+                return self._freq_words_cache
+
             word_groups, filter_words, global_filters = load_frequency_words(words_file)
+            self._freq_words_cache = word_groups
+            self._freq_words_mtime = current_mtime
             return word_groups
         except FileNotFoundError:
             return []

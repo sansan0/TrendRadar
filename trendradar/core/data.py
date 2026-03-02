@@ -2,85 +2,14 @@
 """
 数据处理模块
 
-提供数据读取、保存和检测功能：
-- save_titles_to_file: 保存标题到 TXT 文件
+提供数据读取和检测功能：
 - read_all_today_titles: 从存储后端读取当天所有标题
 - detect_latest_new_titles: 检测最新批次的新增标题
 
 Author: TrendRadar Team
 """
 
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Callable
-
-
-def save_titles_to_file(
-    results: Dict,
-    id_to_name: Dict,
-    failed_ids: List,
-    output_path: str,
-    clean_title_func: Callable[[str], str],
-) -> str:
-    """
-    保存标题到 TXT 文件
-
-    Args:
-        results: 抓取结果 {source_id: {title: title_data}}
-        id_to_name: ID 到名称的映射
-        failed_ids: 失败的 ID 列表
-        output_path: 输出文件路径
-        clean_title_func: 标题清理函数
-
-    Returns:
-        str: 保存的文件路径
-    """
-    # 确保目录存在
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        for id_value, title_data in results.items():
-            # id | name 或 id
-            name = id_to_name.get(id_value)
-            if name and name != id_value:
-                f.write(f"{id_value} | {name}\n")
-            else:
-                f.write(f"{id_value}\n")
-
-            # 按排名排序标题
-            sorted_titles = []
-            for title, info in title_data.items():
-                cleaned_title = clean_title_func(title)
-                if isinstance(info, dict):
-                    ranks = info.get("ranks", [])
-                    url = info.get("url", "")
-                    mobile_url = info.get("mobileUrl", "")
-                else:
-                    ranks = info if isinstance(info, list) else []
-                    url = ""
-                    mobile_url = ""
-
-                rank = ranks[0] if ranks else 1
-                sorted_titles.append((rank, cleaned_title, url, mobile_url))
-
-            sorted_titles.sort(key=lambda x: x[0])
-
-            for rank, cleaned_title, url, mobile_url in sorted_titles:
-                line = f"{rank}. {cleaned_title}"
-
-                if url:
-                    line += f" [URL:{url}]"
-                if mobile_url:
-                    line += f" [MOBILE:{mobile_url}]"
-                f.write(line + "\n")
-
-            f.write("\n")
-
-        if failed_ids:
-            f.write("==== 以下ID请求失败 ====\n")
-            for id_value in failed_ids:
-                f.write(f"{id_value}\n")
-
-    return output_path
+from typing import Dict, List, Tuple, Optional
 
 
 def read_all_today_titles_from_storage(
@@ -122,11 +51,11 @@ def read_all_today_titles_from_storage(
 
             for item in news_list:
                 title = item.title
-                ranks = getattr(item, 'ranks', [item.rank])
-                first_time = getattr(item, 'first_time', item.crawl_time)
-                last_time = getattr(item, 'last_time', item.crawl_time)
-                count = getattr(item, 'count', 1)
-                rank_timeline = getattr(item, 'rank_timeline', [])
+                ranks = item.ranks or [item.rank]
+                first_time = item.first_time or item.crawl_time
+                last_time = item.last_time or item.crawl_time
+                count = item.count
+                rank_timeline = item.rank_timeline
 
                 all_results[source_id][title] = {
                     "ranks": ranks,
@@ -233,7 +162,7 @@ def detect_latest_new_titles_from_storage(
 
             historical_titles[source_id] = set()
             for item in news_list:
-                first_time = getattr(item, 'first_time', item.crawl_time)
+                first_time = item.first_time or item.crawl_time
                 # 如果该记录的首次出现时间早于最新批次，则该标题是历史标题
                 if first_time < latest_time:
                     historical_titles[source_id].add(item.title)

@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════
 #                    TrendRadar 配置文件
-#                      Version: 1.2.0
+#                      Version: 2.0.0
 # ═══════════════════════════════════════════════════════════════
 
 
@@ -11,7 +11,7 @@
 # 1. 基础设置
 # ===============================================================
 app:
-  # 时区配置（影响所有时间显示、推送窗口判断、数据存储）
+  # 时区配置（影响所有时间显示、调度系统判断、数据存储）
   # 常用时区：
   #   - Asia/Shanghai (北京时间 UTC+8)
   #   - America/New_York (美东时间 UTC-5/-4)
@@ -19,6 +19,29 @@ app:
   # 完整时区列表: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   timezone: "Asia/Shanghai"
   show_version_update: true           # 显示版本更新提示
+
+
+# ===============================================================
+# 1.5 调度系统 —— 什么时间做什么事
+#
+# 通过 timeline.yaml 里定义的时间段来自动决定：
+#   - 什么时候推送通知
+#   - 什么时候做 AI 分析
+#   - 用什么报告模式
+#
+# 快速上手：选一个预设模板，改 preset 的值就行
+#
+#   always_on       → 全天候，有新增即推送
+#   morning_evening → 全天推送 + 晚间当日汇总（推荐）
+#   office_hours    → 工作日三段式（到岗→午间→收工），周末增量自由推
+#   night_owl       → 午后速览 + 深夜全天汇总
+#   custom          → 完全自定义，详见 timeline.yaml
+#
+# 详细时间线图请查看 config/timeline.yaml
+# ===============================================================
+schedule:
+  enabled: true                         # 是否启用调度系统
+  preset: "morning_evening"             # 预设模板名称（见上方说明）
 
 
 # ===============================================================
@@ -214,7 +237,7 @@ display:
   # 控制各区域是否启用（配合 region_order 使用）
   regions:
     hotlist: true                     # 热榜区域（关键词匹配的热点新闻）
-    new_items: true                   # 新增热点区域（含热榜新增 + RSS 新增）
+    new_items: false                   # 新增热点区域（含热榜新增 + RSS 新增）
                                       # 注：热点词汇统计中的新增标记🆕不受此配置影响
 
     rss: true                         # RSS 订阅区域
@@ -224,14 +247,14 @@ display:
     standalone: false                 # 独立展示区（完整热榜/RSS，不受关键词过滤）
     ai_analysis: true                 # AI 分析区域
 
-  # 📋 独立展示区配置（仅在 regions.standalone: true 时生效）
-  # 用途：将指定平台的完整热榜/RSS 单独展示，不受关键词过滤影响
-  # 适用场景：
-  #   - 想完整查看某个平台的热榜排名
-  #   - RSS 源内容较少，希望全部展示而非只显示关键词匹配的
-  # 注意：同一新闻可能同时出现在关键词匹配区和独立展示区
+  # 📋 独立展示区配置
+  # 用途：将指定平台的完整热榜/RSS 数据独立提取，不受关键词过滤影响
+  # 两个独立用途：
+  #   - 推送展示：由 regions.standalone 开关控制，在推送中单独展示完整热榜
+  #   - AI 分析：由 ai.include_standalone 开关控制，将完整数据送入 AI 做深度分析
+  # 两者共享此处的平台/RSS 配置，但开关互相独立（可只开 AI 分析、不推送展示）
   standalone:
-    platforms: []                     # 热榜平台 ID 列表（如 ["zhihu", "weibo"]）
+    platforms: ["zhihu", "wallstreetcn-hot"]     # 热榜平台 ID 列表（如 ["zhihu", "weibo"]）
     rss_feeds: []                     # RSS 源 ID 列表（如 ["hacker-news"]）
     max_items: 20                     # 每个源最多展示条数（0=不限制）
 
@@ -257,26 +280,10 @@ display:
 # • 邮箱已支持多收件人（逗号分隔）
 # ===============================================================
 notification:
-  enabled: true                       # 是否启用通知功能
-
-  # 🕐 推送时间窗口控制（可选功能）
-  # 用途：限制推送的时间范围，避免非工作时间打扰
-  # 适用场景：
-  #   • 只想在工作日白天接收推送（如 09:00-18:00）
-  #   • 希望在晚上固定时间收到汇总（如 20:00-22:00）
-  #   • 夜间工作者可配置跨日窗口（如 22:00-02:00）
-  # ⚠️ GitHub Actions 用户注意：
-  #   执行时间不稳定，时间范围建议至少留足 2 小时
-  # 💡 想要精准定时？建议使用 Docker 部署在个人服务器上
-  #
-  # 📌 跨日时间窗口支持：
-  #   • 正常窗口：start < end，如 09:00-21:00（当天 9 点到 21 点）
-  #   • 跨日窗口：start > end，如 22:00-02:00（当天 22 点到次日 2 点）
-  push_window:
-    enabled: true                    # 是否启用推送时间窗口控制
-    start: "07:00"                    # 开始时间（北京时间）
-    end: "22:00"                      # 结束时间（北京时间）
-    once_per_day: false                # true=窗口内只推送一次，false=窗口内每次执行都推送
+  enabled: true                       # 是否启用通知功能（总开关）
+                                      # ⚠️ 开启调度系统后，此项仍为总开关：
+                                      #   false → 永远不推送（无论调度怎么设置）
+                                      #   true  → 由调度的 push 字段控制何时推送
 
   # 推送渠道配置
   channels:
@@ -433,26 +440,10 @@ ai:
 # 模型配置见上方 ai 配置段
 # ===============================================================
 ai_analysis:
-  enabled: true                     # 是否启用 AI 分析
-
-  # 🕐 AI 分析时间窗口控制（可选功能）
-  # 用途：限制 AI 分析的时间范围，避免非必要时段消耗 API 额度
-  # 适用场景：
-  #   • 只在工作时间进行 AI 分析（如 09:00-18:00）
-  #   • 在特定时段进行深度分析（如 20:00-22:00）
-  #   • 夜间工作者可配置跨日窗口（如 22:00-02:00）
-  # ⚠️ GitHub Actions 用户注意：
-  #   执行时间不稳定，时间范围建议至少留足 2 小时
-  # 💡 想要精准定时？建议使用 Docker 部署在个人服务器上
-  #
-  # 📌 跨日时间窗口支持：
-  #   • 正常窗口：start < end，如 09:00-22:00（当天 9 点到 22 点）
-  #   • 跨日窗口：start > end，如 22:00-02:00（当天 22 点到次日 2 点）
-  analysis_window:
-    enabled: true                  # 是否启用 AI 分析时间窗口控制
-    start: "07:00"                  # 开始时间（使用 app.timezone 配置的时区）
-    end: "22:00"                    # 结束时间（使用 app.timezone 配置的时区）
-    once_per_day: false             # true=窗口内只分析一次，false=窗口内每次执行都分析
+  enabled: true                     # 是否启用 AI 分析（总开关）
+                                    # ⚠️ 开启调度系统后，此项仍为总开关：
+                                    #   false → 永远不分析（无论调度怎么设置）
+                                    #   true  → 由调度的 analyze 字段控制何时分析
 
   # 分析报告输出语言
   # 格式：自然语言描述
@@ -476,23 +467,28 @@ ai_analysis:
   mode: "follow_report"
 
   # 分析内容配置
-  max_news_for_analysis: 60         # 参与分析的新闻数量上限（控制成本关键项）
+  max_news_for_analysis: 150        # 热榜+RSS 合计参与分析的新闻数量上限（控制成本关键项）
+                                    # 热榜优先占用配额，RSS 使用剩余配额；独立展示区不受此限制
                                     # 推送消息顶部会显示实际的 AI 分析数供参考
 
                                     # api 成本估算 (仅供参考)
                                       # 按默认模型(deepseek)
-                                      # max_news_for_analysis 为 50 条
-                                      # include_rank_timeline 为 false
+                                      # max_news_for_analysis 为 【50】 条
+                                      # include_rank_timeline 为 【false】
                                     # 则
                                       # GitHub Action 部署默认推送约 20 次（每小时推送一次）， 约 0.1 元/天
                                       # Docker 部署默认推送 48 次(每半小时推送一次)， 约 0.2 元/天
 
-  include_rss: false                 # 是否包含 RSS 内容进行分析
+  include_rss: false                # 是否包含 RSS 内容进行分析
 
-  include_rank_timeline: true      # 是否传递完整排名时间线
+  include_standalone: true          # 是否将独立展示区数据纳入 AI 分析（只需上方 display 区的 standalone 配置了平台/RSS 即可）
+
+  include_rank_timeline: true       # 是否传递完整排名时间线
                                     # false: 使用简化格式（排名范围+时间范围+出现次数）
                                     # true: 传递完整排名变化轨迹（如 1(09:30)→2(10:00)→0(11:00)）
                                     # 启用后 AI 能更精确分析热度趋势，但会额外增加 token 消耗（0.5 倍到 1 倍）
+
+
 
 
 # ===============================================================
@@ -507,7 +503,7 @@ ai_translation:
   # 翻译目标语言
   # 格式：自然语言描述
   # 示例: "Chinese", "Korean", "法语"
-  language: "Chinese"
+  language: "中文"
 
   # 提示词配置文件路径（相对于 config 目录）
   prompt_file: "ai_translation_prompt.txt"
@@ -558,4 +554,4 @@ advanced:
     bark: 4000
     slack: 4000
   batch_send_interval: 3              # 批次发送间隔（秒）
-  feishu_message_separator: "━━━━━━━━━━━━━━━━━━━"
+  feishu_message_separator: "━━━━━━━━━━━━━━━━"

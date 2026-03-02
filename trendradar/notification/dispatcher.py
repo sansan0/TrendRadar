@@ -117,17 +117,19 @@ class NotificationDispatcher:
                 titles_to_translate.append(title_data.get("title", ""))
                 title_locations.append(("new_titles", source_idx, title_idx))
 
-        # 3. RSS 统计标题
+        # 3. RSS 统计标题（结构与 stats 一致：[{word, count, titles: [{title, ...}]}]）
         if rss_items:
-            for item_idx, item in enumerate(rss_items):
-                titles_to_translate.append(item.get("title", ""))
-                title_locations.append(("rss_items", item_idx, None))
+            for stat_idx, stat in enumerate(rss_items):
+                for title_idx, title_data in enumerate(stat.get("titles", [])):
+                    titles_to_translate.append(title_data.get("title", ""))
+                    title_locations.append(("rss_items", stat_idx, title_idx))
 
-        # 4. RSS 新增标题
+        # 4. RSS 新增标题（结构与 stats 一致）
         if rss_new_items:
-            for item_idx, item in enumerate(rss_new_items):
-                titles_to_translate.append(item.get("title", ""))
-                title_locations.append(("rss_new_items", item_idx, None))
+            for stat_idx, stat in enumerate(rss_new_items):
+                for title_idx, title_data in enumerate(stat.get("titles", [])):
+                    titles_to_translate.append(title_data.get("title", ""))
+                    title_locations.append(("rss_new_items", stat_idx, title_idx))
 
         if not titles_to_translate:
             print("[翻译] 没有需要翻译的内容")
@@ -153,9 +155,9 @@ class NotificationDispatcher:
                 elif loc_type == "new_titles":
                     report_data["new_titles"][idx1]["titles"][idx2]["title"] = translated
                 elif loc_type == "rss_items" and rss_items:
-                    rss_items[idx1]["title"] = translated
+                    rss_items[idx1]["titles"][idx2]["title"] = translated
                 elif loc_type == "rss_new_items" and rss_new_items:
-                    rss_new_items[idx1]["title"] = translated
+                    rss_new_items[idx1]["titles"][idx2]["title"] = translated
 
         return report_data, rss_items, rss_new_items
 

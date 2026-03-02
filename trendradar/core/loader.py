@@ -112,22 +112,62 @@ def _load_notification_config(config_data: Dict) -> Dict:
     }
 
 
-def _load_push_window_config(config_data: Dict) -> Dict:
-    """加载推送窗口配置"""
-    notification = config_data.get("notification", {})
-    push_window = notification.get("push_window", {})
+def _load_schedule_config(config_data: Dict) -> Dict:
+    """
+    加载统一调度配置
 
-    enabled_env = _get_env_bool("PUSH_WINDOW_ENABLED")
-    once_per_day_env = _get_env_bool("PUSH_WINDOW_ONCE_PER_DAY")
+    从 config.yaml 的 schedule 段读取，支持环境变量覆盖。
+    """
+    schedule = config_data.get("schedule", {})
+
+    # 环境变量覆盖
+    enabled_env = _get_env_bool("SCHEDULE_ENABLED")
+    preset_env = _get_env_str("SCHEDULE_PRESET")
+
+    enabled = enabled_env if enabled_env is not None else schedule.get("enabled", False)
+    preset = preset_env or schedule.get("preset", "always_on")
 
     return {
-        "ENABLED": enabled_env if enabled_env is not None else push_window.get("enabled", False),
-        "TIME_RANGE": {
-            "START": _get_env_str("PUSH_WINDOW_START") or push_window.get("start", "08:00"),
-            "END": _get_env_str("PUSH_WINDOW_END") or push_window.get("end", "22:00"),
-        },
-        "ONCE_PER_DAY": once_per_day_env if once_per_day_env is not None else push_window.get("once_per_day", True),
+        "enabled": enabled,
+        "preset": preset,
     }
+
+
+def _load_timeline_data(config_dir: str = "config") -> Dict:
+    """
+    加载 timeline.yaml
+
+    Args:
+        config_dir: 配置目录路径
+
+    Returns:
+        timeline.yaml 的完整数据，找不到时返回空模板
+    """
+    timeline_path = Path(config_dir) / "timeline.yaml"
+    if not timeline_path.exists():
+        print(f"[调度] timeline.yaml 未找到: {timeline_path}，使用空模板")
+        return {
+            "presets": {},
+            "custom": {
+                "default": {
+                    "collect": True,
+                    "analyze": False,
+                    "push": False,
+                    "report_mode": "current",
+                    "ai_mode": "follow_report",
+                    "once": {"analyze": False, "push": False},
+                },
+                "periods": {},
+                "day_plans": {"all_day": {"periods": []}},
+                "week_map": {i: "all_day" for i in range(1, 8)},
+            },
+        }
+
+    with open(timeline_path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    print(f"[调度] timeline.yaml 加载成功: {timeline_path}")
+    return data or {}
 
 
 def _load_weight_config(config_data: Dict) -> Dict:
@@ -245,11 +285,8 @@ def _load_ai_config(config_data: Dict) -> Dict:
 def _load_ai_analysis_config(config_data: Dict) -> Dict:
     """加载 AI 分析配置（功能配置，模型配置见 _load_ai_config）"""
     ai_config = config_data.get("ai_analysis", {})
-    analysis_window = ai_config.get("analysis_window", {})
 
     enabled_env = _get_env_bool("AI_ANALYSIS_ENABLED")
-    window_enabled_env = _get_env_bool("AI_ANALYSIS_WINDOW_ENABLED")
-    window_once_per_day_env = _get_env_bool("AI_ANALYSIS_WINDOW_ONCE_PER_DAY")
 
     return {
         "ENABLED": enabled_env if enabled_env is not None else ai_config.get("enabled", False),
@@ -259,14 +296,7 @@ def _load_ai_analysis_config(config_data: Dict) -> Dict:
         "MAX_NEWS_FOR_ANALYSIS": ai_config.get("max_news_for_analysis", 50),
         "INCLUDE_RSS": ai_config.get("include_rss", True),
         "INCLUDE_RANK_TIMELINE": ai_config.get("include_rank_timeline", False),
-        "ANALYSIS_WINDOW": {
-            "ENABLED": window_enabled_env if window_enabled_env is not None else analysis_window.get("enabled", False),
-            "TIME_RANGE": {
-                "START": _get_env_str("AI_ANALYSIS_WINDOW_START") or analysis_window.get("start", "09:00"),
-                "END": _get_env_str("AI_ANALYSIS_WINDOW_END") or analysis_window.get("end", "22:00"),
-            },
-            "ONCE_PER_DAY": window_once_per_day_env if window_once_per_day_env is not None else analysis_window.get("once_per_day", False),
-        },
+        "INCLUDE_STANDALONE": ai_config.get("include_standalone", False),
     }
 
 
@@ -489,8 +519,11 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     # 通知配置
     config.update(_load_notification_config(config_data))
 
-    # 推送窗口配置
-    config["PUSH_WINDOW"] = _load_push_window_config(config_data)
+    # 统一调度配置
+    config["SCHEDULE"] = _load_schedule_config(config_data)
+    config["_TIMELINE_DATA"] = _load_timeline_data(
+        str(Path(config_path).parent) if config_path else "config"
+    )
 
     # 权重配置
     config["WEIGHT_CONFIG"] = _load_weight_config(config_data)

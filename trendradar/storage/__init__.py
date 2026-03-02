@@ -15,7 +15,6 @@ from trendradar.storage.base import (
     RSSItem,
     RSSData,
     convert_crawl_results_to_news_data,
-    convert_news_data_to_results,
 )
 from trendradar.storage.sqlite_mixin import SQLiteStorageMixin
 from trendradar.storage.local import LocalStorageBackend
@@ -40,7 +39,6 @@ __all__ = [
     "SQLiteStorageMixin",
     # 转换函数
     "convert_crawl_results_to_news_data",
-    "convert_news_data_to_results",
     # 后端实现
     "LocalStorageBackend",
     "RemoteStorageBackend",

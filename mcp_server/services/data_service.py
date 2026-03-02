@@ -378,14 +378,16 @@ class DataService:
         word_frequency = Counter()
         keyword_to_news = {}
 
+        # 预加载关键词数据（避免在循环内重复调用）
+        if extract_mode == "keywords":
+            from trendradar.core.frequency import _word_matches
+            word_groups = self.parser.parse_frequency_words()
+
         # 遍历要处理的标题
         for platform_id, titles in titles_to_process.items():
             for title in titles.keys():
                 if extract_mode == "keywords":
                     # 基于预设关键词统计（支持正则匹配）
-                    from trendradar.core.frequency import _word_matches
-
-                    word_groups = self.parser.parse_frequency_words()
                     title_lower = title.lower()
 
                     for group in word_groups:
@@ -495,17 +497,28 @@ class DataService:
                 "enable_notification": notification.get("enabled", True),
                 "enabled_channels": [],
                 "message_batch_size": batch_size.get("default", 4000),
-                "push_window": notification.get("push_window", {})
+                "push_window": {}  # 已迁移至调度系统（schedule + timeline.yaml）
             }
 
-            # 检测已配置的通知渠道
-            channels = notification.get("channels", {})
-            if channels.get("feishu", {}).get("webhook_url"):
-                push_config["enabled_channels"].append("feishu")
-            if channels.get("dingtalk", {}).get("webhook_url"):
-                push_config["enabled_channels"].append("dingtalk")
-            if channels.get("wework", {}).get("webhook_url"):
-                push_config["enabled_channels"].append("wework")
+            # 检测已配置的通知渠道（合并 config.yaml + .env）
+            from trendradar.core.loader import _load_webhook_config
+
+            webhook_config = _load_webhook_config(config_data)
+
+            channel_checks = {
+                "feishu": [webhook_config.get("FEISHU_WEBHOOK_URL")],
+                "dingtalk": [webhook_config.get("DINGTALK_WEBHOOK_URL")],
+                "wework": [webhook_config.get("WEWORK_WEBHOOK_URL")],
+                "telegram": [webhook_config.get("TELEGRAM_BOT_TOKEN"), webhook_config.get("TELEGRAM_CHAT_ID")],
+                "email": [webhook_config.get("EMAIL_FROM"), webhook_config.get("EMAIL_PASSWORD"), webhook_config.get("EMAIL_TO")],
+                "ntfy": [webhook_config.get("NTFY_SERVER_URL"), webhook_config.get("NTFY_TOPIC")],
+                "bark": [webhook_config.get("BARK_URL")],
+                "slack": [webhook_config.get("SLACK_WEBHOOK_URL")],
+                "generic_webhook": [webhook_config.get("GENERIC_WEBHOOK_URL")],
+            }
+            for ch_id, required_values in channel_checks.items():
+                if all(required_values):
+                    push_config["enabled_channels"].append(ch_id)
 
         if section == "all" or section == "keywords":
             keywords_config = {
@@ -542,9 +555,12 @@ class DataService:
 
         return result
 
-    def get_available_date_range(self) -> Tuple[Optional[datetime], Optional[datetime]]:
+    def get_available_date_range(self, db_type: str = "news") -> Tuple[Optional[datetime], Optional[datetime]]:
         """
         扫描 output 目录，返回实际可用的日期范围
+
+        Args:
+            db_type: 数据库类型 ("news" 或 "rss")
 
         Returns:
             (最早日期, 最新日期) 元组，如果没有数据则返回 (None, None)
@@ -554,64 +570,7 @@ class DataService:
             >>> earliest, latest = service.get_available_date_range()
             >>> print(f"可用日期范围：{earliest} 至 {latest}")
         """
-        output_dir = self.parser.project_root / "output"
-
-        if not output_dir.exists():
-            return (None, None)
-
-        available_dates = []
-
-        # 遍历日期文件夹
-        for date_folder in output_dir.iterdir():
-            if date_folder.is_dir() and not date_folder.name.startswith('.'):
-                folder_date = self._parse_date_folder_name(date_folder.name)
-                if folder_date:
-                    available_dates.append(folder_date)
-
-        if not available_dates:
-            return (None, None)
-
-        return (min(available_dates), max(available_dates))
-
-    def _parse_date_folder_name(self, folder_name: str) -> Optional[datetime]:
-        """
-        解析日期文件夹名称（兼容中文和ISO格式）
-
-        支持两种格式：
-        - 中文格式：YYYY年MM月DD日
-        - ISO格式：YYYY-MM-DD
-
-        Args:
-            folder_name: 文件夹名称
-
-        Returns:
-            datetime 对象，解析失败返回 None
-        """
-        # 尝试中文格式：YYYY年MM月DD日
-        chinese_match = re.match(r'(\d{4})年(\d{2})月(\d{2})日', folder_name)
-        if chinese_match:
-            try:
-                return datetime(
-                    int(chinese_match.group(1)),
-                    int(chinese_match.group(2)),
-                    int(chinese_match.group(3))
-                )
-            except ValueError:
-                pass
-
-        # 尝试 ISO 格式：YYYY-MM-DD
-        iso_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', folder_name)
-        if iso_match:
-            try:
-                return datetime(
-                    int(iso_match.group(1)),
-                    int(iso_match.group(2)),
-                    int(iso_match.group(3))
-                )
-            except ValueError:
-                pass
-
-        return None
+        return self.parser.get_available_date_range(db_type)
 
     def get_system_status(self) -> Dict:
         """
@@ -624,26 +583,15 @@ class DataService:
         output_dir = self.parser.project_root / "output"
 
         total_storage = 0
-        oldest_record = None
-        latest_record = None
-        total_news = 0
 
+        # 使用 parser 的方法获取日期范围
+        oldest_record, latest_record = self.get_available_date_range(db_type="news")
+
+        # 计算 output 目录总存储大小
         if output_dir.exists():
-            # 遍历日期文件夹
-            for date_folder in output_dir.iterdir():
-                if date_folder.is_dir() and not date_folder.name.startswith('.'):
-                    # 解析日期（兼容中文和ISO格式）
-                    folder_date = self._parse_date_folder_name(date_folder.name)
-                    if folder_date:
-                        if oldest_record is None or folder_date < oldest_record:
-                            oldest_record = folder_date
-                        if latest_record is None or folder_date > latest_record:
-                            latest_record = folder_date
-
-                    # 计算存储大小
-                    for item in date_folder.rglob("*"):
-                        if item.is_file():
-                            total_storage += item.stat().st_size
+            for item in output_dir.rglob("*"):
+                if item.is_file():
+                    total_storage += item.stat().st_size
 
         # 读取版本信息
         version_file = self.parser.project_root / "version"

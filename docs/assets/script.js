@@ -84,7 +84,7 @@ const MODULE_DEFS = [
     { id: 3, name: "3. 数据源 - RSS 订阅", key: "rss", editable: true },
     { id: 4, name: "4. 报告模式", key: "report", editable: true },
     { id: 5, name: "5. 推送内容控制", key: "display", editable: true },
-    { id: 6, name: "6. 推送通知 (仅限时间窗口)", key: "notification", editable: true, partial: true },
+    { id: 6, name: "6. 推送通知", key: "notification", editable: true, partial: true },
     { id: 7, name: "7. 存储配置", key: "storage", editable: false },
     { id: 8, name: "8. AI 模型配置", key: "ai", editable: true },
     { id: 9, name: "9. AI 分析功能", key: "ai_analysis", editable: true },
@@ -100,16 +100,20 @@ const INITIAL_YAML = `# 在此粘贴你的 config.yaml...
 // LocalStorage 键名
 const STORAGE_KEY_CONFIG = 'trendradar_config_yaml';
 const STORAGE_KEY_FREQUENCY = 'trendradar_frequency_txt';
+const STORAGE_KEY_TIMELINE = 'trendradar_timeline_yaml';
 const STORAGE_KEY_CONFIG_TIME = 'trendradar_config_time';
 const STORAGE_KEY_FREQUENCY_TIME = 'trendradar_frequency_time';
+const STORAGE_KEY_TIMELINE_TIME = 'trendradar_timeline_time';
 
 // 官网配置文件 URL
 const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/config/config.yaml';
 const REMOTE_FREQUENCY_URL = 'https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/config/frequency_words.txt';
+const REMOTE_TIMELINE_URL = 'https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/config/timeline.yaml';
 const REMOTE_VERSION_URL = 'https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version_configs';
 
 let currentYaml = "";
 let currentFrequency = "";
+let currentTimeline = "";
 let currentFrequencyData = null;  // 缓存解析后的数据，避免重复解析导致索引错位
 let currentTab = "config";
 
@@ -119,6 +123,7 @@ let currentTab = "config";
 // 防抖定时器
 let configSaveTimer = null;
 let frequencySaveTimer = null;
+let timelineSaveTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const yamlEditor = document.getElementById('yaml-editor');
@@ -146,6 +151,20 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFrequency = frequencyEditor.value;
     }
 
+    // 初始化 Timeline 编辑器
+    const timelineEditor = document.getElementById('timeline-editor');
+    const savedTimeline = localStorage.getItem(STORAGE_KEY_TIMELINE);
+
+    const INITIAL_TIMELINE = `# 在此粘贴你的 timeline.yaml...\n# 或拖拽文件到编辑器区域\n# 或点击右上角"加载官网最新配置"`;
+
+    if (savedTimeline && savedTimeline.trim() && savedTimeline !== INITIAL_TIMELINE) {
+        timelineEditor.value = savedTimeline;
+        currentTimeline = savedTimeline;
+    } else {
+        timelineEditor.value = INITIAL_TIMELINE;
+        currentTimeline = INITIAL_TIMELINE;
+    }
+
     // 渲染右侧模块列表
     renderModules();
 
@@ -165,13 +184,22 @@ document.addEventListener('DOMContentLoaded', () => {
         debounceSaveFrequency();
     });
 
+    timelineEditor.addEventListener('input', (e) => {
+        currentTimeline = e.target.value;
+        updateBackdrop('timeline-editor', 'timeline-backdrop');
+        syncTimelineToUI();
+        debounceSaveTimeline();
+    });
+
     // 同步滚动
     yamlEditor.addEventListener('scroll', () => syncScroll('yaml-editor', 'yaml-backdrop'));
     frequencyEditor.addEventListener('scroll', () => syncScroll('frequency-editor', 'frequency-backdrop'));
+    timelineEditor.addEventListener('scroll', () => syncScroll('timeline-editor', 'timeline-backdrop'));
 
     // 初始化拖拽上传功能
     initDragAndDrop(yamlEditor, 'config');
     initDragAndDrop(frequencyEditor, 'frequency');
+    initDragAndDrop(timelineEditor, 'timeline');
 
     // 页面关闭/刷新时立即保存
     window.addEventListener('beforeunload', saveAllToLocalStorage);
@@ -188,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateBackdrop('yaml-editor', 'yaml-backdrop');
     updateBackdrop('frequency-editor', 'frequency-backdrop');
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
 
     updateSaveTimeDisplay();
 });
@@ -208,6 +237,14 @@ function debounceSaveFrequency() {
     }, 1000);
 }
 
+// 防抖保存 timeline.yaml
+function debounceSaveTimeline() {
+    if (timelineSaveTimer) clearTimeout(timelineSaveTimer);
+    timelineSaveTimer = setTimeout(() => {
+        saveTimelineToLocalStorage();
+    }, 1000);
+}
+
 // ==========================================
 // 2.1 拖拽上传功能
 // ==========================================
@@ -220,7 +257,7 @@ function initDragAndDrop(editor, type) {
         <div class="drop-overlay-content">
             <i class="fa-solid fa-cloud-arrow-up text-4xl mb-2"></i>
             <div class="text-sm font-bold">释放以加载文件</div>
-            <div class="text-xs opacity-75">${type === 'config' ? 'config.yaml' : 'frequency_words.txt'}</div>
+            <div class="text-xs opacity-75">${type === 'config' ? 'config.yaml' : type === 'timeline' ? 'timeline.yaml' : 'frequency_words.txt'}</div>
         </div>
     `;
     container.style.position = 'relative';
@@ -276,13 +313,15 @@ function handleFileDrop(e, type) {
 
     const validExtensions = type === 'config'
         ? ['.yaml', '.yml', '.txt']
+        : type === 'timeline'
+        ? ['.yaml', '.yml']
         : ['.txt', '.yaml', '.yml'];
 
     const fileName = file.name.toLowerCase();
     const isValid = validExtensions.some(ext => fileName.endsWith(ext));
 
     if (!isValid) {
-        showToast(`请拖入 ${type === 'config' ? 'YAML' : 'TXT'} 文件`, 'error');
+        showToast(`请拖入 ${type === 'config' || type === 'timeline' ? 'YAML' : 'TXT'} 文件`, 'error');
         return;
     }
 
@@ -302,6 +341,19 @@ function handleFileDrop(e, type) {
                 // 仍然加载，让用户修复
                 document.getElementById('yaml-editor').value = content;
                 currentYaml = content;
+            }
+        } else if (type === 'timeline') {
+            try {
+                jsyaml.load(content);
+                document.getElementById('timeline-editor').value = content;
+                currentTimeline = content;
+                updateBackdrop('timeline-editor', 'timeline-backdrop');
+                syncTimelineToUI();
+                showToast(`已加载: ${file.name}`, 'success');
+            } catch (err) {
+                showToast(`YAML 语法错误: ${err.message}`, 'error');
+                document.getElementById('timeline-editor').value = content;
+                currentTimeline = content;
             }
         } else {
             document.getElementById('frequency-editor').value = content;
@@ -350,10 +402,25 @@ function saveFrequencyToLocalStorage() {
     }
 }
 
+// 保存 timeline.yaml
+function saveTimelineToLocalStorage() {
+    try {
+        if (currentTimeline && currentTimeline.trim().length > 10) {
+            const now = new Date().toISOString();
+            localStorage.setItem(STORAGE_KEY_TIMELINE, currentTimeline);
+            localStorage.setItem(STORAGE_KEY_TIMELINE_TIME, now);
+            updateSaveTimeDisplay();
+        }
+    } catch (e) {
+        console.warn('LocalStorage 保存 timeline 失败:', e);
+    }
+}
+
 // 保存全部（页面关闭时调用）
 function saveAllToLocalStorage() {
     saveConfigToLocalStorage();
     saveFrequencyToLocalStorage();
+    saveTimelineToLocalStorage();
 }
 
 // 兼容旧调用
@@ -413,6 +480,22 @@ function updateSaveTimeDisplay() {
             }
         }
     }
+
+    // 更新 timeline.yaml 的时间显示
+    const timelineTime = localStorage.getItem(STORAGE_KEY_TIMELINE_TIME);
+    const timelineTimeEl = document.getElementById('timeline-save-time');
+    const timelineLabelEl = document.getElementById('timeline-save-label');
+    if (timelineTimeEl) {
+        timelineTimeEl.textContent = formatSaveTime(timelineTime);
+        timelineTimeEl.title = timelineTime ? new Date(timelineTime).toLocaleString('zh-CN') : '未保存';
+        if (timelineLabelEl) {
+            if (timelineTime) {
+                timelineLabelEl.classList.remove('hidden');
+            } else {
+                timelineLabelEl.classList.add('hidden');
+            }
+        }
+    }
 }
 
 // ==========================================
@@ -449,6 +532,14 @@ window.openLoadConfigModal = function() {
                     </div>
                     <i class="fa-solid fa-filter text-orange-400"></i>
                 </label>
+                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors">
+                    <input type="checkbox" id="load-timeline-yaml" checked class="w-4 h-4 text-blue-600 rounded">
+                    <div class="flex-1">
+                        <div class="font-medium text-gray-800">timeline.yaml</div>
+                        <div class="text-xs text-gray-500">调度时间线、预设模板、自定义时间段</div>
+                    </div>
+                    <i class="fa-solid fa-calendar-week text-purple-400"></i>
+                </label>
             </div>
             <div class="text-xs text-gray-400 mt-3 p-2 bg-gray-50 rounded">
                 <i class="fa-solid fa-info-circle mr-1"></i>
@@ -473,8 +564,9 @@ window.closeLoadConfigModal = function() {
 window.confirmLoadConfig = async function() {
     const loadConfig = document.getElementById('load-config-yaml')?.checked;
     const loadFrequency = document.getElementById('load-frequency-txt')?.checked;
+    const loadTimeline = document.getElementById('load-timeline-yaml')?.checked;
 
-    if (!loadConfig && !loadFrequency) {
+    if (!loadConfig && !loadFrequency && !loadTimeline) {
         showToast('请至少选择一个文件', 'warning');
         return;
     }
@@ -486,18 +578,19 @@ window.confirmLoadConfig = async function() {
         const promises = [];
         if (loadConfig) promises.push(fetch(REMOTE_CONFIG_URL).then(r => ({ type: 'config', res: r })));
         if (loadFrequency) promises.push(fetch(REMOTE_FREQUENCY_URL).then(r => ({ type: 'frequency', res: r })));
+        if (loadTimeline) promises.push(fetch(REMOTE_TIMELINE_URL).then(r => ({ type: 'timeline', res: r })));
 
         const results = await Promise.all(promises);
 
         for (const { type, res } of results) {
             if (!res.ok) {
-                throw new Error(`${type === 'config' ? 'config.yaml' : 'frequency_words.txt'} 加载失败: ${res.status}`);
+                const names = { config: 'config.yaml', frequency: 'frequency_words.txt', timeline: 'timeline.yaml' };
+                throw new Error(`${names[type]} 加载失败: ${res.status}`);
             }
 
             const text = await res.text();
 
             if (type === 'config') {
-                // 验证 YAML 语法
                 try {
                     jsyaml.load(text);
                 } catch (yamlErr) {
@@ -508,6 +601,17 @@ window.confirmLoadConfig = async function() {
                 currentYaml = text;
                 updateBackdrop('yaml-editor', 'yaml-backdrop');
                 syncYamlToUI();
+            } else if (type === 'timeline') {
+                try {
+                    jsyaml.load(text);
+                } catch (yamlErr) {
+                    showToast(`YAML 语法错误: ${yamlErr.message}`, 'error');
+                    continue;
+                }
+                document.getElementById('timeline-editor').value = text;
+                currentTimeline = text;
+                updateBackdrop('timeline-editor', 'timeline-backdrop');
+                syncTimelineToUI();
             } else {
                 document.getElementById('frequency-editor').value = text;
                 currentFrequency = text;
@@ -522,6 +626,7 @@ window.confirmLoadConfig = async function() {
         const loadedFiles = [];
         if (loadConfig) loadedFiles.push('config.yaml');
         if (loadFrequency) loadedFiles.push('frequency_words.txt');
+        if (loadTimeline) loadedFiles.push('timeline.yaml');
         showToast(`已加载: ${loadedFiles.join(', ')}`, 'success');
 
     } catch (err) {
@@ -787,7 +892,7 @@ function renderControls(mod) {
 
             // Standalone Configuration Section
             html += `<div class="border-t border-gray-200 pt-4 mt-4">`;
-            html += `<div class="text-xs font-bold text-gray-700 mb-3">独立展示区配置 <span class="text-gray-400 font-normal">(仅在上方开启"独立展示区"时生效)</span></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-3">独立展示区配置 <span class="text-gray-400 font-normal">(推送展示由上方开关控制，AI 分析由 AI 模块的开关独立控制)</span></div>`;
 
             html += createNumberControl(mod.key, "standalone.max_items", "每个源最多展示条数");
 
@@ -805,15 +910,11 @@ function renderControls(mod) {
             }, 0);
             break;
         case "notification":
-            // 只有推送窗口可见
-            html = `<div class="text-xs font-bold text-blue-600 mb-2">推送时间窗口设置</div>`;
-            html += createToggleControl(mod.key, "push_window.enabled", "开启时间窗口");
-            html += `<div class="grid grid-cols-2 gap-4">
-                        ${createInputControl(mod.key, "push_window.start", "开始时间 (HH:MM)")}
-                        ${createInputControl(mod.key, "push_window.end", "结束时间 (HH:MM)")}
+            html = `<div class="text-xs text-gray-500 mb-2 p-2 bg-blue-50 rounded border border-blue-200">
+                        <i class="fa-solid fa-info-circle mr-1 text-blue-500"></i>
+                        推送时间由 <strong>timeline.yaml</strong> 控制，切换到 timeline.yaml 标签页可可视化编辑调度规则。<br>
+                        此处仅配置通知渠道（Telegram / 企业微信等），请在左侧编辑器中修改。
                     </div>`;
-            html += createToggleControl(mod.key, "push_window.once_per_day", "窗口内仅推送一次");
-            html += `<div class="text-xs text-gray-500 mt-2">通知渠道配置请在左侧编辑器中修改</div>`;
             break;
         case "ai":
             html = createInputControl(mod.key, "model", "模型名称");
@@ -826,22 +927,20 @@ function renderControls(mod) {
         case "ai_analysis":
             html = createToggleControl(mod.key, "enabled", "开启 AI 分析报告");
 
-            // AI 分析时间窗口设置
-            html += `<div class="text-xs font-bold text-blue-600 mb-2 mt-4">AI 分析时间窗口设置</div>`;
-            html += createToggleControl(mod.key, "analysis_window.enabled", "开启时间窗口");
-            html += `<div class="grid grid-cols-2 gap-4">
-                        ${createInputControl(mod.key, "analysis_window.start", "开始时间 (HH:MM)")}
-                        ${createInputControl(mod.key, "analysis_window.end", "结束时间 (HH:MM)")}
+            // 提示：分析时间窗口已迁移到 timeline.yaml
+            html += `<div class="text-xs text-gray-500 mt-3 mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                        <i class="fa-solid fa-info-circle mr-1 text-blue-500"></i>
+                        AI 分析的执行时间已由 <strong>timeline.yaml</strong> 统一控制。
                     </div>`;
-            html += createToggleControl(mod.key, "analysis_window.once_per_day", "窗口内仅分析一次");
 
             // 其他 AI 分析配置
-            html += `<div class="text-xs font-bold text-blue-600 mb-2 mt-4">分析内容配置</div>`;
+            html += `<div class="text-xs font-bold text-blue-600 mb-2">分析内容配置</div>`;
             html += createInputControl(mod.key, "language", "输出语言");
             html += createInputControl(mod.key, "prompt_file", "提示词配置文件");
             html += createSelectControl(mod.key, "mode", "AI 分析模式", ["follow_report", "daily", "current", "incremental"]);
             html += createNumberControl(mod.key, "max_news_for_analysis", "最大分析条数");
             html += createToggleControl(mod.key, "include_rss", "包含 RSS 内容");
+            html += createToggleControl(mod.key, "include_standalone", "包含独立展示区数据");
             html += createToggleControl(mod.key, "include_rank_timeline", "传递完整排名时间线");
             break;
         case "ai_translation":
@@ -1069,7 +1168,8 @@ function createSelectControl(mod, path, label, options) {
 window.copyResult = function() {
     const yamlEditor = document.getElementById('yaml-editor');
     const frequencyEditor = document.getElementById('frequency-editor');
-    const editor = currentTab === 'config' ? yamlEditor : frequencyEditor;
+    const timelineEditor = document.getElementById('timeline-editor');
+    const editor = currentTab === 'config' ? yamlEditor : currentTab === 'timeline' ? timelineEditor : frequencyEditor;
 
     editor.select();
     document.execCommand('copy');
@@ -1082,31 +1182,33 @@ window.copyResult = function() {
 
 window.resetToDefault = function() {
     if (confirm('确定要重置为初始状态吗？未保存的修改将丢失。')) {
-        const yamlEditor = document.getElementById('yaml-editor');
-        const frequencyEditor = document.getElementById('frequency-editor');
-
         if (currentTab === 'config') {
+            const yamlEditor = document.getElementById('yaml-editor');
             yamlEditor.value = INITIAL_YAML;
             currentYaml = INITIAL_YAML;
             updateBackdrop('yaml-editor', 'yaml-backdrop');
-
-            // 清除 LocalStorage 中的 config 数据
             localStorage.removeItem(STORAGE_KEY_CONFIG);
             localStorage.removeItem(STORAGE_KEY_CONFIG_TIME);
-
-            // 重置 UI：重新渲染模块以清空输入框，因为 INITIAL_YAML 可能为空导致 syncYamlToUI 不执行更新
             renderModules();
             syncYamlToUI();
             updateSaveTimeDisplay();
+        } else if (currentTab === 'timeline') {
+            const timelineEditor = document.getElementById('timeline-editor');
+            const initialTimeline = `# 在此粘贴你的 timeline.yaml...\n# 或拖拽文件到编辑器区域\n# 或点击右上角"加载官网最新配置"`;
+            timelineEditor.value = initialTimeline;
+            currentTimeline = initialTimeline;
+            updateBackdrop('timeline-editor', 'timeline-backdrop');
+            localStorage.removeItem(STORAGE_KEY_TIMELINE);
+            localStorage.removeItem(STORAGE_KEY_TIMELINE_TIME);
+            syncTimelineToUI();
+            updateSaveTimeDisplay();
         } else {
+            const frequencyEditor = document.getElementById('frequency-editor');
             frequencyEditor.value = "# 在此粘贴你的 frequency_words.txt 内容...\n\n[GLOBAL_FILTER]\n\n[WORD_GROUPS]\n";
             currentFrequency = frequencyEditor.value;
             updateBackdrop('frequency-editor', 'frequency-backdrop');
-
-            // 清除 LocalStorage 中的 frequency 数据
             localStorage.removeItem(STORAGE_KEY_FREQUENCY);
             localStorage.removeItem(STORAGE_KEY_FREQUENCY_TIME);
-
             syncFrequencyToUI();
             updateSaveTimeDisplay();
         }
@@ -1120,28 +1222,27 @@ window.resetToDefault = function() {
 window.switchTab = function(tab) {
     currentTab = tab;
 
-    // 更新 Tab 按钮状态
-    document.getElementById('tab-config').classList.toggle('active', tab === 'config');
-    document.getElementById('tab-frequency').classList.toggle('active', tab === 'frequency');
+    const activeClass = "tab-button active px-4 py-2 text-xs font-bold text-gray-300 hover:bg-[#2d2d30] transition-colors border-b-2 border-blue-500";
+    const inactiveClass = "tab-button px-4 py-2 text-xs font-bold text-gray-500 hover:bg-[#2d2d30] transition-colors border-b-2 border-transparent";
 
+    // 更新 Tab 按钮状态
     const configBtn = document.getElementById('tab-config');
     const freqBtn = document.getElementById('tab-frequency');
+    const timelineBtn = document.getElementById('tab-timeline');
 
-    if (tab === 'config') {
-        configBtn.className = "tab-button active px-4 py-2 text-xs font-bold text-gray-300 hover:bg-[#2d2d30] transition-colors border-b-2 border-blue-500";
-        freqBtn.className = "tab-button px-4 py-2 text-xs font-bold text-gray-500 hover:bg-[#2d2d30] transition-colors border-b-2 border-transparent";
-    } else {
-        configBtn.className = "tab-button px-4 py-2 text-xs font-bold text-gray-500 hover:bg-[#2d2d30] transition-colors border-b-2 border-transparent";
-        freqBtn.className = "tab-button active px-4 py-2 text-xs font-bold text-gray-300 hover:bg-[#2d2d30] transition-colors border-b-2 border-blue-500";
-    }
+    configBtn.className = tab === 'config' ? activeClass : inactiveClass;
+    freqBtn.className = tab === 'frequency' ? activeClass : inactiveClass;
+    timelineBtn.className = tab === 'timeline' ? activeClass : inactiveClass;
 
     // 更新编辑器显示
     document.getElementById('yaml-editor-wrap').classList.toggle('hidden', tab !== 'config');
     document.getElementById('frequency-editor-wrap').classList.toggle('hidden', tab !== 'frequency');
+    document.getElementById('timeline-editor-wrap').classList.toggle('hidden', tab !== 'timeline');
 
     // 更新右侧面板
     document.getElementById('config-panel').classList.toggle('hidden', tab !== 'config');
     document.getElementById('frequency-panel').classList.toggle('hidden', tab !== 'frequency');
+    document.getElementById('timeline-panel').classList.toggle('hidden', tab !== 'timeline');
 
     // 更新模块导航栏显示状态：只在 config 模式下显示
     const moduleNav = document.getElementById('module-nav');
@@ -1152,21 +1253,29 @@ window.switchTab = function(tab) {
     // 更新保存时间显示
     const saveTimeConfig = document.getElementById('save-time-config');
     const saveTimeFrequency = document.getElementById('save-time-frequency');
+    const saveTimeTimeline = document.getElementById('save-time-timeline');
     if (saveTimeConfig) saveTimeConfig.classList.toggle('hidden', tab !== 'config');
     if (saveTimeFrequency) saveTimeFrequency.classList.toggle('hidden', tab !== 'frequency');
+    if (saveTimeTimeline) saveTimeTimeline.classList.toggle('hidden', tab !== 'timeline');
 
     // 更新右侧标题
     const versionBtn = document.getElementById('version-check-btn');
     if (tab === 'config') {
         document.getElementById('right-panel-title').textContent = '配置模块';
-        if (versionBtn) versionBtn.title = "检测 config.yaml 版本";
-    } else {
+        if (versionBtn) { versionBtn.style.display = ''; versionBtn.title = "检测 config.yaml 版本"; }
+    } else if (tab === 'frequency') {
         document.getElementById('right-panel-title').textContent = '频率词编辑';
-        if (versionBtn) versionBtn.title = "检测 frequency_words.txt 版本";
+        if (versionBtn) { versionBtn.style.display = ''; versionBtn.title = "检测 frequency_words.txt 版本"; }
+    } else {
+        document.getElementById('right-panel-title').textContent = '时间线调度';
+        if (versionBtn) versionBtn.style.display = 'none';
     }
 
     if (tab === 'frequency') {
         renderFrequencyPanel();
+    }
+    if (tab === 'timeline') {
+        syncTimelineToUI();
     }
 }
 
@@ -3494,4 +3603,1871 @@ function fillRssUrl(url) {
             input.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
         }, 500);
     }
+}
+
+// ==========================================
+// 13. Timeline 编辑器功能
+// ==========================================
+
+const PRESET_META = {
+    morning_evening: { icon: 'fa-sun', color: 'text-amber-500', bg: 'bg-amber-50', recommend: true },
+    always_on:       { icon: 'fa-bolt', color: 'text-blue-500', bg: 'bg-blue-50' },
+    office_hours:    { icon: 'fa-briefcase', color: 'text-green-500', bg: 'bg-green-50' },
+    night_owl:       { icon: 'fa-moon', color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    custom:          { icon: 'fa-sliders', color: 'text-purple-500', bg: 'bg-purple-50' }
+};
+
+const DAY_NAMES = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+/**
+ * 从当前 config.yaml 中读取 schedule.preset
+ */
+function getActivePreset() {
+    try {
+        const doc = jsyaml.load(currentYaml);
+        return doc?.schedule?.preset || 'morning_evening';
+    } catch { return 'morning_evening'; }
+}
+
+/**
+ * 解析 timeline YAML，返回结构化数据
+ */
+function parseTimelineData() {
+    try {
+        const doc = jsyaml.load(currentTimeline);
+        if (!doc) return null;
+        return doc;
+    } catch { return null; }
+}
+
+/**
+ * 获取指定预设/custom 的完整配置
+ */
+function getPresetConfig(data, presetName) {
+    if (!data) return null;
+    if (presetName === 'custom') return data.custom || null;
+    return data.presets?.[presetName] || null;
+}
+
+/**
+ * 主渲染函数：解析 timeline YAML → 渲染右侧面板
+ */
+function syncTimelineToUI() {
+    const panel = document.getElementById('timeline-panel');
+    if (!panel) return;
+
+    const data = parseTimelineData();
+    const activePreset = getActivePreset();
+
+    if (!data) {
+        panel.innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+                <i class="fa-solid fa-calendar-xmark text-4xl mb-3"></i>
+                <p class="text-sm">请在左侧粘贴 timeline.yaml 内容</p>
+                <p class="text-xs mt-1">或点击右上角「加载官网最新配置」</p>
+            </div>`;
+        return;
+    }
+
+    let html = '';
+
+    // ── Layer 1: 预设模式选择卡片 ──
+    html += `<div class="mb-6">
+        <div class="tl-section-title"><i class="fa-solid fa-swatchbook"></i>调度模式</div>
+        <div class="grid grid-cols-2 gap-3" id="tl-preset-grid">`;
+
+    // 收集所有预设名
+    const presetNames = Object.keys(data.presets || {});
+    // 确保 custom 在最后
+    const allModes = [...presetNames.filter(n => n !== 'custom'), ...(data.custom ? ['custom'] : [])];
+
+    allModes.forEach(name => {
+        const meta = PRESET_META[name] || { icon: 'fa-puzzle-piece', color: 'text-gray-500', bg: 'bg-gray-50' };
+        const presetCfg = getPresetConfig(data, name);
+        const label = presetCfg?.name || meta.label || name;
+        const desc = presetCfg?.description || meta.desc || '';
+        const isActive = name === activePreset;
+        const isProtected = ['morning_evening', 'always_on', 'office_hours', 'night_owl', 'custom'].includes(name);
+        html += `
+            <div class="tl-preset-card ${isActive ? 'selected' : ''}" data-preset="${name}">
+                ${meta.recommend ? '<div class="tl-recommend-badge">推荐</div>' : ''}
+                <div class="flex items-center gap-3 cursor-pointer" onclick="selectTimelinePreset('${name}')">
+                    <div class="tl-card-icon ${meta.bg} ${meta.color}"><i class="fa-solid ${meta.icon}"></i></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-bold text-gray-800 truncate tl-editable" ondblclick="event.stopPropagation();tlInlineEdit(this,'${name}','name','${escapeAttr(label)}')">${label}</div>
+                        <div class="text-[10px] text-gray-500 truncate tl-editable" ondblclick="event.stopPropagation();tlInlineEdit(this,'${name}','description','${escapeAttr(desc)}')">${desc}</div>
+                    </div>
+                </div>
+                <div class="tl-card-actions">
+                    <button onclick="event.stopPropagation();duplicateTlPreset('${name}')" class="tl-card-action-btn" title="复制"><i class="fa-regular fa-copy"></i></button>
+                    ${!isProtected ? `<button onclick="event.stopPropagation();deleteTlPreset('${name}')" class="tl-card-action-btn text-red-400 hover:text-red-600" title="删除"><i class="fa-regular fa-trash-can"></i></button>` : ''}
+                </div>
+                ${isActive ? '<div class="absolute bottom-1 right-2 text-[9px] text-blue-500 font-bold"><i class="fa-solid fa-check-circle mr-0.5"></i>当前</div>' : ''}
+            </div>`;
+    });
+
+    // 新建模式卡片
+    html += `
+        <div class="tl-preset-card tl-new-preset-card" onclick="openTlNewPresetModal()">
+            <div class="flex items-center gap-3">
+                <div class="tl-card-icon bg-gray-50 text-gray-400"><i class="fa-solid fa-plus"></i></div>
+                <div>
+                    <div class="text-sm font-bold text-gray-500">新建模式</div>
+                    <div class="text-[10px] text-gray-400">创建自定义调度方案</div>
+                </div>
+            </div>
+        </div>`;
+
+    html += `</div></div>`;
+
+    // 获取当前预设配置
+    const config = getPresetConfig(data, activePreset);
+
+    if (!config) {
+        html += `<div class="text-center py-6 text-gray-400 text-sm">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1"></i>
+            未找到预设「${activePreset}」的配置
+        </div>`;
+        panel.innerHTML = html;
+        return;
+    }
+
+    // ── Layer 2: 周视图时间线 ──
+    html += renderWeekView(config, activePreset);
+
+    // ── Layer 3: 时间段详情 ──
+    html += renderPeriodDetails(config, activePreset);
+
+    panel.innerHTML = html;
+
+    // 初始化日计划 Tag 拖拽排序
+    initDayPlanSortable(activePreset);
+}
+
+/**
+ * 渲染周视图（7 天 × 24 小时水平条）
+ */
+function renderWeekView(config, presetName) {
+    const periods = config.periods || {};
+    const dayPlans = config.day_plans || {};
+    const weekMap = config.week_map || {};
+
+    // 时间刻度
+    let html = `<div class="tl-week-view">
+        <div class="tl-section-title mb-2"><i class="fa-solid fa-calendar-week"></i>周视图</div>
+        <div class="tl-hour-markers">
+            <div style="width:2.5rem;flex-shrink:0"></div>
+            <div style="flex:1;display:flex;min-width:480px">`;
+
+    for (let h = 0; h <= 24; h += 2) {
+        html += `<div class="tl-hour-marker" style="width:${100/12}%;${h===24?'text-align:right;margin-left:-1em':''}">
+            ${h < 10 ? '0' : ''}${h}
+        </div>`;
+    }
+    html += `</div></div>`;
+
+    // 获取当前星期几 (1=周一...7=周日)
+    const today = new Date().getDay();
+    const todayIso = today === 0 ? 7 : today;
+
+    // 7 天的行
+    for (let d = 1; d <= 7; d++) {
+        const dayPlanName = weekMap[d] || weekMap[String(d)];
+        const dayPlan = dayPlans[dayPlanName];
+        const dayPeriodNames = dayPlan?.periods || [];
+        const isToday = d === todayIso;
+
+        html += `<div class="tl-week-row">
+            <div class="tl-day-label ${isToday ? 'today' : ''}">${DAY_NAMES[d-1]}</div>
+            <div class="tl-timeline-bar" data-day="${d}" onclick="onTlBarClick(event,'${presetName}',${d})">`;
+
+        // 渲染各时间段色块
+        dayPeriodNames.forEach(pName => {
+            const p = periods[pName];
+            if (!p) return;
+
+            const merged = mergeWithDefault(p, config.default);
+            const colorClass = getBlockColorClass(merged);
+            const blocks = computeBlocks(p.start, p.end);
+
+            blocks.forEach(b => {
+                const left = (b.start / 24 * 100).toFixed(2);
+                const width = ((b.end - b.start) / 24 * 100).toFixed(2);
+                const label = p.name || pName;
+                html += `<div class="tl-period-block ${colorClass}" style="left:${left}%;width:${width}%"
+                              onclick="scrollToPeriodCard('${pName}')"
+                              onmouseenter="showTlTooltip(event, '${escapeAttr(label)}', '${p.start||''}', '${p.end||''}', ${!!merged.push}, ${!!merged.analyze}, '${merged.report_mode||''}')"
+                              onmouseleave="hideTlTooltip()">
+                    <span class="tl-block-label">${label}</span>
+                </div>`;
+            });
+        });
+
+        // 当前时间指示线（仅今天）
+        if (isToday) {
+            const nowTime = new Date();
+            const nowH = nowTime.getHours() + nowTime.getMinutes() / 60;
+            const nowLeftPct = (nowH / 24 * 100).toFixed(2);
+            html += `<div class="tl-now-line" style="left:${nowLeftPct}%" title="当前时间 ${String(nowTime.getHours()).padStart(2,'0')}:${String(nowTime.getMinutes()).padStart(2,'0')}"></div>`;
+        }
+
+        html += `</div></div>`;
+    }
+
+    // 图例
+    html += `<div class="tl-legend">
+        <div class="tl-legend-item"><div class="tl-legend-color tl-block-push"></div>推送</div>
+        <div class="tl-legend-item"><div class="tl-legend-color tl-block-analyze"></div>AI 分析</div>
+        <div class="tl-legend-item"><div class="tl-legend-color tl-block-push-analyze"></div>推送 + 分析</div>
+        <div class="tl-legend-item"><div class="tl-legend-color tl-block-collect"></div>仅采集</div>
+        <div class="tl-legend-item"><div class="tl-legend-color" style="background:#f1f5f9;border:1px solid #e2e8f0"></div>默认 (default)</div>
+    </div>`;
+
+    html += `</div>`;
+    return html;
+}
+
+/**
+ * 合并 period 与 default（period 字段优先）
+ */
+function mergeWithDefault(period, defaultCfg) {
+    if (!defaultCfg) return period || {};
+    const merged = { ...defaultCfg, ...period };
+    if (period.once || defaultCfg.once) {
+        merged.once = { ...(defaultCfg.once || {}), ...(period.once || {}) };
+    }
+    return merged;
+}
+
+/**
+ * 根据 push/analyze 状态确定色块 CSS 类
+ */
+function getBlockColorClass(merged) {
+    const push = !!merged.push;
+    const analyze = !!merged.analyze;
+    if (push && analyze) return 'tl-block-push-analyze';
+    if (push) return 'tl-block-push';
+    if (analyze) return 'tl-block-analyze';
+    if (merged.collect !== false) return 'tl-block-collect';
+    return 'tl-block-silent';
+}
+
+/**
+ * 计算时间段的渲染块（处理跨午夜情况）
+ * 返回 [{start: 小时数, end: 小时数}, ...] 的数组
+ */
+function computeBlocks(startStr, endStr) {
+    if (!startStr || !endStr) return [];
+    const s = parseTime(startStr);
+    const e = parseTime(endStr);
+    if (s < e) return [{ start: s, end: e }];
+    // 跨午夜
+    return [{ start: s, end: 24 }, { start: 0, end: e }];
+}
+
+function parseTime(str) {
+    const [h, m] = (str || '00:00').split(':').map(Number);
+    return h + (m || 0) / 60;
+}
+
+function escapeAttr(s) {
+    return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+/**
+ * Tooltip 显示/隐藏
+ */
+let tlTooltipEl = null;
+
+function showTlTooltip(event, name, start, end, push, analyze, mode) {
+    hideTlTooltip();
+    const el = document.createElement('div');
+    el.className = 'tl-tooltip';
+    let features = [];
+    if (push) features.push('<span style="color:#93c5fd">推送</span>');
+    if (analyze) features.push('<span style="color:#c4b5fd">分析</span>');
+    if (!push && !analyze) features.push('<span style="color:#94a3b8">仅采集</span>');
+
+    el.innerHTML = `<div style="font-weight:700;margin-bottom:2px">${name}</div>
+        <div style="font-size:11px;color:#9ca3af">${start} - ${end}</div>
+        <div style="margin-top:4px">${features.join(' / ')}</div>
+        ${mode ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px">模式: ${mode}</div>` : ''}`;
+
+    document.body.appendChild(el);
+    tlTooltipEl = el;
+
+    const rect = event.target.getBoundingClientRect();
+    el.style.left = (rect.left + rect.width / 2 - el.offsetWidth / 2) + 'px';
+    el.style.top = (rect.top - el.offsetHeight - 8) + 'px';
+
+    // 确保不超出屏幕
+    const elRect = el.getBoundingClientRect();
+    if (elRect.left < 4) el.style.left = '4px';
+    if (elRect.right > window.innerWidth - 4) el.style.left = (window.innerWidth - el.offsetWidth - 4) + 'px';
+    if (elRect.top < 4) {
+        el.style.top = (rect.bottom + 8) + 'px';
+        el.style.setProperty('--arrow', 'top');
+    }
+}
+
+function hideTlTooltip() {
+    if (tlTooltipEl) {
+        tlTooltipEl.remove();
+        tlTooltipEl = null;
+    }
+}
+
+/**
+ * 渲染时间段详情面板
+ */
+function renderPeriodDetails(config, presetName) {
+    const isCustom = presetName === 'custom';
+    const periods = config.periods || {};
+    const dayPlans = config.day_plans || {};
+    const weekMap = config.week_map || {};
+    const defaults = config.default || {};
+
+    let html = '';
+
+    // ── Default 配置（默认展开）──
+    html += `<div class="tl-collapsible mt-4">
+        <div class="tl-collapsible-header" onclick="toggleTlCollapsible(this)">
+            <span><i class="fa-solid fa-gear mr-2 text-gray-400"></i>默认配置 (default)</span>
+            <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+        </div>
+        <div class="tl-collapsible-body">
+            <div class="text-xs text-gray-500 mb-2">不在任何时间段内时，使用以下配置：</div>
+            ${renderBehaviorToggles(defaults, presetName, 'default')}
+        </div>
+    </div>`;
+
+    // ── 时间段列表 ──
+    const periodEntries = Object.entries(periods);
+    html += `<div class="mt-6">
+        <div class="tl-section-title flex items-center justify-between">
+            <span><i class="fa-solid fa-puzzle-piece"></i>时间段 (Periods)</span>
+            <button onclick="openTlNewPeriodModal('${presetName}')" class="tl-add-btn"><i class="fa-solid fa-plus mr-1"></i>新增</button>
+        </div>`;
+
+    if (periodEntries.length > 0) {
+        html += `<div class="space-y-3">`;
+        periodEntries.forEach(([key, p]) => {
+            const merged = mergeWithDefault(p, defaults);
+            const colorClass = getBlockColorClass(merged);
+            html += `<div class="tl-period-card" id="tl-period-${key}">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded ${colorClass}"></div>
+                        <span class="text-sm font-bold text-gray-800 tl-editable" ondblclick="tlInlineEditPeriod(this,'${presetName}','${key}','${escapeAttr(p.name || key)}')">${p.name || key}</span>
+                        <span class="text-[10px] text-gray-400 font-mono">${key}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500 font-mono">${p.start || '?'} - ${p.end || '?'}</span>
+                        <button onclick="duplicateTlPeriod('${presetName}','${key}')" class="tl-inline-btn" title="复制"><i class="fa-regular fa-copy"></i></button>
+                        <button onclick="deleteTlPeriod('${presetName}','${key}')" class="tl-inline-btn text-red-400 hover:text-red-600" title="删除"><i class="fa-regular fa-trash-can"></i></button>
+                    </div>
+                </div>
+                ${renderBehaviorToggles(merged, presetName, key)}
+            </div>`;
+        });
+        html += `</div>`;
+    } else {
+        html += `<div class="text-xs text-gray-400 text-center py-4">
+            <i class="fa-solid fa-info-circle mr-1"></i>此模式无自定义时间段，全天使用 default 配置
+        </div>`;
+    }
+
+    html += `</div>`;
+
+    // ── 日计划 ──
+    const dayPlanEntries = Object.entries(dayPlans);
+    html += `<div class="mt-6">
+        <div class="tl-section-title flex items-center justify-between">
+            <span><i class="fa-solid fa-list-ol"></i>日计划 (Day Plans)</span>
+            <button onclick="addTlDayPlan('${presetName}')" class="tl-add-btn"><i class="fa-solid fa-plus mr-1"></i>新增</button>
+        </div>`;
+
+    if (dayPlanEntries.length > 0) {
+        html += `<div class="space-y-2">`;
+        dayPlanEntries.forEach(([name, plan]) => {
+            const pList = plan.periods || [];
+            // 构建可用 period 下拉（排除已添加的）
+            const availablePeriods = periodEntries.filter(([k]) => !pList.includes(k));
+            html += `<div class="bg-white border border-gray-200 rounded-lg px-3 py-2 tl-dayplan-card">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-bold text-gray-700">${name}</span>
+                    <button onclick="deleteTlDayPlan('${presetName}','${name}')" class="tl-inline-btn text-red-400 hover:text-red-600" title="删除日计划"><i class="fa-regular fa-trash-can"></i></button>
+                </div>
+                <div class="flex flex-wrap gap-1 items-center tl-dayplan-sortable" data-plan-key="${name}">
+                    ${pList.length > 0 ? pList.map(pn => {
+                        const p = periods[pn];
+                        const merged = p ? mergeWithDefault(p, defaults) : {};
+                        const cc = getBlockColorClass(merged);
+                        return `<span class="tl-period-tag ${cc}" data-period-key="${pn}">
+                            ${p?.name || pn}
+                            <button onclick="removePeriodFromDayPlanUI('${presetName}','${name}','${pn}')" class="tl-tag-remove" title="移除">&times;</button>
+                        </span>`;
+                    }).join('') : '<span class="text-[10px] text-gray-400">空 (全天走 default)</span>'}
+                    ${availablePeriods.length > 0 ? `
+                        <select class="tl-add-period-select" onchange="if(this.value){addPeriodToDayPlan('${presetName}','${name}',this.value);this.value=''}">
+                            <option value="">+ 添加</option>
+                            ${availablePeriods.map(([k, p]) => `<option value="${k}">${p.name || k}</option>`).join('')}
+                        </select>
+                    ` : ''}
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+
+    // ── 周映射（下拉选择）──
+    const dayPlanKeys = Object.keys(dayPlans);
+
+    // 为不同日计划分配颜色
+    const planColorMap = {};
+    const planColors = ['bg-blue-50 border-blue-200', 'bg-green-50 border-green-200', 'bg-amber-50 border-amber-200', 'bg-purple-50 border-purple-200', 'bg-rose-50 border-rose-200', 'bg-cyan-50 border-cyan-200', 'bg-orange-50 border-orange-200'];
+    dayPlanKeys.forEach((k, idx) => { planColorMap[k] = planColors[idx % planColors.length]; });
+
+    html += `<div class="mt-6">
+        <div class="tl-section-title"><i class="fa-solid fa-calendar-days"></i>周映射 (Week Map)</div>
+        <div class="bg-white border border-gray-200 rounded-lg px-3 py-2 space-y-1">`;
+
+    for (let d = 1; d <= 7; d++) {
+        const plan = weekMap[d] || weekMap[String(d)] || '';
+        const rowColor = planColorMap[plan] || '';
+        const options = dayPlanKeys.map(k =>
+            `<option value="${k}" ${k === plan ? 'selected' : ''}>${k}</option>`
+        ).join('');
+        html += `<div class="tl-dayplan-row ${rowColor} rounded px-2">
+            <div class="tl-dayplan-label">${DAY_NAMES[d-1]}</div>
+            <select class="tl-weekmap-select"
+                    onchange="onTlWeekMap('${presetName}',${d},this.value)">
+                ${options}
+            </select>
+        </div>`;
+    }
+
+    html += `</div>
+        <div class="flex gap-2 mt-2">
+            <button onclick="tlWeekMapQuick('${presetName}','all_same')" class="tl-quick-btn">全周统一</button>
+            <button onclick="tlWeekMapQuick('${presetName}','weekday_same')" class="tl-quick-btn">工作日统一</button>
+            <button onclick="tlWeekMapQuick('${presetName}','weekday_weekend')" class="tl-quick-btn">工作日/周末</button>
+        </div>
+    </div>`;
+
+    // 提示
+    if (!isCustom) {
+        html += `<div class="mt-4 text-xs text-gray-400 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <i class="fa-solid fa-lightbulb mr-1 text-amber-400"></i>
+            直接在上方调整开关和下拉框，左侧 YAML 会同步更新。如需更精细的控制，可直接编辑左侧 YAML 或修改 <strong>timeline.yaml</strong>。
+        </div>`;
+    } else {
+        html += `<div class="mt-4 text-xs text-gray-400 p-3 bg-purple-50 rounded-lg border border-purple-200">
+            <i class="fa-solid fa-pen-ruler mr-1 text-purple-400"></i>
+            自定义模式支持完全自由编辑。可直接在上方调整控件，或在左侧编辑 YAML 文本，两边实时同步。
+        </div>`;
+    }
+
+    return html;
+}
+
+/**
+ * 渲染行为开关（可交互）
+ * presetName: 当前预设名（用于定位 YAML 中的位置）
+ * periodKey: 'default' 或时间段 key（如 'weekday_morning'）
+ */
+function renderBehaviorToggles(cfg, presetName, periodKey) {
+    const toggleItems = [
+        { k: 'collect', label: '采集', icon: 'fa-download' },
+        { k: 'analyze', label: '分析', icon: 'fa-brain' },
+        { k: 'push', label: '推送', icon: 'fa-bell' },
+    ];
+
+    const uid = `tl-${presetName}-${periodKey}`;
+
+    let html = '<div class="tl-toggle-row">';
+    toggleItems.forEach(item => {
+        const val = cfg[item.k];
+        const on = val === true || val === 'true';
+        const toggleId = `${uid}-${item.k}`;
+        html += `<label class="tl-toggle-item ${on ? 'on' : 'off'}" for="${toggleId}" style="cursor:pointer">
+            <div class="relative inline-block w-8 mr-1 align-middle select-none">
+                <input type="checkbox" id="${toggleId}" ${on ? 'checked' : ''}
+                    onchange="onTlToggle('${presetName}','${periodKey}','${item.k}',this.checked)"
+                    class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200 ease-in-out" style="top:0"/>
+                <label for="${toggleId}" class="toggle-label block overflow-hidden h-4 rounded-full bg-gray-300 cursor-pointer"></label>
+            </div>
+            <i class="fa-solid ${item.icon}" style="font-size:10px"></i>${item.label}
+        </label>`;
+    });
+    html += '</div>';
+
+    // 报告模式下拉
+    const reportModes = ['current', 'daily', 'incremental'];
+    const aiModes = ['follow_report', 'daily', 'current', 'incremental'];
+
+    html += `<div class="flex flex-wrap gap-2 mt-2 items-center">`;
+
+    // report_mode
+    html += `<div class="flex items-center gap-1">
+        <span class="text-[10px] text-gray-400">报告:</span>
+        <select class="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white"
+                onchange="onTlSelect('${presetName}','${periodKey}','report_mode',this.value)">
+            ${reportModes.map(m => `<option value="${m}" ${cfg.report_mode === m ? 'selected' : ''}>${m}</option>`).join('')}
+        </select>
+    </div>`;
+
+    // ai_mode
+    html += `<div class="flex items-center gap-1">
+        <span class="text-[10px] text-gray-400">AI:</span>
+        <select class="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white"
+                onchange="onTlSelect('${presetName}','${periodKey}','ai_mode',this.value)">
+            ${aiModes.map(m => `<option value="${m}" ${(cfg.ai_mode || 'follow_report') === m ? 'selected' : ''}>${m}</option>`).join('')}
+        </select>
+    </div>`;
+
+    // once toggles
+    const onceAnalyze = cfg.once?.analyze === true;
+    const oncePush = cfg.once?.push === true;
+    html += `<label class="flex items-center gap-1 text-[10px] ${onceAnalyze ? 'text-blue-600' : 'text-gray-400'}" style="cursor:pointer">
+        <input type="checkbox" ${onceAnalyze ? 'checked' : ''}
+               onchange="onTlToggle('${presetName}','${periodKey}','once.analyze',this.checked)"
+               class="w-3 h-3 rounded">仅分析一次
+    </label>`;
+    html += `<label class="flex items-center gap-1 text-[10px] ${oncePush ? 'text-blue-600' : 'text-gray-400'}" style="cursor:pointer">
+        <input type="checkbox" ${oncePush ? 'checked' : ''}
+               onchange="onTlToggle('${presetName}','${periodKey}','once.push',this.checked)"
+               class="w-3 h-3 rounded">仅推送一次
+    </label>`;
+
+    html += `</div>`;
+
+    // 时间段编辑（仅非 default）
+    if (periodKey !== 'default' && (cfg.start || cfg.end)) {
+        html += `<div class="flex items-center gap-2 mt-2">
+            <span class="text-[10px] text-gray-400">时间:</span>
+            <input type="time" value="${cfg.start || ''}" class="text-xs border border-gray-200 rounded px-1.5 py-0.5"
+                   onchange="onTlSelect('${presetName}','${periodKey}','start',this.value)">
+            <span class="text-gray-300">~</span>
+            <input type="time" value="${cfg.end || ''}" class="text-xs border border-gray-200 rounded px-1.5 py-0.5"
+                   onchange="onTlSelect('${presetName}','${periodKey}','end',this.value)">
+        </div>`;
+    }
+
+    return html;
+}
+
+/**
+ * 点击周视图色块 → 滚动到对应 period 卡片并高亮
+ */
+window.scrollToPeriodCard = function(periodKey) {
+    const card = document.getElementById('tl-period-' + periodKey);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('tl-period-highlight');
+    setTimeout(() => card.classList.remove('tl-period-highlight'), 1500);
+}
+
+/**
+ * 折叠/展开切换
+ */
+window.toggleTlCollapsible = function(header) {
+    const body = header.nextElementSibling;
+    body.classList.toggle('collapsed');
+    header.classList.toggle('is-collapsed');
+}
+
+/**
+ * 右侧开关变更 → 更新左侧 timeline YAML
+ */
+window.onTlToggle = function(presetName, periodKey, field, value) {
+    updateTimelineField(presetName, periodKey, field, value);
+}
+
+window.onTlSelect = function(presetName, periodKey, field, value) {
+    updateTimelineField(presetName, periodKey, field, value);
+}
+
+/**
+ * 周映射下拉变更 → 更新 timeline YAML 中的 week_map.N
+ */
+window.onTlWeekMap = function(presetName, dayNum, value) {
+    const editor = document.getElementById('timeline-editor');
+    let yaml = editor.value;
+    const lines = yaml.split('\n');
+
+    // 定位 preset section
+    const isCustom = presetName === 'custom';
+    let sectionStart = -1;
+    let sectionIndent = 0;
+
+    if (isCustom) {
+        for (let i = 0; i < lines.length; i++) {
+            if (/^custom:\s*/.test(lines[i])) { sectionStart = i; break; }
+        }
+    } else {
+        let inPresets = false;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^presets:\s*/.test(line)) { inPresets = true; continue; }
+            if (inPresets && /^\S/.test(line) && !line.startsWith('#')) break;
+            if (inPresets) {
+                const m = line.match(/^(\s+)(\S+):\s*/);
+                if (m && m[2] === presetName) { sectionStart = i; sectionIndent = m[1].length; break; }
+            }
+        }
+    }
+
+    if (sectionStart < 0) return;
+
+    let sectionEnd = lines.length;
+    for (let i = sectionStart + 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim() === '' || line.trim().startsWith('#')) continue;
+        if (line.search(/\S/) <= sectionIndent) { sectionEnd = i; break; }
+    }
+
+    // 找 week_map: 行
+    const weekMapLine = findChildKey(lines, sectionStart, sectionEnd, sectionIndent, 'week_map');
+    if (weekMapLine < 0) return;
+
+    const wmIndent = lines[weekMapLine].search(/\S/);
+    const wmEnd = findBlockEnd(lines, weekMapLine, wmIndent, sectionEnd);
+
+    // 找 dayNum: 行
+    const dayKey = String(dayNum);
+    const dayLine = findChildKey(lines, weekMapLine, wmEnd, wmIndent, dayKey);
+
+    if (dayLine >= 0) {
+        replaceLineValue(lines, dayLine, value);
+    }
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+
+    clearTimeout(window._tlRenderTimer);
+    window._tlRenderTimer = setTimeout(() => syncTimelineToUI(), 300);
+}
+
+/**
+ * 核心：修改 timeline YAML 中的指定字段，保留注释
+ */
+function updateTimelineField(presetName, periodKey, field, value) {
+    const editor = document.getElementById('timeline-editor');
+    let yaml = editor.value;
+    const lines = yaml.split('\n');
+
+    // 1. 定位预设/custom 的起始行
+    const isCustom = presetName === 'custom';
+    let sectionStart = -1;
+    let sectionIndent = 0;
+
+    if (isCustom) {
+        // 找 custom: 顶层 key
+        for (let i = 0; i < lines.length; i++) {
+            if (/^custom:\s*/.test(lines[i])) {
+                sectionStart = i;
+                sectionIndent = 0;
+                break;
+            }
+        }
+    } else {
+        // 找 presets: 下的 presetName:
+        let inPresets = false;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^presets:\s*/.test(line)) {
+                inPresets = true;
+                continue;
+            }
+            if (inPresets && /^\S/.test(line) && !line.startsWith('#')) {
+                break; // left presets block
+            }
+            if (inPresets) {
+                const m = line.match(/^(\s+)(\S+):\s*/);
+                if (m && m[2] === presetName) {
+                    sectionStart = i;
+                    sectionIndent = m[1].length;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (sectionStart < 0) return;
+
+    // 2. 找到 section 结束行
+    let sectionEnd = lines.length;
+    for (let i = sectionStart + 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim() === '' || line.trim().startsWith('#')) continue;
+        const indent = line.search(/\S/);
+        if (indent <= sectionIndent) {
+            sectionEnd = i;
+            break;
+        }
+    }
+
+    // 3. 在 section 内定位 periodKey 子区域
+    let targetStart, targetEnd;
+    const fieldParts = field.split('.');
+
+    if (periodKey === 'default') {
+        // 找 default: 行
+        targetStart = findChildKey(lines, sectionStart, sectionEnd, sectionIndent, 'default');
+    } else {
+        // 找 periods: 下的 periodKey:
+        const periodsLine = findChildKey(lines, sectionStart, sectionEnd, sectionIndent, 'periods');
+        if (periodsLine < 0) return;
+        const periodsIndent = lines[periodsLine].search(/\S/);
+        const periodsEnd = findBlockEnd(lines, periodsLine, periodsIndent, sectionEnd);
+        targetStart = findChildKey(lines, periodsLine, periodsEnd, periodsIndent, periodKey);
+    }
+
+    if (targetStart < 0) return;
+
+    const targetIndent = lines[targetStart].search(/\S/);
+    targetEnd = findBlockEnd(lines, targetStart, targetIndent, sectionEnd);
+
+    // 4. 在 target 内查找 field（支持 once.analyze 嵌套）
+    let lineIdx = -1;
+
+    if (fieldParts.length === 1) {
+        lineIdx = findChildKey(lines, targetStart, targetEnd, targetIndent, fieldParts[0]);
+    } else {
+        // nested: once.analyze → find once: then analyze:
+        const parentLine = findChildKey(lines, targetStart, targetEnd, targetIndent, fieldParts[0]);
+        if (parentLine >= 0) {
+            const parentIndent = lines[parentLine].search(/\S/);
+            const parentEnd = findBlockEnd(lines, parentLine, parentIndent, targetEnd);
+            lineIdx = findChildKey(lines, parentLine, parentEnd, parentIndent, fieldParts[1]);
+        }
+    }
+
+    if (lineIdx < 0) {
+        // 字段不存在 → 需要插入
+        insertTimelineField(lines, targetStart, targetEnd, targetIndent, field, value, fieldParts);
+    } else {
+        // 字段存在 → 原地替换值
+        replaceLineValue(lines, lineIdx, value);
+    }
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+
+    // 延迟重新渲染（避免输入中途刷新）
+    clearTimeout(window._tlRenderTimer);
+    window._tlRenderTimer = setTimeout(() => syncTimelineToUI(), 300);
+}
+
+/**
+ * 查找子级 key 行
+ */
+function findChildKey(lines, start, end, parentIndent, key) {
+    for (let i = start + 1; i < end; i++) {
+        const line = lines[i];
+        if (line.trim() === '' || line.trim().startsWith('#')) continue;
+        const indent = line.search(/\S/);
+        if (indent <= parentIndent) break;
+        const m = line.match(/^\s*(\S+):\s*/);
+        if (m && m[1] === key && indent === parentIndent + 2) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * 找一个 block 的结束行号（下一个同级或更低缩进的非空非注释行）
+ */
+function findBlockEnd(lines, start, indent, maxEnd) {
+    for (let i = start + 1; i < maxEnd; i++) {
+        const line = lines[i];
+        if (line.trim() === '' || line.trim().startsWith('#')) continue;
+        const curIndent = line.search(/\S/);
+        if (curIndent <= indent) return i;
+    }
+    return maxEnd;
+}
+
+/**
+ * 替换行中的值，保留注释
+ */
+function replaceLineValue(lines, idx, value) {
+    const original = lines[idx];
+    const match = original.match(/^(\s*\S+:\s*)(.*)$/);
+    if (!match) return;
+
+    const prefix = match[1];
+    const rest = match[2];
+    const commentMatch = rest.match(/(\s*#.*)$/);
+    const comment = commentMatch ? commentMatch[1] : '';
+
+    let formatted;
+    if (typeof value === 'boolean') {
+        formatted = value ? 'true' : 'false';
+    } else if (typeof value === 'string') {
+        // 检查原值是否带引号
+        const valPart = rest.slice(0, rest.length - comment.length).trim();
+        const isQuoted = (valPart.startsWith('"') && valPart.endsWith('"')) ||
+                         (valPart.startsWith("'") && valPart.endsWith("'"));
+        if (isQuoted || value.includes(':') || value.includes('#') || value.includes(' ')) {
+            formatted = `"${value}"`;
+        } else {
+            formatted = value;
+        }
+    } else {
+        formatted = String(value);
+    }
+
+    lines[idx] = `${prefix}${formatted}${comment}`;
+}
+
+/**
+ * 字段不存在时，插入新行
+ */
+function insertTimelineField(lines, targetStart, targetEnd, targetIndent, field, value, fieldParts) {
+    const indent = ' '.repeat(targetIndent + 2);
+
+    let formatted;
+    if (typeof value === 'boolean') formatted = value ? 'true' : 'false';
+    else if (typeof value === 'string') formatted = value.includes(':') ? `"${value}"` : value;
+    else formatted = String(value);
+
+    if (fieldParts.length === 1) {
+        // 直接在 target 的末尾插入
+        lines.splice(targetEnd, 0, `${indent}${field}: ${formatted}`);
+    } else {
+        // once.analyze → find or create once: block, then insert child
+        const parentLine = findChildKey(lines, targetStart, targetEnd, targetIndent, fieldParts[0]);
+        if (parentLine >= 0) {
+            const parentIndent = lines[parentLine].search(/\S/);
+            const parentEnd = findBlockEnd(lines, parentLine, parentIndent, targetEnd);
+            const childIndent = ' '.repeat(parentIndent + 2);
+            lines.splice(parentEnd, 0, `${childIndent}${fieldParts[1]}: ${formatted}`);
+        } else {
+            // parent doesn't exist → create both
+            lines.splice(targetEnd, 0,
+                `${indent}${fieldParts[0]}:`,
+                `${indent}  ${fieldParts[1]}: ${formatted}`
+            );
+        }
+    }
+}
+
+/**
+ * 点击预设卡片 → 更新 config.yaml 中的 schedule.preset + 滚动左侧编辑器
+ */
+window.selectTimelinePreset = function(name) {
+    // 更新 config.yaml 中的 schedule.preset
+    const configEditor = document.getElementById('yaml-editor');
+    let yaml = configEditor.value;
+    const lines = yaml.split('\n');
+
+    let presetLineIdx = -1;
+    let inSchedule = false;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (/^schedule:\s*$/.test(line.trimEnd()) || /^schedule:\s*#/.test(line)) {
+            inSchedule = true;
+            continue;
+        }
+        if (inSchedule && /^\S/.test(line) && !line.startsWith('#')) {
+            inSchedule = false;
+        }
+        if (inSchedule && /^\s+preset:\s*/.test(line)) {
+            presetLineIdx = i;
+            break;
+        }
+    }
+
+    if (presetLineIdx >= 0) {
+        const original = lines[presetLineIdx];
+        const match = original.match(/^(\s*preset:\s*)(.*)$/);
+        if (match) {
+            const prefix = match[1];
+            const rest = match[2];
+            const commentMatch = rest.match(/(\s*#.*)$/);
+            const comment = commentMatch ? commentMatch[1] : '';
+            lines[presetLineIdx] = `${prefix}"${name}"${comment}`;
+        }
+    }
+
+    configEditor.value = lines.join('\n');
+    currentYaml = configEditor.value;
+    updateBackdrop('yaml-editor', 'yaml-backdrop');
+    debounceSaveConfig();
+
+    // 左侧 timeline 编辑器跳转到对应预设
+    scrollTimelineEditorToPreset(name);
+
+    // 重新渲染 timeline 面板
+    syncTimelineToUI();
+    const tlData = parseTimelineData();
+    const tlCfg = getPresetConfig(tlData, name);
+    const displayName = tlCfg?.name || name;
+    showToast(`已切换至「${displayName}」模式`, 'success');
+}
+
+/**
+ * 滚动左侧 timeline 编辑器到对应预设位置
+ */
+function scrollTimelineEditorToPreset(presetName) {
+    const editor = document.getElementById('timeline-editor');
+    const text = editor.value;
+    const lines = text.split('\n');
+
+    let targetLine = -1;
+
+    if (presetName === 'custom') {
+        // 找顶层 custom:
+        for (let i = 0; i < lines.length; i++) {
+            if (/^custom:\s*/.test(lines[i])) {
+                targetLine = i;
+                break;
+            }
+        }
+    } else {
+        // 找 presets: 下的 presetName:
+        let inPresets = false;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^presets:\s*/.test(line)) {
+                inPresets = true;
+                continue;
+            }
+            if (inPresets && /^\S/.test(line) && !line.startsWith('#')) break;
+            if (inPresets) {
+                const m = line.match(/^\s+(\S+):\s*/);
+                if (m && m[1] === presetName) {
+                    targetLine = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (targetLine < 0) return;
+
+    const lineHeight = 19.5;
+    const scrollPosition = targetLine * lineHeight;
+
+    // 设置光标位置
+    let charCount = 0;
+    for (let i = 0; i < targetLine; i++) {
+        charCount += lines[i].length + 1;
+    }
+
+    editor.focus();
+    editor.setSelectionRange(charCount, charCount + lines[targetLine].length);
+    editor.scrollTop = scrollPosition - 50;
+
+    // 高亮闪烁
+    editor.style.transition = 'background-color 0.3s';
+    const originalBg = editor.style.backgroundColor;
+    editor.style.backgroundColor = '#2d4a7c';
+    setTimeout(() => { editor.style.backgroundColor = originalBg; }, 300);
+}
+
+// ==========================================
+// 14. Timeline CRUD 功能（新建模式/时间段/日计划/删除等）
+// ==========================================
+
+// ── 弹窗：新建调度模式 ──
+
+window.openTlNewPresetModal = function() {
+    const modal = document.getElementById('tl-new-preset-modal');
+    // 填充模板下拉
+    const sel = document.getElementById('tl-new-preset-template');
+    const data = parseTimelineData();
+    sel.innerHTML = '<option value="">空白模板（仅采集，不推送不分析）</option>';
+    if (data?.presets) {
+        Object.keys(data.presets).forEach(k => {
+            const name = data.presets[k]?.name || k;
+            sel.innerHTML += `<option value="${k}">${name} (${k})</option>`;
+        });
+    }
+    if (data?.custom) {
+        sel.innerHTML += `<option value="custom">${data.custom.name || '自定义'} (custom)</option>`;
+    }
+    // 清空输入
+    document.getElementById('tl-new-preset-key').value = '';
+    document.getElementById('tl-new-preset-name').value = '';
+    document.getElementById('tl-new-preset-desc').value = '';
+    sel.value = '';
+    modal.classList.remove('hidden');
+}
+
+window.closeTlNewPresetModal = function() {
+    document.getElementById('tl-new-preset-modal').classList.add('hidden');
+}
+
+window.confirmTlNewPreset = function() {
+    const key = document.getElementById('tl-new-preset-key').value.trim();
+    const name = document.getElementById('tl-new-preset-name').value.trim();
+    const desc = document.getElementById('tl-new-preset-desc').value.trim();
+    const template = document.getElementById('tl-new-preset-template').value;
+
+    // 验证
+    if (!key) { showToast('请输入模式标识 (key)', 'error'); return; }
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) { showToast('key 仅支持英文、数字和下划线，且不能以数字开头', 'error'); return; }
+    if (!name) { showToast('请输入显示名称', 'error'); return; }
+
+    // 检查重复
+    const data = parseTimelineData();
+    if (data?.presets?.[key]) { showToast(`预设「${key}」已存在`, 'error'); return; }
+    if (key === 'custom') { showToast('不能使用 "custom" 作为预设名', 'error'); return; }
+
+    // 构建 YAML 文本块
+    let block;
+    if (template && data) {
+        const src = getPresetConfig(data, template);
+        if (src) {
+            block = buildPresetYamlBlock(key, { ...src, name: name, description: desc || src.description || '' });
+        } else {
+            block = buildEmptyPresetBlock(key, name, desc);
+        }
+    } else {
+        block = buildEmptyPresetBlock(key, name, desc);
+    }
+
+    // 插入到 timeline YAML 的 presets: 块末尾
+    const editor = document.getElementById('timeline-editor');
+    let yaml = editor.value;
+    const lines = yaml.split('\n');
+
+    // 找 presets: 块的结束位置
+    let presetsStart = -1;
+    for (let i = 0; i < lines.length; i++) {
+        if (/^presets:\s*/.test(lines[i])) { presetsStart = i; break; }
+    }
+
+    if (presetsStart < 0) {
+        // 没有 presets: 顶层 key，在文件开头插入
+        lines.unshift('presets:', ...block.split('\n'));
+    } else {
+        // 找 presets 块结束（下一个顶层 key）
+        let presetsEnd = lines.length;
+        for (let i = presetsStart + 1; i < lines.length; i++) {
+            if (/^\S/.test(lines[i]) && !lines[i].startsWith('#') && lines[i].trim() !== '') {
+                presetsEnd = i;
+                break;
+            }
+        }
+        // 在 presetsEnd 前插入（即 presets 块最后）
+        const blockLines = block.split('\n');
+        lines.splice(presetsEnd, 0, ...blockLines);
+    }
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+
+    // 切换 config.yaml 中 preset 为新模式
+    selectTimelinePreset(key);
+
+    closeTlNewPresetModal();
+    showToast(`调度模式「${name}」创建成功`, 'success');
+}
+
+/**
+ * 构建空白预设 YAML 文本块
+ */
+function buildEmptyPresetBlock(key, name, desc) {
+    return [
+        `  ${key}:`,
+        `    name: "${name}"`,
+        `    description: "${desc || ''}"`,
+        `    default:`,
+        `      collect: true`,
+        `      analyze: false`,
+        `      ai_mode: follow_report`,
+        `      push: false`,
+        `      report_mode: current`,
+        `      once:`,
+        `        analyze: false`,
+        `        push: false`,
+        `    periods: {}`,
+        `    day_plans:`,
+        `      all_day:`,
+        `        periods: []`,
+        `    week_map:`,
+        `      1: all_day`,
+        `      2: all_day`,
+        `      3: all_day`,
+        `      4: all_day`,
+        `      5: all_day`,
+        `      6: all_day`,
+        `      7: all_day`,
+        ``
+    ].join('\n');
+}
+
+/**
+ * 基于已有配置构建预设 YAML 文本块
+ */
+function buildPresetYamlBlock(key, cfg) {
+    const obj = { [key]: cfg };
+    const dumped = jsyaml.dump(obj, { indent: 2, lineWidth: -1, quotingType: '"', forceQuotes: false });
+    return dumped.split('\n').map(l => l ? '  ' + l : l).join('\n');
+}
+
+// ── 弹窗：新增时间段 ──
+
+let _tlNewPeriodTarget = '';
+
+window.openTlNewPeriodModal = function(presetName) {
+    _tlNewPeriodTarget = presetName;
+    document.getElementById('tl-new-period-key').value = '';
+    document.getElementById('tl-new-period-name').value = '';
+    document.getElementById('tl-new-period-start').value = '09:00';
+    document.getElementById('tl-new-period-end').value = '11:00';
+    document.getElementById('tl-new-period-modal').classList.remove('hidden');
+}
+
+window.closeTlNewPeriodModal = function() {
+    document.getElementById('tl-new-period-modal').classList.add('hidden');
+}
+
+window.confirmTlNewPeriod = function() {
+    const key = document.getElementById('tl-new-period-key').value.trim();
+    const name = document.getElementById('tl-new-period-name').value.trim();
+    const start = document.getElementById('tl-new-period-start').value;
+    const end = document.getElementById('tl-new-period-end').value;
+
+    if (!key) { showToast('请输入时间段标识 (key)', 'error'); return; }
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) { showToast('key 仅支持英文、数字和下划线', 'error'); return; }
+    if (!name) { showToast('请输入显示名称', 'error'); return; }
+    if (!start || !end) { showToast('请设置开始和结束时间', 'error'); return; }
+    if (start === end) { showToast('开始时间和结束时间不能相同', 'error'); return; }
+
+    const data = parseTimelineData();
+    const presetCfg = getPresetConfig(data, _tlNewPeriodTarget);
+    if (presetCfg?.periods?.[key]) { showToast(`时间段「${key}」已存在`, 'error'); return; }
+
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, _tlNewPeriodTarget);
+    if (!sectionInfo) { showToast('未找到预设配置段', 'error'); return; }
+
+    const periodsLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'periods');
+    if (periodsLine < 0) { showToast('未找到 periods 配置段', 'error'); return; }
+
+    const periodsIndent = lines[periodsLine].search(/\S/);
+    const periodsContent = lines[periodsLine].trim();
+    const childIndent = periodsIndent + 2;
+    const periodIndent = childIndent + 2;
+    const indent = ' '.repeat(childIndent);
+    const subIndent = ' '.repeat(periodIndent);
+
+    const newPeriodLines = [
+        `${indent}${key}:`,
+        `${subIndent}name: "${name}"`,
+        `${subIndent}start: "${start}"`,
+        `${subIndent}end: "${end}"`,
+        `${subIndent}collect: true`,
+        `${subIndent}analyze: false`,
+        `${subIndent}push: true`,
+        `${subIndent}report_mode: current`
+    ];
+
+    if (periodsContent === 'periods: {}' || periodsContent === 'periods:{}') {
+        lines[periodsLine] = ' '.repeat(periodsIndent) + 'periods:';
+        lines.splice(periodsLine + 1, 0, ...newPeriodLines);
+    } else {
+        const periodsEnd = findBlockEnd(lines, periodsLine, periodsIndent, sectionInfo.end);
+        lines.splice(periodsEnd, 0, ...newPeriodLines);
+    }
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+
+    closeTlNewPeriodModal();
+    syncTimelineToUI();
+    showToast(`时间段「${name}」添加成功`, 'success');
+}
+
+// ── 删除时间段 ──
+
+window.deleteTlPeriod = function(presetName, periodKey) {
+    const data = parseTimelineData();
+    const config = getPresetConfig(data, presetName);
+    if (!config) return;
+
+    const refs = [];
+    const dayPlans = config.day_plans || {};
+    Object.entries(dayPlans).forEach(([planName, plan]) => {
+        if ((plan.periods || []).includes(periodKey)) refs.push(planName);
+    });
+
+    const periodName = config.periods?.[periodKey]?.name || periodKey;
+    let msg = `确定删除时间段「${periodName}」？`;
+    if (refs.length > 0) {
+        msg += `\n\n⚠️ 该时间段被以下日计划引用，将同时移除引用：\n${refs.map(r => '  • ' + r).join('\n')}`;
+    }
+    if (!confirm(msg)) return;
+
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    const periodsLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'periods');
+    if (periodsLine >= 0) {
+        const periodsIndent = lines[periodsLine].search(/\S/);
+        const periodsEnd = findBlockEnd(lines, periodsLine, periodsIndent, sectionInfo.end);
+        const periodLine = findChildKey(lines, periodsLine, periodsEnd, periodsIndent, periodKey);
+        if (periodLine >= 0) {
+            const periodIndent = lines[periodLine].search(/\S/);
+            const periodEnd = findBlockEnd(lines, periodLine, periodIndent, periodsEnd);
+            lines.splice(periodLine, periodEnd - periodLine);
+        }
+    }
+
+    if (refs.length > 0) {
+        const updatedSection = findPresetSection(lines, presetName);
+        if (updatedSection) removePeriodFromDayPlans(lines, updatedSection, periodKey);
+    }
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+    syncTimelineToUI();
+    showToast(`时间段「${periodName}」已删除`, 'success');
+}
+
+// ── 复制时间段 ──
+
+window.duplicateTlPeriod = function(presetName, periodKey) {
+    const data = parseTimelineData();
+    const config = getPresetConfig(data, presetName);
+    if (!config?.periods?.[periodKey]) return;
+
+    let newKey = periodKey + '_copy';
+    let i = 2;
+    while (config.periods[newKey]) { newKey = periodKey + '_copy' + i; i++; }
+
+    const src = config.periods[periodKey];
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    const periodsLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'periods');
+    if (periodsLine < 0) return;
+
+    const periodsIndent = lines[periodsLine].search(/\S/);
+    const periodsEnd = findBlockEnd(lines, periodsLine, periodsIndent, sectionInfo.end);
+    const srcLine = findChildKey(lines, periodsLine, periodsEnd, periodsIndent, periodKey);
+    if (srcLine < 0) return;
+
+    const srcIndent = lines[srcLine].search(/\S/);
+    const srcEnd = findBlockEnd(lines, srcLine, srcIndent, periodsEnd);
+
+    const copiedLines = [];
+    for (let li = srcLine; li < srcEnd; li++) {
+        let line = lines[li];
+        if (li === srcLine) {
+            line = line.replace(periodKey, newKey);
+        }
+        copiedLines.push(line);
+    }
+    for (let li = 0; li < copiedLines.length; li++) {
+        const m = copiedLines[li].match(/^(\s*name:\s*).+$/);
+        if (m) {
+            const newName = (src.name || periodKey) + ' (副本)';
+            copiedLines[li] = `${m[1]}"${newName}"`;
+            break;
+        }
+    }
+
+    lines.splice(srcEnd, 0, ...copiedLines);
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+    syncTimelineToUI();
+    showToast(`已复制为「${newKey}」`, 'success');
+}
+
+// ── 删除预设模式 ──
+
+const PROTECTED_PRESETS = ['morning_evening', 'always_on', 'office_hours', 'night_owl'];
+
+window.deleteTlPreset = function(presetName) {
+    if (PROTECTED_PRESETS.includes(presetName)) {
+        showToast('内置预设不可删除，可使用复制功能', 'warning');
+        return;
+    }
+    if (presetName === 'custom') {
+        showToast('custom 模式不可删除', 'warning');
+        return;
+    }
+
+    const data = parseTimelineData();
+    const cfg = data?.presets?.[presetName];
+    const displayName = cfg?.name || presetName;
+
+    if (!confirm(`确定删除调度模式「${displayName}」？\n此操作不可撤销。`)) return;
+
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    lines.splice(sectionInfo.start, sectionInfo.end - sectionInfo.start);
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+
+    if (getActivePreset() === presetName) {
+        selectTimelinePreset('morning_evening');
+    } else {
+        syncTimelineToUI();
+    }
+    showToast(`调度模式「${displayName}」已删除`, 'success');
+}
+
+// ── 复制预设模式 ──
+
+window.duplicateTlPreset = function(presetName) {
+    const data = parseTimelineData();
+    const src = getPresetConfig(data, presetName);
+    if (!src) return;
+
+    openTlNewPresetModal();
+    const origName = src.name || presetName;
+    document.getElementById('tl-new-preset-key').value = presetName + '_copy';
+    document.getElementById('tl-new-preset-name').value = origName + ' (副本)';
+    document.getElementById('tl-new-preset-desc').value = src.description || '';
+    document.getElementById('tl-new-preset-template').value = presetName;
+}
+
+// ── 新增日计划 ──
+
+window.addTlDayPlan = function(presetName) {
+    const planKey = prompt('请输入日计划标识 (key)，如 holiday：');
+    if (!planKey) return;
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(planKey)) {
+        showToast('key 仅支持英文、数字和下划线', 'error');
+        return;
+    }
+
+    const data = parseTimelineData();
+    const config = getPresetConfig(data, presetName);
+    if (config?.day_plans?.[planKey]) {
+        showToast(`日计划「${planKey}」已存在`, 'error');
+        return;
+    }
+
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    const dayPlansLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'day_plans');
+    if (dayPlansLine < 0) return;
+
+    const dpIndent = lines[dayPlansLine].search(/\S/);
+    const dpEnd = findBlockEnd(lines, dayPlansLine, dpIndent, sectionInfo.end);
+
+    const indent = ' '.repeat(dpIndent + 2);
+    const subIndent = ' '.repeat(dpIndent + 4);
+
+    lines.splice(dpEnd, 0,
+        `${indent}${planKey}:`,
+        `${subIndent}periods: []`
+    );
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+    syncTimelineToUI();
+    showToast(`日计划「${planKey}」已添加`, 'success');
+}
+
+// ── 删除日计划 ──
+
+window.deleteTlDayPlan = function(presetName, planKey) {
+    const data = parseTimelineData();
+    const config = getPresetConfig(data, presetName);
+    if (!config) return;
+
+    const weekMap = config.week_map || {};
+    const refs = [];
+    for (let d = 1; d <= 7; d++) {
+        const v = weekMap[d] || weekMap[String(d)];
+        if (v === planKey) refs.push(DAY_NAMES[d - 1]);
+    }
+
+    if (refs.length > 0) {
+        showToast(`无法删除：「${planKey}」正在被 ${refs.join('、')} 使用。请先修改周映射。`, 'error');
+        return;
+    }
+
+    if (!confirm(`确定删除日计划「${planKey}」？`)) return;
+
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    const dayPlansLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'day_plans');
+    if (dayPlansLine < 0) return;
+
+    const dpIndent = lines[dayPlansLine].search(/\S/);
+    const dpEnd = findBlockEnd(lines, dayPlansLine, dpIndent, sectionInfo.end);
+    const planLine = findChildKey(lines, dayPlansLine, dpEnd, dpIndent, planKey);
+    if (planLine < 0) return;
+
+    const planIndent = lines[planLine].search(/\S/);
+    const planEnd = findBlockEnd(lines, planLine, planIndent, dpEnd);
+
+    lines.splice(planLine, planEnd - planLine);
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+    syncTimelineToUI();
+    showToast(`日计划「${planKey}」已删除`, 'success');
+}
+
+// ── 日计划中添加/移除时间段引用 ──
+
+window.addPeriodToDayPlan = function(presetName, planKey, periodKey) {
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    const dayPlansLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'day_plans');
+    if (dayPlansLine < 0) return;
+
+    const dpIndent = lines[dayPlansLine].search(/\S/);
+    const dpEnd = findBlockEnd(lines, dayPlansLine, dpIndent, sectionInfo.end);
+    const planLine = findChildKey(lines, dayPlansLine, dpEnd, dpIndent, planKey);
+    if (planLine < 0) return;
+
+    const planIndent = lines[planLine].search(/\S/);
+    const planEnd = findBlockEnd(lines, planLine, planIndent, dpEnd);
+    const periodsLine = findChildKey(lines, planLine, planEnd, planIndent, 'periods');
+    if (periodsLine < 0) return;
+
+    const periodsContent = lines[periodsLine].trim();
+
+    if (periodsContent === 'periods: []' || periodsContent === 'periods:[]') {
+        const pIndent = ' '.repeat(lines[periodsLine].search(/\S/));
+        lines[periodsLine] = `${pIndent}periods:`;
+        lines.splice(periodsLine + 1, 0, `${pIndent}  - ${periodKey}`);
+    } else {
+        const inlineMatch = lines[periodsLine].match(/^(\s*periods:\s*)\[([^\]]*)\]/);
+        if (inlineMatch) {
+            const existing = inlineMatch[2].split(',').map(s => s.trim()).filter(Boolean);
+            // 保持引号风格一致
+            const hasQuotes = existing.length > 0 && existing[0].startsWith('"');
+            existing.push(hasQuotes ? `"${periodKey}"` : periodKey);
+            lines[periodsLine] = `${inlineMatch[1]}[${existing.join(', ')}]`;
+        } else {
+            const pIndent = ' '.repeat(lines[periodsLine].search(/\S/) + 2);
+            const listEnd = findBlockEnd(lines, periodsLine, lines[periodsLine].search(/\S/), planEnd);
+            lines.splice(listEnd, 0, `${pIndent}- ${periodKey}`);
+        }
+    }
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+    syncTimelineToUI();
+}
+
+window.removePeriodFromDayPlanUI = function(presetName, planKey, periodKey) {
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    removePeriodFromDayPlanInLines(lines, sectionInfo, planKey, periodKey);
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+    syncTimelineToUI();
+}
+
+// ── 周映射快捷操作 ──
+
+window.tlWeekMapQuick = function(presetName, mode) {
+    const data = parseTimelineData();
+    const config = getPresetConfig(data, presetName);
+    if (!config) return;
+
+    const dayPlanKeys = Object.keys(config.day_plans || {});
+    if (dayPlanKeys.length === 0) { showToast('没有可用的日计划', 'error'); return; }
+
+    let mapping = {};
+
+    if (mode === 'all_same') {
+        const plan = dayPlanKeys[0];
+        for (let d = 1; d <= 7; d++) mapping[d] = plan;
+    } else if (mode === 'weekday_same') {
+        const plan = dayPlanKeys[0];
+        for (let d = 1; d <= 5; d++) mapping[d] = plan;
+        const wm = config.week_map || {};
+        mapping[6] = wm[6] || wm['6'] || plan;
+        mapping[7] = wm[7] || wm['7'] || plan;
+    } else if (mode === 'weekday_weekend') {
+        if (dayPlanKeys.length < 2) { showToast('需要至少两个日计划来分离工作日/周末', 'warning'); return; }
+        const wd = dayPlanKeys[0];
+        const we = dayPlanKeys[1];
+        for (let d = 1; d <= 5; d++) mapping[d] = wd;
+        mapping[6] = we;
+        mapping[7] = we;
+    }
+
+    for (let d = 1; d <= 7; d++) {
+        if (mapping[d]) onTlWeekMap(presetName, d, mapping[d]);
+    }
+    showToast('周映射已更新', 'success');
+}
+
+// ── 辅助函数 ──
+
+/**
+ * 定位预设配置段的起始行和结束行
+ */
+function findPresetSection(lines, presetName) {
+    const isCustom = presetName === 'custom';
+    let start = -1;
+    let indent = 0;
+
+    if (isCustom) {
+        for (let i = 0; i < lines.length; i++) {
+            if (/^custom:\s*/.test(lines[i])) { start = i; indent = 0; break; }
+        }
+    } else {
+        let inPresets = false;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^presets:\s*/.test(line)) { inPresets = true; continue; }
+            if (inPresets && /^\S/.test(line) && !line.startsWith('#') && line.trim() !== '') break;
+            if (inPresets) {
+                const m = line.match(/^(\s+)(\S+):\s*/);
+                if (m && m[2] === presetName) { start = i; indent = m[1].length; break; }
+            }
+        }
+    }
+
+    if (start < 0) return null;
+
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim() === '' || line.trim().startsWith('#')) continue;
+        const curIndent = line.search(/\S/);
+        if (curIndent <= indent) { end = i; break; }
+    }
+
+    return { start, end, indent };
+}
+
+/**
+ * 从 day_plans 中批量移除对某 period 的引用
+ */
+function removePeriodFromDayPlans(lines, sectionInfo, periodKey) {
+    const dayPlansLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'day_plans');
+    if (dayPlansLine < 0) return;
+
+    const dpIndent = lines[dayPlansLine].search(/\S/);
+    const sectionEnd = findBlockEnd(lines, sectionInfo.start, sectionInfo.indent, lines.length);
+    const dpEnd = findBlockEnd(lines, dayPlansLine, dpIndent, sectionEnd);
+
+    for (let i = dayPlansLine + 1; i < dpEnd; i++) {
+        const line = lines[i];
+        if (line.trim() === '' || line.trim().startsWith('#')) continue;
+        const listMatch = line.match(/^(\s*)-\s*(\S+)\s*$/);
+        if (listMatch && listMatch[2] === periodKey) {
+            lines.splice(i, 1);
+            i--;
+            continue;
+        }
+        const inlineMatch = line.match(/^(\s*periods:\s*)\[([^\]]*)\]/);
+        if (inlineMatch) {
+            const items = inlineMatch[2].split(',').map(s => s.trim()).filter(s => {
+                const bare = s.replace(/^["']|["']$/g, '');
+                return bare && bare !== periodKey;
+            });
+            lines[i] = items.length > 0
+                ? `${inlineMatch[1]}[${items.join(', ')}]`
+                : `${inlineMatch[1]}[]`;
+        }
+    }
+}
+
+/**
+ * 从指定 day_plan 中移除单个 period 引用
+ */
+function removePeriodFromDayPlanInLines(lines, sectionInfo, planKey, periodKey) {
+    const dayPlansLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'day_plans');
+    if (dayPlansLine < 0) return;
+
+    const dpIndent = lines[dayPlansLine].search(/\S/);
+    const dpEnd = findBlockEnd(lines, dayPlansLine, dpIndent, sectionInfo.end);
+    const planLine = findChildKey(lines, dayPlansLine, dpEnd, dpIndent, planKey);
+    if (planLine < 0) return;
+
+    const planIndent = lines[planLine].search(/\S/);
+    const planEnd = findBlockEnd(lines, planLine, planIndent, dpEnd);
+    const periodsLine = findChildKey(lines, planLine, planEnd, planIndent, 'periods');
+    if (periodsLine < 0) return;
+
+    const inlineMatch = lines[periodsLine].match(/^(\s*periods:\s*)\[([^\]]*)\]/);
+    if (inlineMatch) {
+        const items = inlineMatch[2].split(',').map(s => s.trim()).filter(s => {
+            const bare = s.replace(/^["']|["']$/g, '');
+            return bare && bare !== periodKey;
+        });
+        lines[periodsLine] = items.length > 0
+            ? `${inlineMatch[1]}[${items.join(', ')}]`
+            : `${inlineMatch[1]}[]`;
+        return;
+    }
+
+    const pEnd = findBlockEnd(lines, periodsLine, lines[periodsLine].search(/\S/), planEnd);
+    for (let i = periodsLine + 1; i < pEnd; i++) {
+        const m = lines[i].match(/^(\s*)-\s*(\S+)\s*$/);
+        if (m && m[2] === periodKey) {
+            lines.splice(i, 1);
+            return;
+        }
+    }
+}
+
+// ==========================================
+// 15. 后续优化功能
+// ==========================================
+
+// ── 1.3 / 3A.4 内联编辑（双击编辑文本）──
+
+/**
+ * 预设卡片名称/描述内联编辑
+ */
+window.tlInlineEdit = function(el, presetName, field, currentValue) {
+    if (el.querySelector('input')) return;
+
+    const original = currentValue;
+    const isName = field === 'name';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = original;
+    input.className = `tl-inline-input ${isName ? 'text-sm font-bold' : 'text-[10px]'}`;
+    input.style.width = '100%';
+
+    el.textContent = '';
+    el.appendChild(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+        const newVal = input.value.trim();
+        if (newVal && newVal !== original) {
+            updatePresetMeta(presetName, field, newVal);
+        }
+        syncTimelineToUI();
+    };
+
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { el.textContent = original; }
+    });
+}
+
+/**
+ * 更新预设顶层的 name / description 字段
+ */
+function updatePresetMeta(presetName, field, value) {
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    const lineIdx = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, field);
+    if (lineIdx >= 0) {
+        replaceLineValue(lines, lineIdx, value);
+    } else {
+        const indent = ' '.repeat(sectionInfo.indent + 2);
+        lines.splice(sectionInfo.start + 1, 0, `${indent}${field}: "${value}"`);
+    }
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+}
+
+/**
+ * 时间段名称内联编辑
+ */
+window.tlInlineEditPeriod = function(el, presetName, periodKey, currentValue) {
+    if (el.querySelector('input')) return;
+
+    const original = currentValue;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = original;
+    input.className = 'tl-inline-input text-sm font-bold';
+    input.style.width = Math.max(80, original.length * 14) + 'px';
+
+    el.textContent = '';
+    el.appendChild(input);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+        const newVal = input.value.trim();
+        if (newVal && newVal !== original) {
+            updateTimelineField(presetName, periodKey, 'name', newVal);
+        }
+        syncTimelineToUI();
+    };
+
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { el.textContent = original; }
+    });
+}
+
+// ── 2.2 周视图空白区域点击 → 显示日计划名称 ──
+
+window.onTlBarClick = function(event, presetName, dayNum) {
+    if (event.target.closest('.tl-period-block')) return;
+
+    const data = parseTimelineData();
+    const config = getPresetConfig(data, presetName);
+    if (!config) return;
+
+    const weekMap = config.week_map || {};
+    const planKey = weekMap[dayNum] || weekMap[String(dayNum)] || '(未设置)';
+
+    hideTlTooltip();
+    const el = document.createElement('div');
+    el.className = 'tl-tooltip';
+    el.innerHTML = `<div style="font-weight:700;margin-bottom:2px">${DAY_NAMES[dayNum - 1]}</div>
+        <div style="font-size:11px;color:#9ca3af">日计划: <strong style="color:#374151">${planKey}</strong></div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:4px">使用 default 配置</div>`;
+
+    document.body.appendChild(el);
+    tlTooltipEl = el;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    el.style.left = (x - el.offsetWidth / 2) + 'px';
+    el.style.top = (rect.top - el.offsetHeight - 8) + 'px';
+
+    const elRect = el.getBoundingClientRect();
+    if (elRect.left < 4) el.style.left = '4px';
+    if (elRect.right > window.innerWidth - 4) el.style.left = (window.innerWidth - el.offsetWidth - 4) + 'px';
+    if (elRect.top < 4) el.style.top = (rect.bottom + 8) + 'px';
+
+    setTimeout(() => { if (tlTooltipEl === el) hideTlTooltip(); }, 2000);
+}
+
+// ── 3B.5 日计划 Tag 拖拽排序 ──
+
+/**
+ * 为日计划中的 period tag 容器初始化 SortableJS
+ */
+function initDayPlanSortable(presetName) {
+    document.querySelectorAll('.tl-dayplan-sortable').forEach(container => {
+        const planKey = container.dataset.planKey;
+        if (!planKey) return;
+
+        new Sortable(container, {
+            animation: 150,
+            ghostClass: 'tl-tag-ghost',
+            dragClass: 'tl-tag-drag',
+            draggable: '.tl-period-tag',
+            filter: '.tl-add-period-select, .tl-tag-remove',
+            preventOnFilter: false,
+            onEnd: function() {
+                const items = [];
+                container.querySelectorAll('.tl-period-tag').forEach(tag => {
+                    const key = tag.dataset.periodKey;
+                    if (key) items.push(key);
+                });
+                reorderDayPlanPeriods(presetName, planKey, items);
+            }
+        });
+    });
+}
+
+/**
+ * 重新排列 day_plan 中 periods 的顺序
+ */
+function reorderDayPlanPeriods(presetName, planKey, orderedKeys) {
+    const editor = document.getElementById('timeline-editor');
+    const lines = editor.value.split('\n');
+
+    const sectionInfo = findPresetSection(lines, presetName);
+    if (!sectionInfo) return;
+
+    const dayPlansLine = findChildKey(lines, sectionInfo.start, sectionInfo.end, sectionInfo.indent, 'day_plans');
+    if (dayPlansLine < 0) return;
+
+    const dpIndent = lines[dayPlansLine].search(/\S/);
+    const dpEnd = findBlockEnd(lines, dayPlansLine, dpIndent, sectionInfo.end);
+    const planLine = findChildKey(lines, dayPlansLine, dpEnd, dpIndent, planKey);
+    if (planLine < 0) return;
+
+    const planIndent = lines[planLine].search(/\S/);
+    const planEnd = findBlockEnd(lines, planLine, planIndent, dpEnd);
+    const periodsLine = findChildKey(lines, planLine, planEnd, planIndent, 'periods');
+    if (periodsLine < 0) return;
+
+    const inlineMatch = lines[periodsLine].match(/^(\s*periods:\s*)\[([^\]]*)\]/);
+    if (inlineMatch) {
+        lines[periodsLine] = `${inlineMatch[1]}[${orderedKeys.join(', ')}]`;
+    } else {
+        const pIndent = lines[periodsLine].search(/\S/);
+        const pEnd = findBlockEnd(lines, periodsLine, pIndent, planEnd);
+        lines.splice(periodsLine + 1, pEnd - periodsLine - 1);
+        const itemIndent = ' '.repeat(pIndent + 2);
+        const newItems = orderedKeys.map(k => `${itemIndent}- ${k}`);
+        lines.splice(periodsLine + 1, 0, ...newItems);
+    }
+
+    editor.value = lines.join('\n');
+    currentTimeline = editor.value;
+    updateBackdrop('timeline-editor', 'timeline-backdrop');
+    debounceSaveTimeline();
+
+    clearTimeout(window._tlRenderTimer);
+    window._tlRenderTimer = setTimeout(() => syncTimelineToUI(), 500);
 }

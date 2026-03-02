@@ -435,61 +435,35 @@ class StorageBackend(ABC):
         """
         pass
 
-    # === 推送记录相关方法 ===
+    # === 时间段执行记录（调度系统）===
 
-    @abstractmethod
-    def has_pushed_today(self, date: Optional[str] = None) -> bool:
+    def has_period_executed(self, date_str: str, period_key: str, action: str) -> bool:
         """
-        检查指定日期是否已推送过
+        检查指定时间段的某个 action 是否已执行
 
         Args:
-            date: 日期字符串（YYYY-MM-DD），默认为今天
+            date_str: 日期字符串 YYYY-MM-DD
+            period_key: 时间段 key
+            action: 动作类型 (analyze / push)
 
         Returns:
-            是否已推送
+            是否已执行
         """
-        pass
+        return False
 
-    @abstractmethod
-    def record_push(self, report_type: str, date: Optional[str] = None) -> bool:
+    def record_period_execution(self, date_str: str, period_key: str, action: str) -> bool:
         """
-        记录推送
+        记录时间段的 action 执行
 
         Args:
-            report_type: 报告类型
-            date: 日期字符串（YYYY-MM-DD），默认为今天
-
-        Returns:
-            是否记录成功
-        """
-        pass
-
-    @abstractmethod
-    def has_ai_analyzed_today(self, date: Optional[str] = None) -> bool:
-        """
-        检查指定日期是否已进行过 AI 分析
-
-        Args:
-            date: 日期字符串（YYYY-MM-DD），默认为今天
-
-        Returns:
-            是否已分析
-        """
-        pass
-
-    @abstractmethod
-    def record_ai_analysis(self, analysis_mode: str, date: Optional[str] = None) -> bool:
-        """
-        记录 AI 分析
-
-        Args:
-            analysis_mode: 分析模式（daily/current/incremental）
-            date: 日期字符串（YYYY-MM-DD），默认为今天
+            date_str: 日期字符串 YYYY-MM-DD
+            period_key: 时间段 key
+            action: 动作类型 (analyze / push)
 
         Returns:
             是否记录成功
         """
-        pass
+        return False
 
 
 def convert_crawl_results_to_news_data(
@@ -519,15 +493,9 @@ def convert_crawl_results_to_news_data(
         news_list = []
 
         for title, data in titles_data.items():
-            if isinstance(data, dict):
-                ranks = data.get("ranks", [])
-                url = data.get("url", "")
-                mobile_url = data.get("mobileUrl", "")
-            else:
-                # 兼容旧格式
-                ranks = data if isinstance(data, list) else []
-                url = ""
-                mobile_url = ""
+            ranks = data.get("ranks", [])
+            url = data.get("url", "")
+            mobile_url = data.get("mobileUrl", "")
 
             rank = ranks[0] if ranks else 99
 
@@ -555,39 +523,3 @@ def convert_crawl_results_to_news_data(
         id_to_name=id_to_name,
         failed_ids=failed_ids,
     )
-
-
-def convert_news_data_to_results(data: NewsData) -> tuple:
-    """
-    将 NewsData 转换回原有的 results 格式（用于兼容现有代码）
-
-    Args:
-        data: NewsData 对象
-
-    Returns:
-        (results, id_to_name, title_info) 元组
-    """
-    results = {}
-    title_info = {}
-
-    for source_id, news_list in data.items.items():
-        results[source_id] = {}
-        title_info[source_id] = {}
-
-        for item in news_list:
-            results[source_id][item.title] = {
-                "ranks": item.ranks,
-                "url": item.url,
-                "mobileUrl": item.mobile_url,
-            }
-
-            title_info[source_id][item.title] = {
-                "first_time": item.first_time,
-                "last_time": item.last_time,
-                "count": item.count,
-                "ranks": item.ranks,
-                "url": item.url,
-                "mobileUrl": item.mobile_url,
-            }
-
-    return results, data.id_to_name, title_info

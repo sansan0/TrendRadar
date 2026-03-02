@@ -8,7 +8,6 @@
 - Email、ntfy、Bark
 
 模块结构：
-- push_manager: 推送记录管理
 - formatters: 内容格式转换
 - batch: 批次处理工具
 - renderer: 通知内容渲染
@@ -17,7 +16,6 @@
 - dispatcher: 多账号通知调度器
 """
 
-from trendradar.notification.push_manager import PushRecordManager
 from trendradar.notification.formatters import (
     strip_markdown,
     convert_markdown_to_mrkdwn,
@@ -50,8 +48,6 @@ from trendradar.notification.senders import (
 from trendradar.notification.dispatcher import NotificationDispatcher
 
 __all__ = [
-    # 推送记录管理
-    "PushRecordManager",
     # 格式转换
     "strip_markdown",
     "convert_markdown_to_mrkdwn",

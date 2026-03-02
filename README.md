@@ -12,8 +12,8 @@
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v5.5.3-blue.svg)](https://github.com/sansan0/TrendRadar)
-[![MCP](https://img.shields.io/badge/MCP-v3.2.0-green.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v6.0.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![MCP](https://img.shields.io/badge/MCP-v4.0.0-green.svg)](https://github.com/sansan0/TrendRadar)
 [![RSS](https://img.shields.io/badge/RSS-订阅源支持-orange.svg?style=flat-square&logo=rss&logoColor=white)](https://github.com/sansan0/TrendRadar)
 [![AI翻译](https://img.shields.io/badge/AI-多语言推送-purple.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
 
@@ -186,27 +186,18 @@
 <div align="center">
 
 > **虚位以待**
->
-> 寻找靠谱的产品赞助。   
-> 比起功能，我更看重**你对待用户的态度**。  
-> 请附带你的用户群或反馈渠道，让我看到你是如何帮助用户解决问题的。  
-> [📩 点击联系](mailto:path@linux.do) 
 
 </div>
 
 <br>
 
 <a name="-支持项目"></a>
-## ✨ 觉得好用？支持一下
 
-TrendRadar 是完全开源免费的项目，持续更新需要你的动力支持。
+### ❤️ 觉得好用？支持一下
 
-### ❤️ 随心赞赏
-
-一瓶水、一包辣条都是爱。
-金额随意，1 元也是一份心意。
-
-> 你的赞助将用于补充碳基生物的咖啡因 ☕️ 和硅基生物的 API Token 消耗 🤖。
+> 若 TrendRadar 曾为你捕捉价值，不妨为它注入动力，助其持续进化
+>
+> 金额随意，1 元也是对开源的鼓励。欢迎在赞赏时备注留言 (´▽`ʃ♡ƪ)
 
 <div align="center">
 
@@ -216,29 +207,21 @@ TrendRadar 是完全开源免费的项目，持续更新需要你的动力支持
 
 </div>
 
-### 🌟 其他支持方式
-
-1. **点亮 Star** ⭐️：动动手指只需 **1 秒**，让更多人看到这个项目，这是对我最大的认可。
-2. **公益助学** 🌻：微信搜索**腾讯公益**，支持**助学**项目。将这份善意传递给需要的人。
 
 ### 🤝 二次开发与引用
 
 如果你在项目中使用或借鉴了本项目的思路、核心代码，**非常欢迎**在 README 或文档中注明来源并附上本仓库链接。
 
-> [https://github.com/sansan0/TrendRadar](https://github.com/sansan0/TrendRadar)
-
 这将有助于项目的持续维护和社区发展，感谢你的尊重与支持！❤️
 
----
 
 ### 💬 交流与反馈
 
 - **GitHub Issues**：适合具体的技术问题。提问时请提供完整信息（截图、错误日志等），有助于快速定位。
 - **公众号交流**：建议优先在相关文章下的留言区交流。若需后台提问，**先点赞/推荐**文章是最好的“敲门砖”，我在后台都能感受到这份心意哟 (´▽`ʃ♡ƪ)。
 
-> **友情提示**：   
-> 本项目为开源分享，非商业产品。文档倾注了大量心血，绝大多数部署问题都能在 [**🚀 快速开始**](#-快速开始) 中找到答案。   
-> *提问请保持耐心与礼貌，把作者当朋友而非客服，沟通效率会更高哦！*  
+> **友情提示**：        
+> 本项目为开源分享，非商业产品。把作者当朋友而非客服，沟通效率会更高哦！     
 
 <div align="center">
 
@@ -256,6 +239,45 @@ TrendRadar 是完全开源免费的项目，持续更新需要你的动力支持
 - **提示**：建议查看【历史更新】，明确具体的【功能内容】
 
 
+### 2026/02/09 - v6.0.0
+
+> **Breaking Change**：配置文件升级（config.yaml 2.0.0），旧版 `push_window` 和 `analysis_window` 配置不再兼容，请参考新版 config.yaml 迁移
+
+- **统一调度系统**：新增 `timeline.yaml`，用一套配置控制「什么时间采集 / 推送 / AI 分析」
+- **5 种预设模板**：`always_on`（全天候，默认）、`morning_evening`（早晚汇总）、`office_hours`（办公时间）、`night_owl`（夜猫子）、`custom`（自定义）；也支持在 `presets:` 下新增自己的模板，只要 key 不重复，然后在 config.yaml 里填你的模板名即可
+- **灵活的时间段配置**：支持工作日/周末差异化、跨午夜时间段、per-period once 去重
+- **可视化配置编辑器**：
+  - 新增 `timeline.yaml` 编辑标签页，与 config.yaml / frequency_words.txt 并列
+  - 预设模式卡片选择：点击即切换，自动同步 config.yaml 的 `schedule.preset`
+  - 周视图时间线：7 天 × 24 小时水平条，用颜色区分推送/分析/采集状态
+  - 可交互控件：开关、下拉框、时间选择器，右侧修改实时同步到左侧 YAML
+  - 周映射下拉选择：根据日计划动态填充，拖拉点击即可完成调度配置
+- **AI 提示词稳定性优化**（ai_analysis_prompt.txt v2.0.0）：
+  - 格式规范独立说明：将换行/标签/序号/禁止事项从 JSON value 中抽出，作为独立章节
+  - JSON 模板简化：字段描述缩短为一句话 + 字数限制，减少 AI 输出格式混乱
+  - 去除 system prompt 中的 Markdown 格式，与"禁止 Markdown"指令保持一致
+  - 所有 JSON 字段声明为可选，缺少任何字段不会报错，增强容错性
+- **新增独立展示区 AI 概括分析**（`ai_analysis.include_standalone`）：
+  - 新增独立开关，开启后 AI 对每个 standalone 源生成核心概括
+  - AI 分析与推送展示解耦：无需开启独立展示区的推送显示，AI 也可独立分析完整热榜数据
+  - 支持热榜平台和 RSS 源，含排名/时间/轨迹数据
+  - 轨迹分析与 `include_rank_timeline` 联动：开启时利用轨迹数据做深度趋势分析，关闭时基于排名做简要判断
+  - 新增 `standalone_summaries` JSON 字段（独立源点速览），所有推送渠道均已适配渲染
+
+
+### 2026/02/09 - mcp-v4.0.0
+
+- **🔥 AI 消息直推所有渠道**：让 AI 写好的内容一键推送到飞书、钉钉、Telegram、邮件等 9 个渠道，Markdown 自动适配各平台格式，不用操心格式差异
+- **新增格式化策略指南**：新增 `get_channel_format_guide` 工具，告诉 AI 每个渠道支持什么格式、有什么限制，生成的内容排版更好看
+- **智能分批发送**：超长消息自动按各渠道字节限制拆分（飞书 30KB、钉钉 20KB 等），配置读取自 config.yaml
+- **修复渠道误检测**：ntfy 不再因为默认地址被误报为"已配置"
+- **代码复用优化**：批次处理函数直接复用 trendradar 核心模块，不重复造轮子
+
+
+<details>
+<summary>👉 点击展开：<strong>历史更新</strong></summary>
+
+
 ### 2026/01/28 - v5.5.0
 
 > 和 mcp 功能一样, 这个小工具我也不新开一个仓库维护了, 反正纯前端, 都搁一起吧
@@ -269,11 +291,6 @@ TrendRadar 是完全开源免费的项目，持续更新需要你的动力支持
 - **新增 read_articles_batch 工具**：批量读取多篇文章（最多 5 篇，自动限速）
 - **推荐工作流**：`search_news(query="关键词", include_url=True)` → `read_article(url=...)` 读取正文
 - **文档更新**：README-MCP-FAQ.md 和 README-MCP-FAQ-EN.md 新增 Q19-Q20 文章读取相关说明
-
-
-
-<details>
-<summary>👉 点击展开：<strong>历史更新</strong></summary>
 
 
 ### 2026/01/10 - mcp-v3.0.0~v3.1.5
@@ -469,9 +486,9 @@ TrendRadar 是完全开源免费的项目，持续更新需要你的动力支持
    - 使用分号 `;` 分隔多个账号，例如：`FEISHU_WEBHOOK_URL=url1;url2`
    - 自动验证配对配置（如 Telegram 的 token 和 chat_id）数量一致性
 
-2. **推送内容顺序可配置**
-   - 新增 `reverse_content_order` 配置项
-   - 支持自定义热点词汇统计与新增热点新闻的显示顺序
+2. **推送区域配置**
+   - 通过 `display.region_order` 自定义各区域的显示顺序（v5.2.0 替代原 `reverse_content_order`）
+   - 通过 `display.regions` 控制各区域是否显示（热榜、新增热点、RSS、独立展示区、AI 分析）
 
 3. **全局过滤关键词**
    - 新增 `[GLOBAL_FILTER]` 区域标记，支持全局过滤不想看到的内容
@@ -946,6 +963,14 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 > 💡 RSS 使用与热榜相同的 `frequency_words.txt` 进行关键词过滤
 
+### **可视化配置编辑器**
+
+提供基于 Web 的图形化配置界面，无需手动编辑 YAML 文件，通过表单即可完成所有配置项的修改与导出。
+
+👉 **在线体验**：[https://sansan0.github.io/TrendRadar/](https://sansan0.github.io/TrendRadar/)
+
+<img src="/_image/editor.png" alt="可视化配置编辑器" width="80%">
+
 ### **智能推送策略**
 
 **三种推送模式**：
@@ -967,8 +992,8 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 | 功能 | 说明 | 默认 |
 |------|------|------|
-| **推送时间窗口控制** | 设定推送时间范围（如 09:00-18:00），避免非工作时间打扰 | 关闭 |
-| **内容顺序配置** | 调整"热点词汇统计"和"新增热点新闻"的显示顺序（v3.5.0 新增） | 统计在前 |
+| **调度系统** | 按周一到周日逐日编排：为每天分配不同时间段、推送模式和 AI 分析策略。内置 5 种预设（always_on / morning_evening / office_hours / night_owl / custom），也可自定义。支持工作日/周末差异化、跨午夜时段、per-period 去重（v6.0.0） | morning_evening |
+| **内容顺序配置** | 通过 `display.region_order` 调整各区域（热榜、新增热点、RSS、独立展示区、AI 分析）的显示顺序；通过 `display.regions` 控制各区域是否显示（v5.2.0） | 见配置文件 |
 | **显示模式切换** | `keyword`=按关键词分组，`platform`=按平台分组（v4.6.0 新增） | keyword |
 
 > 💡 详细配置教程见 [推送内容怎么显示？](#7-推送内容怎么显示) 和 [什么时候给我推送？](#8-什么时候给我推送)
@@ -1064,6 +1089,7 @@ ai_translation:
 
 - **完整热榜**：指定平台的热榜完整展示，适合想看完整排名的用户
 - **RSS 独立展示**：RSS 源内容可完整展示，不受关键词限制
+- **AI 深度分析**：可独立开启 AI 对完整热榜的趋势分析，无需在推送中展示
 - **灵活配置**：支持配置展示平台、RSS 源、最大条数
 
 > 💡 详细配置教程见 [推送内容怎么显示？ - 独立展示区](#7-推送内容怎么显示)
@@ -3017,6 +3043,28 @@ display:
 1. 在 `region_order` 列表中
 2. 在 `display.regions` 中对应开关为 `true`
 
+#### 区域开关（regions）
+
+通过 `display.regions` 控制各区域是否在推送中显示：
+
+```yaml
+display:
+  regions:
+    hotlist: true                    # 热榜区域（关键词匹配的热点新闻）
+    new_items: false                 # 新增热点区域（含热榜新增 + RSS 新增）
+    rss: true                       # RSS 订阅区域（关键词匹配的 RSS 内容）
+    standalone: false                # 独立展示区（完整热榜/RSS，不受关键词过滤）
+    ai_analysis: true                # AI 分析区域
+```
+
+| 区域 | 配置键 | 默认值 | 说明 |
+|------|--------|-------|------|
+| **热榜** | `hotlist` | `true` | 按关键词匹配的热点新闻聚合 |
+| **新增热点** | `new_items` | `false` | 本轮新出现的热点话题（含热榜新增 + RSS 新增）。注：热榜区域中的 🆕 标记不受此开关影响 |
+| **RSS** | `rss` | `true` | 按关键词匹配的 RSS 订阅内容。关闭后跳过 RSS 分析，但独立展示区中的 RSS 不受影响 |
+| **独立展示区** | `standalone` | `false` | 指定平台/RSS 的完整内容展示，不受关键词过滤 |
+| **AI 分析** | `ai_analysis` | `true` | AI 生成的热点分析摘要 |
+
 #### 排序优先级（sort_by_position_first）
 
 假设你配置了关键词：1.特斯拉，2.比亚迪。
@@ -3034,7 +3082,7 @@ display:
 ```yaml
 display:
   regions:
-    standalone: true                  # 开启这个“特权区域”
+    standalone: true                  # 推送中展示独立展示区（关闭不影响 AI 分析）
 
   standalone:
     platforms: ["zhihu", "weibo"]     # 这些平台的热榜给我完整显示
@@ -3042,81 +3090,54 @@ display:
     max_items: 20                     # 最多显示多少条
 ```
 
+> 💡 **推送展示与 AI 分析独立控制**：`regions.standalone` 只控制推送中是否显示独立展示区。即使关闭推送展示，只要在 AI 配置中开启 `include_standalone: true`，AI 仍会分析这些平台的完整数据。适合想让 AI 做深度分析、但不想推送消息太长的用户。
+
 </details>
 
 ### 8. 什么时候给我推送？
 
 <details>
-<summary>👉 点击展开：<strong>设置推送时间段</strong></summary>
+<summary>👉 点击展开：<strong>设置推送时间（调度系统）</strong></summary>
 <br>
 
-**配置位置：** `config/config.yaml` 的 `notification.push_window` 部分
+**配置位置：** `config/config.yaml` 的 `schedule` 部分 + `config/timeline.yaml`
+
+#### 快速上手
+
+只需在 `config.yaml` 中选一个预设模板，不需要编辑 `timeline.yaml`：
 
 ```yaml
-notification:
-  push_window:
-    enabled: false                    # 是否启用
-    start: "20:00"                    # 开始时间（北京时间）
-    end: "22:00"                      # 结束时间（北京时间）
-    once_per_day: true                # 每天只推送一次
+schedule:
+  enabled: true
+  preset: "morning_evening"     # 改这里就行
 ```
 
-#### 配置项详解
+#### 可选预设模板
 
-| 配置项 | 类型 | 默认值 | 说明 |
-|-------|------|-------|------|
-| `enabled` | bool | `false` | 是否启用推送时间窗口控制 |
-| `start` | string | `"20:00"` | 推送时间窗口开始时间（北京时间，HH:MM 格式） |
-| `end` | string | `"22:00"` | 推送时间窗口结束时间（北京时间，HH:MM 格式） |
-| `once_per_day` | bool | `true` | `true`=每天在窗口内只推送一次，`false`=窗口内每次执行都推送 |
+| 模板名 | 说明 | 推送行为 |
+|-------|------|---------|
+| `morning_evening` | 全天增量 + 晚间汇总（推荐） | 全天有新增就推 + 19:00-21:00 晚间当日汇总 |
+| `always_on` | 全天候监控 | 全天有新增就推送，不划分时间段 |
+| `office_hours` | 办公时间 | 工作日三段式（到岗速览→午间热点→收工汇总），周末增量自由推 |
+| `night_owl` | 夜猫子 | 午后速览 + 深夜全天汇总（22:00-01:00 跨午夜） |
+| `custom` | 完全自定义 | 编辑 `timeline.yaml` 底部的 custom 段 |
 
-#### 使用场景
+#### 完全自定义
 
-| 场景 | 配置示例 |
-|------|---------|
-| **工作时间推送** | `start: "09:00"`, `end: "18:00"`, `once_per_day: false` |
-| **晚间汇总推送** | `start: "20:00"`, `end: "22:00"`, `once_per_day: true` |
-| **午休时间推送** | `start: "12:00"`, `end: "13:00"`, `once_per_day: true` |
+如果预设模板都不满足需求，可以编辑 `config/timeline.yaml` 底部的 `custom` 段，自由定义时间段、日计划和周映射。详见 `timeline.yaml` 文件内的注释说明。
 
 #### 重要提示
 
+> ⚠️ **从旧版本升级的用户注意：**
+> - v6.0.0 移除了旧的 `notification.push_window` 和 `ai_analysis.analysis_window` 配置
+> - 请改用新的 `schedule` + `timeline.yaml` 调度系统
+> - 旧的"每天推送一次"可用 `morning_evening` 预设替代
+> - 旧的"工作时间推送"可用 `office_hours` 预设替代
+
 > ⚠️ **GitHub Actions 用户注意：**
 > - GitHub Actions 执行时间不稳定，可能有 ±15 分钟的偏差
-> - 时间范围建议至少留足 **2 小时**
+> - 时间段范围建议至少留足 **2 小时**
 > - 如果想要精准的定时推送，建议使用 **Docker 部署**在个人服务器上
-
-#### Docker 环境变量
-
-```bash
-PUSH_WINDOW_ENABLED=true
-PUSH_WINDOW_START=09:00
-PUSH_WINDOW_END=18:00
-PUSH_WINDOW_ONCE_PER_DAY=false
-```
-
-#### 完整配置示例
-
-**场景：每天晚上 8-10 点只推送一次汇总**
-
-```yaml
-notification:
-  push_window:
-    enabled: true
-    start: "20:00"
-    end: "22:00"
-    once_per_day: true
-```
-
-**场景：工作时间内每小时推送**
-
-```yaml
-notification:
-  push_window:
-    enabled: true
-    start: "09:00"
-    end: "18:00"
-    once_per_day: false
-```
 
 </details>
 

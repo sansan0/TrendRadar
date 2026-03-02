@@ -148,9 +148,17 @@ def _parse_string_to_bool(value: str) -> bool:
         return bool(value)
 
 
+# 平台列表 mtime 缓存（避免每次 MCP 调用都重新读取 config.yaml）
+_platforms_cache: Optional[List[str]] = None
+_platforms_config_mtime: float = 0.0
+_platforms_config_path: Optional[str] = None
+
+
 def get_supported_platforms() -> List[str]:
     """
-    从 config.yaml 动态获取支持的平台列表
+    从 config.yaml 动态获取支持的平台列表（带 mtime 缓存）
+
+    仅当 config.yaml 被修改时才重新读取，避免每次 MCP 调用的重复 IO。
 
     Returns:
         平台ID列表
@@ -159,21 +167,29 @@ def get_supported_platforms() -> List[str]:
         - 读取失败时返回空列表，允许所有平台通过（降级策略）
         - 平台列表来自 config/config.yaml 中的 platforms 配置
     """
-    try:
-        # 获取 config.yaml 路径（相对于当前文件）
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, "..", "..", "config", "config.yaml")
-        config_path = os.path.normpath(config_path)
+    global _platforms_cache, _platforms_config_mtime, _platforms_config_path
 
-        with open(config_path, 'r', encoding='utf-8') as f:
+    try:
+        if _platforms_config_path is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            _platforms_config_path = os.path.normpath(
+                os.path.join(current_dir, "..", "..", "config", "config.yaml")
+            )
+
+        current_mtime = os.path.getmtime(_platforms_config_path)
+
+        if _platforms_cache is not None and current_mtime == _platforms_config_mtime:
+            return _platforms_cache
+
+        with open(_platforms_config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
             platforms_config = config.get('platforms', {})
-            # 处理嵌套结构：{enabled: bool, sources: [...]}
             sources = platforms_config.get('sources', [])
-            return [p['id'] for p in sources if 'id' in p]
+            _platforms_cache = [p['id'] for p in sources if 'id' in p]
+            _platforms_config_mtime = current_mtime
+            return _platforms_cache
     except Exception as e:
-        # 降级方案：返回空列表，允许所有平台
-        print(f"警告：无法加载平台配置 ({config_path}): {e}")
+        print(f"警告：无法加载平台配置: {e}")
         return []
 
 

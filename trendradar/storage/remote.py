@@ -394,101 +394,31 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
         """检查是否是当天第一次抓取"""
         return self._is_first_crawl_today_impl(date)
 
-    def has_pushed_today(self, date: Optional[str] = None) -> bool:
-        """检查指定日期是否已推送过"""
-        return self._has_pushed_today_impl(date)
+    # ========================================
+    # 时间段执行记录（调度系统）
+    # ========================================
 
-    def record_push(self, report_type: str, date: Optional[str] = None) -> bool:
-        """记录推送"""
-        success = self._record_push_impl(report_type, date)
+    def has_period_executed(self, date_str: str, period_key: str, action: str) -> bool:
+        """检查指定时间段的某个 action 是否已执行"""
+        return self._has_period_executed_impl(date_str, period_key, action)
 
-        if success:
-            now_str = self._get_configured_time().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"[远程存储] 推送记录已保存: {report_type} at {now_str}")
-
-            # 上传到远程存储 确保记录持久化
-            if self._upload_sqlite(date):
-                print(f"[远程存储] 推送记录已同步到远程存储")
-                return True
-            else:
-                print(f"[远程存储] 推送记录同步到远程存储失败")
-                return False
-
-        return False
-
-    def has_ai_analyzed_today(self, date: Optional[str] = None) -> bool:
-        """检查指定日期是否已进行过 AI 分析"""
-        return self._has_ai_analyzed_today_impl(date)
-
-    def record_ai_analysis(self, analysis_mode: str, date: Optional[str] = None) -> bool:
-        """记录 AI 分析"""
-        success = self._record_ai_analysis_impl(analysis_mode, date)
+    def record_period_execution(self, date_str: str, period_key: str, action: str) -> bool:
+        """记录时间段的 action 执行"""
+        success = self._record_period_execution_impl(date_str, period_key, action)
 
         if success:
             now_str = self._get_configured_time().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"[远程存储] AI 分析记录已保存: {analysis_mode} at {now_str}")
+            print(f"[远程存储] 时间段执行记录已保存: {period_key}/{action} at {now_str}")
 
-            # 上传到远程存储 确保记录持久化
-            if self._upload_sqlite(date):
-                print(f"[远程存储] AI 分析记录已同步到远程存储")
+            # 上传到远程存储确保记录持久化
+            if self._upload_sqlite(date_str):
+                print(f"[远程存储] 时间段执行记录已同步到远程存储")
                 return True
             else:
-                print(f"[远程存储] AI 分析记录同步到远程存储失败")
+                print(f"[远程存储] 时间段执行记录同步到远程存储失败")
                 return False
 
         return False
-
-    def reset_push_state(self, date: Optional[str] = None) -> bool:
-        """
-        重置推送状态（远程存储版本）
-
-        流程：下载远程数据库 → 重置状态 → 上传回远程
-        """
-        # 确保连接已建立（会自动下载远程数据库）
-        self._get_connection(date)
-
-        # 执行重置
-        success = self._reset_push_state_impl(date)
-
-        if success:
-            # 上传到远程存储
-            if self._upload_sqlite(date):
-                print(f"[远程存储] 推送状态重置已同步到远程存储")
-                return True
-            else:
-                print(f"[远程存储] 推送状态重置同步到远程存储失败")
-                return False
-
-        return False
-
-    def reset_ai_analysis_state(self, date: Optional[str] = None) -> bool:
-        """
-        重置 AI 分析状态（远程存储版本）
-
-        流程：下载远程数据库 → 重置状态 → 上传回远程
-        """
-        # 确保连接已建立（会自动下载远程数据库）
-        self._get_connection(date)
-
-        # 执行重置
-        success = self._reset_ai_analysis_state_impl(date)
-
-        if success:
-            # 上传到远程存储
-            if self._upload_sqlite(date):
-                print(f"[远程存储] AI 分析状态重置已同步到远程存储")
-                return True
-            else:
-                print(f"[远程存储] AI 分析状态重置同步到远程存储失败")
-                return False
-
-        return False
-
-    def get_push_status(self, date: Optional[str] = None) -> dict:
-        """获取推送状态详情"""
-        # 确保连接已建立（会自动下载远程数据库）
-        self._get_connection(date)
-        return self._get_push_status_impl(date)
 
     # ========================================
     # RSS 数据存储方法

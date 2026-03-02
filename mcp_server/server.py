@@ -18,6 +18,7 @@ from .tools.config_mgmt import ConfigManagementTools
 from .tools.system import SystemManagementTools
 from .tools.storage_sync import StorageSyncTools
 from .tools.article_reader import ArticleReaderTools
+from .tools.notification import NotificationTools
 from .utils.date_parser import DateParser
 from .utils.errors import MCPError
 
@@ -39,6 +40,7 @@ def _get_tools(project_root: Optional[str] = None):
         _tools_instances['system'] = SystemManagementTools(project_root)
         _tools_instances['storage'] = StorageSyncTools(project_root)
         _tools_instances['article'] = ArticleReaderTools(project_root)
+        _tools_instances['notification'] = NotificationTools(project_root)
     return _tools_instances
 
 
@@ -1004,6 +1006,112 @@ async def read_articles_batch(
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
+# ==================== 通知推送工具 ====================
+
+
+@mcp.tool
+async def get_channel_format_guide(channel: Optional[str] = None) -> str:
+    """
+    获取通知渠道的格式化策略指南
+
+    返回各渠道支持的 Markdown 特性、格式限制和最佳格式化提示词。
+    在调用 send_notification 之前使用此工具，可以了解目标渠道的格式要求，
+    从而生成最佳排版效果的消息内容。
+
+    各渠道格式差异概览：
+    - 飞书：支持 **粗体**、<font color>彩色文本、[链接](url)、--- 分割线
+    - 钉钉：支持 ### 标题、**粗体**、> 引用、--- 分割线，不支持颜色
+    - 企业微信：仅支持 **粗体**、[链接](url)、> 引用，不支持标题和分割线
+    - Telegram：自动转为 HTML，支持粗体/斜体/删除线/代码/链接/引用块
+    - ntfy：支持标准 Markdown，不支持颜色
+    - Bark：iOS 推送，仅支持粗体和链接，内容需精简
+    - Slack：自动转为 mrkdwn，*粗体*、~删除线~、<url|链接>
+    - 邮件：自动转为完整 HTML 网页，支持标题/样式/分割线
+    - 通用 Webhook：标准 Markdown 或自定义模板
+
+    Args:
+        channel: 指定渠道 ID（可选），不指定返回所有渠道策略
+                 可选值: feishu, dingtalk, wework, telegram, email, ntfy, bark, slack, generic_webhook
+
+    Returns:
+        JSON格式的渠道格式化策略，包含支持特性、限制和格式化提示词
+
+    Examples:
+        - get_channel_format_guide()  # 获取所有渠道策略
+        - get_channel_format_guide(channel="feishu")  # 获取飞书策略
+        - get_channel_format_guide(channel="telegram")  # 获取 Telegram 策略
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(
+        tools['notification'].get_channel_format_guide,
+        channel=channel
+    )
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+async def get_notification_channels() -> str:
+    """
+    获取所有已配置的通知渠道及其状态
+
+    检测 config.yaml 和 .env 环境变量中的通知渠道配置。
+    支持 9 个渠道：飞书、钉钉、企业微信、Telegram、邮件、ntfy、Bark、Slack、通用 Webhook。
+
+    Returns:
+        JSON格式的渠道状态，包含每个渠道是否已配置及配置来源
+
+    Examples:
+        - get_notification_channels()
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(tools['notification'].get_notification_channels)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+async def send_notification(
+    message: str,
+    title: str = "TrendRadar 通知",
+    channels: Optional[List[str]] = None,
+) -> str:
+    """
+    向已配置的通知渠道发送消息
+
+    接受 markdown 格式内容，内部自动适配各渠道的格式要求和限制：
+    - 飞书：Markdown 卡片消息（支持 **粗体**、<font color>彩色文本、[链接](url)、---）
+    - 钉钉：Markdown（自动降级标题为 ###、剥离 <font> 标签和删除线）
+    - 企业微信：Markdown（自动剥离 # 标题、---、<font> 标签、删除线）
+    - Telegram：HTML（自动转换 **→<b>、*→<i>、~~→<s>、>→<blockquote>）
+    - Email：HTML 邮件（完整网页样式，支持 # 标题、---、粗体斜体）
+    - ntfy：Markdown（自动剥离 <font> 标签）
+    - Bark：Markdown（自动简化为粗体+链接，适配 iOS 推送）
+    - Slack：mrkdwn（自动转换 **→*、~~→~、[text](url)→<url|text>）
+    - 通用 Webhook：Markdown（支持自定义模板）
+
+    提示：发送前可调用 get_channel_format_guide 获取目标渠道的详细格式化策略，
+    以生成最佳排版效果的消息内容。
+
+    Args:
+        message: markdown 格式的消息内容（必需）
+        title: 消息标题，默认 "TrendRadar 通知"
+        channels: 指定发送的渠道列表，不指定则发送到所有已配置渠道
+                  可选值: feishu, dingtalk, wework, telegram, email, ntfy, bark, slack, generic_webhook
+
+    Returns:
+        JSON格式的发送结果，包含每个渠道的发送状态
+
+    Examples:
+        - send_notification(message="**测试消息**\\n这是一条测试通知")
+        - send_notification(message="紧急通知", title="系统告警", channels=["feishu", "dingtalk"])
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(
+        tools['notification'].send_notification,
+        message=message, title=title, channels=channels
+    )
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
 # ==================== 启动入口 ====================
 
 def run_server(
@@ -1084,6 +1192,11 @@ def run_server(
     print("    === 文章内容读取 ===")
     print("    22. read_article            - 读取单篇文章内容（Markdown格式）")
     print("    23. read_articles_batch     - 批量读取多篇文章（自动限速）")
+    print()
+    print("    === 通知推送工具 ===")
+    print("    24. get_channel_format_guide  - 获取渠道格式化策略指南（提示词）")
+    print("    25. get_notification_channels - 获取已配置的通知渠道状态")
+    print("    26. send_notification         - 向通知渠道发送消息（自动适配格式）")
     print("=" * 60)
     print()
 

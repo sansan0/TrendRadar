@@ -81,20 +81,17 @@ CREATE TABLE IF NOT EXISTS crawl_source_status (
 );
 
 -- ============================================
--- 推送记录表
--- 用于 push_window once_per_day 功能
--- 以及 ai_analysis analysis_window once_per_day 功能
+-- 时间段执行记录表
+-- 记录每天每个时间段在各 action 维度的执行状态（用于 once 功能）
+-- 替代旧的 push_records 表
 -- ============================================
-CREATE TABLE IF NOT EXISTS push_records (
+CREATE TABLE IF NOT EXISTS period_executions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL UNIQUE,
-    pushed INTEGER DEFAULT 0,
-    push_time TEXT,
-    report_type TEXT,
-    ai_analyzed INTEGER DEFAULT 0,
-    ai_analysis_time TEXT,
-    ai_analysis_mode TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    execution_date TEXT NOT NULL,          -- YYYY-MM-DD
+    period_key TEXT NOT NULL,              -- period 的稳定 key
+    action TEXT NOT NULL,                  -- analyze | push
+    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(execution_date, period_key, action)
 );
 
 -- ============================================
@@ -119,3 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_crawl_status_record ON crawl_source_status(crawl_
 
 -- 排名历史索引
 CREATE INDEX IF NOT EXISTS idx_rank_history_news ON rank_history(news_item_id);
+
+-- 时间段执行记录索引
+CREATE INDEX IF NOT EXISTS idx_period_exec_lookup
+ON period_executions(execution_date, period_key, action);

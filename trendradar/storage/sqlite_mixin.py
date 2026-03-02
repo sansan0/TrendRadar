@@ -608,7 +608,7 @@ class SQLiteStorageMixin:
             for source_id, news_list in historical_data.items.items():
                 historical_titles[source_id] = set()
                 for item in news_list:
-                    first_time = getattr(item, 'first_time', item.crawl_time)
+                    first_time = item.first_time or item.crawl_time
                     if first_time < current_time:
                         historical_titles[source_id].add(item.title)
 
@@ -689,242 +689,85 @@ class SQLiteStorageMixin:
             return []
 
     # ========================================
-    # 推送记录
+    # 时间段执行记录（调度系统）
     # ========================================
 
-    def _has_pushed_today_impl(self, date: Optional[str] = None) -> bool:
+    def _has_period_executed_impl(self, date_str: str, period_key: str, action: str) -> bool:
         """
-        检查指定日期是否已推送过
+        检查指定时间段的某个 action 今天是否已执行
 
         Args:
-            date: 日期字符串（YYYY-MM-DD），默认为今天
+            date_str: 日期字符串 YYYY-MM-DD
+            period_key: 时间段 key
+            action: 动作类型 (analyze / push)
 
         Returns:
-            是否已推送
+            是否已执行
         """
         try:
-            conn = self._get_connection(date)
+            conn = self._get_connection(date_str)
             cursor = conn.cursor()
 
-            target_date = self._format_date_folder(date)
+            # 先检查表是否存在
+            cursor.execute("""
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name='period_executions'
+            """)
+            if not cursor.fetchone():
+                return False
 
             cursor.execute("""
-                SELECT pushed FROM push_records WHERE date = ?
-            """, (target_date,))
+                SELECT 1 FROM period_executions
+                WHERE execution_date = ? AND period_key = ? AND action = ?
+            """, (date_str, period_key, action))
 
-            row = cursor.fetchone()
-            if row:
-                return bool(row[0])
-            return False
+            return cursor.fetchone() is not None
 
         except Exception as e:
-            print(f"[存储] 检查推送记录失败: {e}")
+            print(f"[存储] 检查时间段执行记录失败: {e}")
             return False
 
-    def _record_push_impl(self, report_type: str, date: Optional[str] = None) -> bool:
+    def _record_period_execution_impl(self, date_str: str, period_key: str, action: str) -> bool:
         """
-        记录推送
+        记录时间段的 action 执行
 
         Args:
-            report_type: 报告类型
-            date: 日期字符串（YYYY-MM-DD），默认为今天
-
-        Returns:
-            是否记录成功
-        """
-        try:
-            conn = self._get_connection(date)
-            cursor = conn.cursor()
-
-            target_date = self._format_date_folder(date)
-            now_str = self._get_configured_time().strftime("%Y-%m-%d %H:%M:%S")
-
-            cursor.execute("""
-                INSERT INTO push_records (date, pushed, push_time, report_type, created_at)
-                VALUES (?, 1, ?, ?, ?)
-                ON CONFLICT(date) DO UPDATE SET
-                    pushed = 1,
-                    push_time = excluded.push_time,
-                    report_type = excluded.report_type
-            """, (target_date, now_str, report_type, now_str))
-
-            conn.commit()
-            return True
-
-        except Exception as e:
-            print(f"[存储] 记录推送失败: {e}")
-            return False
-
-    def _has_ai_analyzed_today_impl(self, date: Optional[str] = None) -> bool:
-        """
-        检查指定日期是否已进行过 AI 分析
-
-        Args:
-            date: 日期字符串（YYYY-MM-DD），默认为今天
-
-        Returns:
-            是否已分析
-        """
-        try:
-            conn = self._get_connection(date)
-            cursor = conn.cursor()
-
-            target_date = self._format_date_folder(date)
-
-            cursor.execute("""
-                SELECT ai_analyzed FROM push_records WHERE date = ?
-            """, (target_date,))
-
-            row = cursor.fetchone()
-            if row:
-                return bool(row[0])
-            return False
-
-        except Exception as e:
-            print(f"[存储] 检查 AI 分析记录失败: {e}")
-            return False
-
-    def _record_ai_analysis_impl(self, analysis_mode: str, date: Optional[str] = None) -> bool:
-        """
-        记录 AI 分析
-
-        Args:
-            analysis_mode: 分析模式（daily/current/incremental）
-            date: 日期字符串（YYYY-MM-DD），默认为今天
+            date_str: 日期字符串 YYYY-MM-DD
+            period_key: 时间段 key
+            action: 动作类型 (analyze / push)
 
         Returns:
             是否记录成功
         """
         try:
-            conn = self._get_connection(date)
+            conn = self._get_connection(date_str)
             cursor = conn.cursor()
 
-            target_date = self._format_date_folder(date)
+            # 确保表存在
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS period_executions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    execution_date TEXT NOT NULL,
+                    period_key TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(execution_date, period_key, action)
+                )
+            """)
+
             now_str = self._get_configured_time().strftime("%Y-%m-%d %H:%M:%S")
 
             cursor.execute("""
-                INSERT INTO push_records (date, ai_analyzed, ai_analysis_time, ai_analysis_mode, created_at)
-                VALUES (?, 1, ?, ?, ?)
-                ON CONFLICT(date) DO UPDATE SET
-                    ai_analyzed = 1,
-                    ai_analysis_time = excluded.ai_analysis_time,
-                    ai_analysis_mode = excluded.ai_analysis_mode
-            """, (target_date, now_str, analysis_mode, now_str))
+                INSERT OR IGNORE INTO period_executions (execution_date, period_key, action, executed_at)
+                VALUES (?, ?, ?, ?)
+            """, (date_str, period_key, action, now_str))
 
             conn.commit()
             return True
 
         except Exception as e:
-            print(f"[存储] 记录 AI 分析失败: {e}")
+            print(f"[存储] 记录时间段执行失败: {e}")
             return False
-
-    def _reset_push_state_impl(self, date: Optional[str] = None) -> bool:
-        """
-        重置推送状态
-
-        Args:
-            date: 日期字符串（YYYY-MM-DD），默认为今天
-
-        Returns:
-            是否重置成功
-        """
-        try:
-            conn = self._get_connection(date)
-            cursor = conn.cursor()
-
-            target_date = self._format_date_folder(date)
-
-            cursor.execute("""
-                UPDATE push_records
-                SET pushed = 0, push_time = NULL
-                WHERE date = ?
-            """, (target_date,))
-
-            conn.commit()
-            print(f"[存储] 已重置 {target_date} 的推送状态")
-            return True
-
-        except Exception as e:
-            print(f"[存储] 重置推送状态失败: {e}")
-            return False
-
-    def _reset_ai_analysis_state_impl(self, date: Optional[str] = None) -> bool:
-        """
-        重置 AI 分析状态
-
-        Args:
-            date: 日期字符串（YYYY-MM-DD），默认为今天
-
-        Returns:
-            是否重置成功
-        """
-        try:
-            conn = self._get_connection(date)
-            cursor = conn.cursor()
-
-            target_date = self._format_date_folder(date)
-
-            cursor.execute("""
-                UPDATE push_records
-                SET ai_analyzed = 0, ai_analysis_time = NULL, ai_analysis_mode = NULL
-                WHERE date = ?
-            """, (target_date,))
-
-            conn.commit()
-            print(f"[存储] 已重置 {target_date} 的 AI 分析状态")
-            return True
-
-        except Exception as e:
-            print(f"[存储] 重置 AI 分析状态失败: {e}")
-            return False
-
-    def _get_push_status_impl(self, date: Optional[str] = None) -> dict:
-        """
-        获取推送状态详情
-
-        Args:
-            date: 日期字符串（YYYY-MM-DD），默认为今天
-
-        Returns:
-            状态详情字典
-        """
-        try:
-            conn = self._get_connection(date)
-            cursor = conn.cursor()
-
-            target_date = self._format_date_folder(date)
-
-            cursor.execute("""
-                SELECT date, pushed, push_time, report_type,
-                       ai_analyzed, ai_analysis_time, ai_analysis_mode
-                FROM push_records
-                WHERE date = ?
-            """, (target_date,))
-
-            row = cursor.fetchone()
-            if row:
-                return {
-                    "date": row[0],
-                    "pushed": bool(row[1]),
-                    "push_time": row[2],
-                    "report_type": row[3],
-                    "ai_analyzed": bool(row[4]),
-                    "ai_analysis_time": row[5],
-                    "ai_analysis_mode": row[6],
-                }
-            return {
-                "date": target_date,
-                "pushed": False,
-                "push_time": None,
-                "report_type": None,
-                "ai_analyzed": False,
-                "ai_analysis_time": None,
-                "ai_analysis_mode": None,
-            }
-
-        except Exception as e:
-            print(f"[存储] 获取推送状态失败: {e}")
-            return {}
 
     # ========================================
     # RSS 数据存储
@@ -1188,7 +1031,7 @@ class SQLiteStorageMixin:
             for feed_id, rss_list in historical_data.items.items():
                 historical_urls[feed_id] = set()
                 for item in rss_list:
-                    first_time = getattr(item, 'first_time', item.crawl_time)
+                    first_time = item.first_time or item.crawl_time
                     if first_time < current_time:
                         if item.url:
                             historical_urls[feed_id].add(item.url)

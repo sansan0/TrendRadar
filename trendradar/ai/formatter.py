@@ -27,7 +27,11 @@ def _format_list_content(text: str) -> str:
     
     # 去除首尾空白，防止 AI 返回的内容开头就有换行导致显示空行
     text = text.strip()
-    
+
+    # 0. 合并序号与紧随的【标签】（防御性处理）
+    # 将 "1.\n【投资者】：" 或 "1. 【投资者】：" 合并为 "1. 投资者："
+    text = re.sub(r'(\d+\.)\s*【([^】]+)】([:：]?)', r'\1 \2：', text)
+
     # 1. 规范化：确保 "1." 后面有空格
     result = re.sub(r'(\d+)\.([^ \d])', r'\1. \2', text)
 
@@ -44,15 +48,31 @@ def _format_list_content(text: str) -> str:
     # 只有在中文标点（句号、逗号、分号等）后才触发换行，避免破坏 "1. XX领域：" 格式
     result = re.sub(r'([。！？；，、])\s*([a-zA-Z0-9\u4e00-\u9fa5]+(方面|领域)[:：])', r'\1\n\2', result)
 
-    # 6. 处理 "【XX】："(如【宏观主线】：) 前的换行，确保视觉分隔
-    result = re.sub(r'(?<=[^\n])\s*(【[^】]+】[:：])', r'\n\n\1', result)
+    # 6. 处理 【标签】 格式
+    # 6a. 标签前确保空行分隔（文本开头除外）
+    result = re.sub(r'(?<=\S)\n*(【[^】]+】)', r'\n\n\1', result)
+    # 6b. 合并标签与被换行拆开的冒号：【tag】\n： → 【tag】：
+    result = re.sub(r'(【[^】]+】)\n+([:：])', r'\1\2', result)
+    # 6c. 标签后（含可选冒号），如果紧跟非空白非冒号内容则另起一行
+    # 用 (?=[^\s:：]) 避免正则回溯将冒号误判为"内容"而拆开 【tag】：
+    result = re.sub(r'(【[^】]+】[:：]?)[ \t]*(?=[^\s:：])', r'\1\n', result)
 
-    # 7. 在列表项之间增加视觉空行（将 \n数字. 替换为 \n\n数字.）
-    # 但排除标题行（以冒号结尾）之后的情况，避免标题和第一项之间有空行
-    # (?<![:：]) 是负向后瞻，表示前面不能是冒号
-    result = re.sub(r'(?<![:：])\n(\d+\.)', r'\n\n\1', result)
+    # 7. 在列表项之间增加视觉空行
+    # 排除 【标签】 行（以】结尾）和子标题行（以冒号结尾）之后的情况，避免标题与首项之间出现空行
+    result = re.sub(r'(?<![:：】])\n(\d+\.)', r'\n\n\1', result)
 
     return result
+
+
+def _format_standalone_summaries(summaries: dict) -> str:
+    """格式化独立展示区概括为纯文本行，每个源名称单独一行"""
+    if not summaries:
+        return ""
+    lines = []
+    for source_name, summary in summaries.items():
+        if summary:
+            lines.append(f"[{source_name}]:\n{summary}")
+    return "\n\n".join(lines)
 
 
 def render_ai_analysis_markdown(result: AIAnalysisResult) -> str:
@@ -80,8 +100,13 @@ def render_ai_analysis_markdown(result: AIAnalysisResult) -> str:
 
     if result.outlook_strategy:
         lines.extend(
-            ["**研判策略建议**", _format_list_content(result.outlook_strategy)]
+            ["**研判策略建议**", _format_list_content(result.outlook_strategy), ""]
         )
+
+    if result.standalone_summaries:
+        summaries_text = _format_standalone_summaries(result.standalone_summaries)
+        if summaries_text:
+            lines.extend(["**独立源点速览**", summaries_text])
 
     return "\n".join(lines)
 
@@ -111,8 +136,13 @@ def render_ai_analysis_feishu(result: AIAnalysisResult) -> str:
 
     if result.outlook_strategy:
         lines.extend(
-            ["**研判策略建议**", _format_list_content(result.outlook_strategy)]
+            ["**研判策略建议**", _format_list_content(result.outlook_strategy), ""]
         )
+
+    if result.standalone_summaries:
+        summaries_text = _format_standalone_summaries(result.standalone_summaries)
+        if summaries_text:
+            lines.extend(["**独立源点速览**", summaries_text])
 
     return "\n".join(lines)
 
@@ -148,8 +178,13 @@ def render_ai_analysis_dingtalk(result: AIAnalysisResult) -> str:
 
     if result.outlook_strategy:
         lines.extend(
-            ["#### 研判策略建议", _format_list_content(result.outlook_strategy)]
+            ["#### 研判策略建议", _format_list_content(result.outlook_strategy), ""]
         )
+
+    if result.standalone_summaries:
+        summaries_text = _format_standalone_summaries(result.standalone_summaries)
+        if summaries_text:
+            lines.extend(["#### 独立源点速览", summaries_text])
 
     return "\n".join(lines)
 
@@ -223,6 +258,19 @@ def render_ai_analysis_html(result: AIAnalysisResult) -> str:
             ]
         )
 
+    if result.standalone_summaries:
+        summaries_text = _format_standalone_summaries(result.standalone_summaries)
+        if summaries_text:
+            summaries_html = _escape_html(summaries_text).replace("\n", "<br>")
+            html_parts.extend(
+                [
+                    '<div class="ai-section">',
+                    "<h4>独立源点速览</h4>",
+                    f'<div class="ai-content">{summaries_html}</div>',
+                    "</div>",
+                ]
+            )
+
     html_parts.append("</div>")
     return "\n".join(html_parts)
 
@@ -249,7 +297,12 @@ def render_ai_analysis_plain(result: AIAnalysisResult) -> str:
         lines.extend(["[RSS 深度洞察]", _format_list_content(result.rss_insights), ""])
 
     if result.outlook_strategy:
-        lines.extend(["[研判策略建议]", _format_list_content(result.outlook_strategy)])
+        lines.extend(["[研判策略建议]", _format_list_content(result.outlook_strategy), ""])
+
+    if result.standalone_summaries:
+        summaries_text = _format_standalone_summaries(result.standalone_summaries)
+        if summaries_text:
+            lines.extend(["[独立源点速览]", summaries_text])
 
     return "\n".join(lines)
 
@@ -332,6 +385,16 @@ def render_ai_analysis_html_rich(result: AIAnalysisResult) -> str:
                     <div class="ai-block">
                         <div class="ai-block-title">研判策略建议</div>
                         <div class="ai-block-content">{content_html}</div>
+                    </div>"""
+
+    if result.standalone_summaries:
+        summaries_text = _format_standalone_summaries(result.standalone_summaries)
+        if summaries_text:
+            summaries_html = _escape_html(summaries_text).replace("\n", "<br>")
+            ai_html += f"""
+                    <div class="ai-block">
+                        <div class="ai-block-title">独立源点速览</div>
+                        <div class="ai-block-content">{summaries_html}</div>
                     </div>"""
 
     ai_html += """

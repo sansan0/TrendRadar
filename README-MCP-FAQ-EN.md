@@ -38,6 +38,8 @@
 | | `list_available_dates` | List available dates (local/remote) |
 | **Article** | `read_article` | Read single article content (Markdown format) |
 | | `read_articles_batch` | Batch read multiple articles (max 5) |
+| **Notification** | `get_notification_channels` | Get all configured notification channels and their status |
+| | `send_notification` | Send messages to configured notification channels (auto format conversion) |
 
 ---
 
@@ -530,7 +532,7 @@ After testing one query, please immediately check the [SiliconFlow Billing](http
 - Available platform list
 - Crawler configuration (request interval, timeout settings)
 - Weight configuration (ranking weight, frequency weight)
-- Notification configuration (DingTalk, WeChat)
+- Notification configuration (Feishu, DingTalk, WeCom, Telegram, Email, ntfy, Bark, Slack, Generic Webhook)
 
 ---
 
@@ -801,6 +803,64 @@ Users often use natural language like "this week", "last 7 days" to express date
 - Articles beyond 5 will be automatically skipped
 - Single article failure doesn't affect other articles
 - More articles mean longer wait time, please be patient
+
+---
+
+## Notification Push
+
+### Q21: How to send notification messages via MCP?
+
+**You can ask like this:**
+
+- "Show me which notification channels are configured"
+- "Send a test message to all channels"
+- "Push this content to Feishu"
+- "Send today's news summary to DingTalk and Telegram"
+
+**Supported notification channels (9):**
+
+| Channel | Message Format | Configuration |
+|---------|---------------|---------------|
+| **Feishu** | Plain text | `FEISHU_WEBHOOK_URL` |
+| **DingTalk** | Markdown | `DINGTALK_WEBHOOK_URL` |
+| **WeCom** | Markdown | `WEWORK_WEBHOOK_URL` |
+| **Telegram** | HTML | `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` |
+| **Email** | HTML | `EMAIL_FROM` + `EMAIL_PASSWORD` + `EMAIL_TO` |
+| **ntfy** | Markdown | `NTFY_SERVER_URL` + `NTFY_TOPIC` |
+| **Bark** | Markdown | `BARK_URL` |
+| **Slack** | mrkdwn | `SLACK_WEBHOOK_URL` |
+| **Generic Webhook** | Markdown | `GENERIC_WEBHOOK_URL` |
+
+**Configuration methods:**
+
+- Configure channels in `config.yaml` under `notification.channels`
+- Or set corresponding environment variables in `.env` file (higher priority)
+- Both sources are automatically merged, `.env` values override `config.yaml` values
+
+**Two tools:**
+
+| Tool | Function | Example Question |
+|------|----------|------------------|
+| `get_notification_channels` | Detect configured channels and status | "View notification channel config" |
+| `send_notification` | Send message to specified or all channels | "Send message to Feishu" |
+
+**Typical workflow:**
+
+1. Check channel status first: "Show me which notification channels are configured"
+2. Send after confirming availability: "Push the following to DingTalk: today's hotspot summary..."
+3. Or specify multiple channels: "Send to Feishu and Telegram"
+4. Without specifying channels, sends to all configured channels
+
+**Message format:**
+
+- The tool accepts messages in **Markdown format**
+- Automatically converts to each channel's required format (Feishu to plain text, Telegram to HTML, Slack to mrkdwn, etc.)
+- No need to manually handle format differences
+
+**Multi-account support:**
+
+- Separate multiple URLs/Tokens with `;` in config values to send to multiple accounts
+- For example: `FEISHU_WEBHOOK_URL=url1;url2` sends to two Feishu groups simultaneously
 
 ---
 

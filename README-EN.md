@@ -11,8 +11,8 @@ Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v5.5.3-blue.svg)](https://github.com/sansan0/TrendRadar)
-[![MCP](https://img.shields.io/badge/MCP-v3.2.0-green.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v6.0.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![MCP](https://img.shields.io/badge/MCP-v4.0.0-green.svg)](https://github.com/sansan0/TrendRadar)
 [![RSS](https://img.shields.io/badge/RSS-Feed_Support-orange.svg?style=flat-square&logo=rss&logoColor=white)](https://github.com/sansan0/TrendRadar)
 [![AI Translation](https://img.shields.io/badge/AI-Multi--Language-purple.svg?style=flat-square)](https://github.com/sansan0/TrendRadar)
 
@@ -137,12 +137,7 @@ After communication, the author indicated no concerns about server pressure, but
 
 <div align="center">
 
-> **Sponsorship Open**  
->
-> Seeking quality product partners.  
-> More than features, I value **your attitude towards users**.  
-> Please share your user community or feedback channels—I want to see how you support your users.  
-> [📩 Contact Me](mailto:path@linux.do)  
+> **Sponsorship Open**
 
 </div>
 
@@ -150,16 +145,11 @@ After communication, the author indicated no concerns about server pressure, but
 
 <a name="-support-project"></a>
 
-## ✨ Find it useful? Support TrendRadar
+### ❤️ Find it useful? Support TrendRadar
 
-TrendRadar is a completely free and open-source project. Your support fuels the motivation for continuous updates.
-
-### ❤️ Donate
-
-A bottle of water or a snack represents your love.
-Any amount is welcome; even 1 RMB is a gesture of kindness.
-
-> Your sponsorship will be used to replenish caffeine for carbon-based lifeforms ☕️ and API Tokens for silicon-based lifeforms 🤖.
+> If TrendRadar has captured value for you, give it some fuel to keep evolving
+>
+> Any amount is welcome; even 1 RMB is a gesture of encouragement for open source. Feel free to leave a note with your donation (´▽`ʃ♡ƪ)
 
 <div align="center">
 
@@ -169,29 +159,21 @@ Any amount is welcome; even 1 RMB is a gesture of kindness.
 
 </div>
 
-### 🌟 Other Ways to Support
-
-1. **Star the Repo** ⭐️: It only takes **1 second**. Letting more people see this project is the greatest recognition for me.
-2. **Charity** 🌻: Search for **Tencent Charity** (or support a local charity) to help students in need. Pass this kindness forward.
 
 ### 🤝 Attribution & Secondary Development
 
 If you utilize the core code or draw inspiration from the logic of this project, **it would be greatly appreciated** if you could acknowledge the source in your README or documentation and include a link to this repository.
 
-> [https://github.com/sansan0/TrendRadar](https://github.com/sansan0/TrendRadar)
-
 This contributes to the sustainable maintenance of the project and the growth of the community. Thank you for your respect and support! ❤️
 
----
 
 ### 💬 Feedback & Community
 
 * **GitHub Issues**: Best for specific technical issues. Please provide complete information (screenshots, error logs, etc.) to help locate the problem quickly.
 * **WeChat Official Account**: It is recommended to leave comments under relevant articles. If you need to ask questions in the background, **liking/recommending** the article first is the best "icebreaker," and I can feel your appreciation (´▽`ʃ♡ƪ).
 
-> **Friendly Reminder**:  
-> This project is for open-source sharing, not a commercial product. A lot of effort went into the documentation; most deployment issues can be answered in **[🚀 Quick Start](#-quick-start)**.   
-> *Please be patient and polite when asking questions. Treat the author as a friend, not customer service, for better communication efficiency!*  
+> **Friendly Reminder**:
+> This project is for open-source sharing, not a commercial product. Treat the author as a friend, not customer service, for better communication efficiency!
 
 <div align="center">
 
@@ -207,6 +189,61 @@ This contributes to the sustainable maintenance of the project and the growth of
 
 >**📌 Check Latest Updates**: **[Original Repository Changelog](https://github.com/sansan0/TrendRadar?tab=readme-ov-file#-changelog)**:
 - **Tip**: Check [Changelog] to understand specific [Features]
+
+
+### 2026/02/09 - v6.0.0
+
+> **Breaking Change**: Config file upgrade (config.yaml 2.0.0), old `push_window` and `analysis_window` configs are no longer compatible, please refer to the new config.yaml for migration
+
+- **Unified Scheduling System**: New `timeline.yaml` — one config to control when to crawl / push / AI analyze
+- **5 Preset Templates**: `always_on` (24/7, default), `morning_evening` (morning & evening summary), `office_hours` (work hours), `night_owl` (late night), `custom` (fully customizable); you can also add your own templates under `presets:` — just use a unique key, then set it in config.yaml
+- **Flexible Time Period Config**: Supports weekday/weekend differentiation, cross-midnight time periods, per-period once deduplication
+- **Visual Config Editor**:
+  - New `timeline.yaml` editor tab, alongside config.yaml / frequency_words.txt
+  - Preset mode card selector: click to switch, auto-syncs config.yaml's `schedule.preset`
+  - Week view timeline: 7 days × 24 hours horizontal bars, color-coded for push/analysis/crawl status
+  - Interactive controls: toggles, dropdowns, time pickers — right-side changes sync to left-side YAML in real time
+  - Week mapping dropdown: dynamically populated from day plans, configure scheduling by drag and click
+- **AI Prompt Stability Overhaul** (ai_analysis_prompt.txt v2.0.0):
+  - Formatting rules extracted from JSON values into a standalone spec section, reducing AI output format inconsistencies
+  - JSON template simplified: field descriptions shortened to one sentence + word limit
+  - Removed Markdown from system prompt to align with the "no Markdown" instruction
+  - All JSON fields declared optional — missing any field won't cause errors, improving fault tolerance
+- **Standalone Source AI Summaries** (`ai_analysis.include_standalone`):
+  - New independent toggle: when enabled, AI generates a concise summary for each standalone source
+  - Decoupled from display: AI can analyze full hotlist data without enabling standalone display in push notifications
+  - Supports both trending platforms and RSS feeds, including rank/time/trajectory data
+  - Trajectory analysis linked with `include_rank_timeline`: uses trajectory data for deep trend analysis when enabled, falls back to rank-based summary when disabled
+  - New `standalone_summaries` JSON field ("Source Snapshot"), all notification channels adapted for rendering
+
+
+### 2026/02/09 - mcp-v4.0.0
+
+- **🔥 Push any AI message to all channels**: Send AI-generated content to Feishu, DingTalk, Telegram, Email and all 9 channels with one call — Markdown auto-adapts to each platform's native format
+- **New format guide tool**: `get_channel_format_guide` tells AI what each channel supports and its limitations, so generated content looks great everywhere
+- **Smart batch splitting**: Long messages auto-split per channel byte limits (Feishu 30KB, DingTalk 20KB, etc.), reads config from config.yaml
+- **Fixed channel detection**: ntfy no longer falsely reported as "configured" due to default server URL
+- **Code reuse**: Batch utilities now imported from trendradar core instead of duplicated
+
+
+<details>
+<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
+
+
+### 2026/01/28 - v5.5.0
+
+> Like the MCP feature, I'm not creating a separate repo for this tool either — it's pure frontend, so bundling it together
+
+- Added visual configuration editor for TrendRadar
+
+
+### 2026/02/02 - mcp-v3.2.0
+
+- **New read_article tool**: Read a single article body via Jina AI Reader (Markdown format)
+- **New read_articles_batch tool**: Batch read multiple articles (up to 5, auto rate-limited)
+- **Recommended workflow**: `search_news(query="keyword", include_url=True)` → `read_article(url=...)` to read article body
+- **Docs update**: README-MCP-FAQ.md and README-MCP-FAQ-EN.md added Q19-Q20 for article reading
+
 
 ### 2026/01/23 - v5.4.0
 
@@ -275,10 +312,6 @@ This contributes to the sustainable maintenance of the project and the growth of
 - **Regex Matching Fix**: `get_trending_topics` supports `/pattern/` regex syntax and `display_name`
 - **Cache Optimization**: Added `make_cache_key()` function with param sorting + MD5 hash for consistency
 - **New check_version Tool**: Check TrendRadar and MCP Server version updates simultaneously
-
-
-<details>
-<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
 
 
 ### 2026/01/10 - v5.0.0
@@ -387,9 +420,9 @@ This update refactors the push message structure into five distinct core section
    - Use semicolon `;` to separate multiple accounts, e.g., `FEISHU_WEBHOOK_URL=url1;url2`
    - Automatic validation for paired configurations (e.g., Telegram's token and chat_id)
 
-2. **Configurable Push Content Order**
-   - Added `reverse_content_order` configuration option
-   - Customize display order of trending keywords stats and new trending news
+2. **Push Region Configuration**
+   - Customize display order of all regions via `display.region_order` (v5.2.0, replaces `reverse_content_order`)
+   - Control visibility of each region via `display.regions` (hotlist, new items, RSS, standalone, AI analysis)
 
 3. **Global Filter Keywords**
    - Added `[GLOBAL_FILTER]` region marker for filtering unwanted content globally
@@ -874,6 +907,14 @@ Supports RSS/Atom feed crawling, keyword-based grouping and statistics (consiste
 
 > 💡 RSS uses the same `frequency_words.txt` for keyword filtering as trending
 
+### **Visual Configuration Editor**
+
+A web-based graphical configuration interface — no need to manually edit YAML files. Complete all configuration changes and exports through simple forms.
+
+👉 **Try it online**: [https://sansan0.github.io/TrendRadar/](https://sansan0.github.io/TrendRadar/)
+
+<img src="/_image/editor.png" alt="Visual Configuration Editor" width="80%">
+
 ### **Smart Push Strategies**
 
 **Three Push Modes**:
@@ -895,11 +936,11 @@ Supports RSS/Atom feed crawling, keyword-based grouping and statistics (consiste
 
 | Feature | Description | Default |
 |---------|-------------|---------|
-| **Push Time Window Control** | Set push time range (e.g., 09:00-18:00) to avoid non-work hours notifications | Disabled |
-| **Content Order Configuration** | Adjust display order of "Trending Keywords Stats" and "New Trending News" (v3.5.0 new) | Stats first |
+| **Scheduling System** | Per-day-of-week scheduling: assign different time periods, push modes, and AI analysis strategies to each day (Mon–Sun). 5 built-in presets (always_on / morning_evening / office_hours / night_owl / custom), or define your own. Supports weekday vs weekend differentiation, cross-midnight periods, and per-period once-only dedup (v6.0.0) | morning_evening |
+| **Content Order Configuration** | Use `display.region_order` to adjust display order of all regions (hotlist, new items, RSS, standalone, AI analysis); use `display.regions` to toggle each region on/off (v5.2.0) | See config |
 | **Display Mode Switch** | `keyword`=group by keyword, `platform`=group by platform (v4.6.0 new) | keyword |
 
-> 💡 For detailed configuration, see [Configuration Guide - Report Configuration](#7-report-configuration) and [Configuration Guide - Push Window](#8-push-window-configuration)
+> 💡 For detailed configuration, see [Configuration Guide - Report Configuration](#7-report-configuration) and [Configuration Guide - Scheduling System](#8-when-will-i-receive-pushes)
 
 ### **Precise Content Filtering**
 
@@ -993,6 +1034,7 @@ Provide complete trending display for specified platforms, unaffected by keyword
 
 - **Full Trending**: Specified platforms show complete trending list, for users who want to see full rankings
 - **RSS Independent Display**: RSS source content can be fully displayed, not limited by keywords
+- **AI Deep Analysis**: Independently enable AI trend analysis on full hotlists, without displaying in push
 - **Flexible Configuration**: Support configuring display platforms, RSS sources, max count
 
 > 💡 Detailed configuration tutorial: [Report Configuration - Independent Display](#7-report-configuration)
@@ -2977,6 +3019,28 @@ display:
 1. Listed in `region_order`
 2. Corresponding switch in `display.regions` is `true`
 
+#### Region Switches (regions)
+
+Control whether each region is displayed in push notifications via `display.regions`:
+
+```yaml
+display:
+  regions:
+    hotlist: true                    # Hotlist region (keyword-matched trending news)
+    new_items: false                 # New items region (new hotlist + new RSS items)
+    rss: true                       # RSS region (keyword-matched RSS content)
+    standalone: false                # Standalone section (full hotlist/RSS, unfiltered by keywords)
+    ai_analysis: true                # AI analysis region
+```
+
+| Region | Config Key | Default | Description |
+|--------|-----------|---------|-------------|
+| **Hotlist** | `hotlist` | `true` | Keyword-matched trending news aggregation |
+| **New Items** | `new_items` | `false` | Newly appeared topics in this crawl cycle (hotlist + RSS). Note: the 🆕 markers in the hotlist region are not affected by this switch |
+| **RSS** | `rss` | `true` | Keyword-matched RSS subscription content. When disabled, RSS analysis is skipped, but RSS in standalone section is unaffected |
+| **Standalone** | `standalone` | `false` | Full content display for specified platforms/RSS, unfiltered by keywords |
+| **AI Analysis** | `ai_analysis` | `true` | AI-generated trending analysis summary |
+
 #### Sorting Priority Configuration
 
 **Example Scenario:** Config order A, B, C, news count A(3), B(10), C(5)
@@ -3001,13 +3065,15 @@ Provides full trending list display for specified platforms, unaffected by `freq
 ```yaml
 display:
   regions:
-    standalone: true                  # Enable independent display section
+    standalone: true                  # Show standalone section in push (disabling doesn't affect AI analysis)
 
   standalone:
     platforms: ["zhihu", "weibo"]     # Trending platform ID list
     rss_feeds: ["hacker-news"]        # RSS feed ID list
     max_items: 20                     # Max display count per source (0=unlimited)
 ```
+
+> 💡 **Display and AI analysis are independently controlled**: `regions.standalone` only controls whether the standalone section appears in push notifications. Even with display disabled, setting `include_standalone: true` in the AI config still allows AI to analyze full hotlist data from these platforms. Ideal for users who want deeper AI insights without longer push messages.
 
 **Use Cases:**
 - Want to view the complete trending ranking of a platform (like Zhihu) instead of just keyword-matched content
@@ -3032,76 +3098,47 @@ Hacker News (5 items):
 ### 8. When will I receive pushes?
 
 <details>
-<summary>👉 Click to expand: <strong>Set Push Time Window</strong></summary>
+<summary>👉 Click to expand: <strong>Set Push Time (Scheduling System)</strong></summary>
 <br>
 
-**Configuration Location:** `notification.push_window` section in `config/config.yaml`
+**Configuration Location:** `schedule` section in `config/config.yaml` + `config/timeline.yaml`
+
+#### Quick Start
+
+Just pick a preset template in `config.yaml` — no need to edit `timeline.yaml`:
 
 ```yaml
-notification:
-  push_window:
-    enabled: false                    # Whether to enable
-    start: "20:00"                    # Start time (Beijing time)
-    end: "22:00"                      # End time (Beijing time)
-    once_per_day: true                # Push only once per day
+schedule:
+  enabled: true
+  preset: "morning_evening"     # Change this line
 ```
 
-#### Configuration Details
+#### Available Preset Templates
 
-| Config Item | Type | Default | Description |
-|------------|------|---------|-------------|
-| `enabled` | bool | `false` | Whether to enable push time window control |
-| `start` | string | `"20:00"` | Push window start time (Beijing time, HH:MM format) |
-| `end` | string | `"22:00"` | Push window end time (Beijing time, HH:MM format) |
-| `once_per_day` | bool | `true` | `true`=push only once per day within window, `false`=push every execution within window |
+| Template | Description | Push Behavior |
+|----------|-------------|---------------|
+| `morning_evening` | Incremental + evening summary (recommended) | Push new content all day + 19:00-21:00 daily summary |
+| `always_on` | 24/7 monitoring | Push whenever new content appears, no time restrictions |
+| `office_hours` | Office hours | Three-phase weekday push (morning briefing → noon update → closing summary), weekends incremental |
+| `night_owl` | Night owl | Afternoon peek + late-night daily summary (22:00-01:00 cross-midnight) |
+| `custom` | Fully customizable | Edit the `custom` section at the bottom of `timeline.yaml` |
 
-#### Use Cases
+#### Full Customization
 
-| Scenario | Configuration Example |
-|----------|---------------------|
-| **Working Hours Push** | `start: "09:00"`, `end: "18:00"`, `once_per_day: false` |
-| **Evening Summary Push** | `start: "20:00"`, `end: "22:00"`, `once_per_day: true` |
-| **Lunch Break Push** | `start: "12:00"`, `end: "13:00"`, `once_per_day: true` |
+If none of the preset templates fit your needs, edit the `custom` section at the bottom of `config/timeline.yaml` to freely define time periods, day plans, and week mappings. See the comments in `timeline.yaml` for details.
 
 #### Important Notice
 
+> ⚠️ **Users upgrading from older versions:**
+> - v6.0.0 removed the old `notification.push_window` and `ai_analysis.analysis_window` configs
+> - Please switch to the new `schedule` + `timeline.yaml` scheduling system
+> - Old "push once per day" can be replaced with the `morning_evening` preset
+> - Old "working hours push" can be replaced with the `office_hours` preset
+
 > ⚠️ **GitHub Actions Users Note:**
 > - GitHub Actions execution time is unstable, may have ±15 minutes deviation
-> - Time range should be at least **2 hours** wide
+> - Time period ranges should be at least **2 hours** wide
 > - For precise timed push, recommend **Docker deployment** on personal server
-
-#### Docker Environment Variables
-
-```bash
-PUSH_WINDOW_ENABLED=true
-PUSH_WINDOW_START=09:00
-PUSH_WINDOW_END=18:00
-PUSH_WINDOW_ONCE_PER_DAY=false
-```
-
-#### Complete Configuration Examples
-
-**Scenario: Push once between 8-10 PM daily**
-
-```yaml
-notification:
-  push_window:
-    enabled: true
-    start: "20:00"
-    end: "22:00"
-    once_per_day: true
-```
-
-**Scenario: Push every hour during working hours**
-
-```yaml
-notification:
-  push_window:
-    enabled: true
-    start: "09:00"
-    end: "18:00"
-    once_per_day: false
-```
 
 </details>
 

@@ -166,12 +166,23 @@ def send_to_feishu(
             f"发送{log_prefix}第 {i}/{len(batches)} 批次，大小：{content_size} 字节 [{report_type}]"
         )
 
-        # 飞书 webhook 只显示 content.text，所有信息都整合到 text 中
         payload = {
-            "msg_type": "text",
-            "content": {
-                "text": batch_content,
-            },
+            "msg_type": "interactive",
+            "card": {
+                "elements": [
+                    {
+                        "tag": "markdown",
+                        "content": batch_content
+                    }
+                ],
+                "header": {
+                    "template": "blue",
+                    "title": {
+                        "content": "📊 TrendRadar 热点简报",
+                        "tag": "plain_text"
+                    }
+                }
+            }
         }
 
         try:

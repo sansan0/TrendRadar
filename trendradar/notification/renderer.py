@@ -54,12 +54,12 @@ def render_feishu_content(
             word = stat["word"]
             count = stat["count"]
 
-            sequence_display = f"<font color='grey'>[{i + 1}/{total_count}]</font>"
+            sequence_display = f"[{i + 1}/{total_count}]"
 
             if count >= 10:
-                stats_content += f"🔥 {sequence_display} **{word}** : <font color='red'>{count}</font> 条\n\n"
+                stats_content += f"🔥 {sequence_display} **{word}** : {count} 条\n\n"
             elif count >= 5:
-                stats_content += f"📈 {sequence_display} **{word}** : <font color='orange'>{count}</font> 条\n\n"
+                stats_content += f"📈 {sequence_display} **{word}** : {count} 条\n\n"
             else:
                 stats_content += f"📌 {sequence_display} **{word}** : {count} 条\n\n"
 
@@ -133,16 +133,16 @@ def render_feishu_content(
 
         text_content += "⚠️ **数据获取失败的平台：**\n\n"
         for i, id_value in enumerate(report_data["failed_ids"], 1):
-            text_content += f"  • <font color='red'>{id_value}</font>\n"
+            text_content += f"  • {id_value}\n"
 
     # 获取当前时间
     now = get_time_func() if get_time_func else datetime.now()
     text_content += (
-        f"\n\n<font color='grey'>更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"
+        f"\n\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
     )
 
     if update_info:
-        text_content += f"\n<font color='grey'>TrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}</font>"
+        text_content += f"\nTrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}"
 
     return text_content
 
@@ -310,7 +310,7 @@ def render_rss_feishu_content(
     """
     if not rss_items:
         now = get_time_func() if get_time_func else datetime.now()
-        return f"📭 暂无新的 RSS 订阅内容\n\n<font color='grey'>更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"
+        return f"📭 暂无新的 RSS 订阅内容\n\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
 
     # 按 feed_id 分组
     feeds_map: Dict[str, list] = {}
@@ -342,7 +342,7 @@ def render_rss_feishu_content(
                 text_content += f"  {i}. {title}"
 
             if published_at:
-                text_content += f" <font color='grey'>- {published_at}</font>"
+                text_content += f" - {published_at}"
 
             text_content += "\n"
 
@@ -352,7 +352,7 @@ def render_rss_feishu_content(
         text_content += f"\n{separator}\n\n"
 
     now = get_time_func() if get_time_func else datetime.now()
-    text_content += f"<font color='grey'>更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"
+    text_content += f"更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
 
     return text_content
 
@@ -516,7 +516,7 @@ def _render_rss_section_feishu(rss_items: list, separator: str = "---") -> str:
                 text_content += f"  {i}. {title}"
 
             if published_at:
-                text_content += f" <font color='grey'>- {published_at}</font>"
+                text_content += f" - {published_at}"
 
             text_content += "\n"
 

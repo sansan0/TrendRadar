@@ -343,6 +343,7 @@
   - OpenAI: `openai/gpt-4o`
   - Gemini: `gemini/gemini-2.5-flash`
   - Anthropic: `anthropic/claude-3-5-sonnet`
+  - MiniMax: `openai/MiniMax-M2.5`（需设置 `api_base`）
 
 ### 2026/01/17 - v5.2.0
 
@@ -395,7 +396,7 @@
 
 - **AI 分析集成**：使用 AI 大模型对推送内容进行深度分析，自动生成热点趋势概述、关键词热度分析、跨平台关联、潜在影响评估等
 - **情感倾向分析**：新增深度情感识别，精准捕捉舆论的正负面、争议或担忧情绪
-- **多 AI 提供商支持**：支持 DeepSeek（默认，性价比高）、OpenAI、Google Gemini 及任意 OpenAI 兼容接口
+- **多 AI 提供商支持**：支持 DeepSeek（默认，性价比高）、OpenAI、Google Gemini、MiniMax 及任意 OpenAI 兼容接口
 - **两种推送模式**：`only_analysis`（仅 AI 分析）、`both`（两者都推送）
 - **自定义提示词**：通过 `config/ai_analysis_prompt.txt` 文件自定义 AI 分析角色和输出格式
 - **多维度数据分析**：AI 可分析排名变化、热度持续时间、跨平台表现、趋势预测等
@@ -1114,7 +1115,7 @@ ai_translation:
 使用 AI 大模型对推送内容进行深度分析，自动生成热点洞察报告
 
 - **智能分析**：自动分析热点趋势、关键词热度、跨平台关联、潜在影响
-- **多提供商**：基于 LiteLLM 统一接口，支持 100+ AI 提供商（DeepSeek、OpenAI、Gemini、Anthropic、本地 Ollama 等），还支持备用模型自动切换
+- **多提供商**：基于 LiteLLM 统一接口，支持 100+ AI 提供商（DeepSeek、OpenAI、Gemini、Anthropic、MiniMax、本地 Ollama 等），还支持备用模型自动切换
 - **分析模式独立**：AI 的分析范围可以和推送不同——推送只发新增消息（避免打扰），但 AI 可以分析当天全部新闻（看完整趋势）
 - **灵活推送**：可选仅原始内容、仅 AI 分析、或两者都推送
 - **自定义提示词**：通过 `config/ai_analysis_prompt.txt` 自定义分析角度
@@ -3385,6 +3386,7 @@ app:
 | **DeepSeek** (推荐) | `deepseek/deepseek-chat` | 性价比极高，适合高频分析 |
 | **OpenAI** | `openai/gpt-4o`<br>`openai/gpt-4o-mini` | GPT-4o 系列 |
 | **Google Gemini** | `gemini/gemini-1.5-flash`<br>`gemini/gemini-1.5-pro` | Gemini 系列 |
+| **[MiniMax](https://www.minimax.io)** | `openai/MiniMax-M2.5` | 204K 超长上下文，需配合 `AI_API_BASE` 使用 |
 | **自定义 API** | 任意格式 | 配合 `AI_API_BASE` 使用 |
 
 > 💡 **新特性**：现已基于 [LiteLLM](https://github.com/BerriAI/litellm) 统一接口，支持 100+ AI 提供商，配置更简单、错误处理更完善。

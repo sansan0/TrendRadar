@@ -284,6 +284,7 @@ This contributes to the sustainable maintenance of the project and the growth of
   - OpenAI: `openai/gpt-4o`
   - Gemini: `gemini/gemini-2.5-flash`
   - Anthropic: `anthropic/claude-3-5-sonnet`
+  - MiniMax: `openai/MiniMax-M2.5` (requires `api_base` setting)
 
 ### 2026/01/17 - v5.2.0
 
@@ -348,7 +349,7 @@ This update refactors the push message structure into five distinct core section
 
 - **AI Analysis Integration**: Use AI models to deeply analyze push content, automatically generate trending insights, keyword analysis, cross-platform correlation, potential impact assessment
 - **Sentiment Analysis**: New deep sentiment recognition to accurately capture positive, negative, controversial, or concerned public opinions (v5.0.0 key enhancement)
-- **Multi AI Provider Support**: Supports DeepSeek (default, cost-effective), OpenAI, Google Gemini, and any OpenAI-compatible API
+- **Multi AI Provider Support**: Supports DeepSeek (default, cost-effective), OpenAI, Google Gemini, MiniMax, and any OpenAI-compatible API
 - **Two Push Modes**: `only_analysis` (AI analysis only), `both` (push both)
 - **Custom Prompts**: Customize AI analysis role and output format via `config/ai_analysis_prompt.txt`
 - **Multi-dimensional Analysis**: AI can analyze ranking changes, trending duration, cross-platform performance, trend prediction
@@ -1060,7 +1061,7 @@ ai_translation:
 Use AI models to deeply analyze push content, automatically generate trending insights report
 
 - **Smart Analysis**: Automatically analyze trending topics, keyword popularity, cross-platform correlation, potential impact
-- **Multi Provider**: Built on LiteLLM unified interface, supports 100+ AI providers (DeepSeek, OpenAI, Gemini, Anthropic, local Ollama, etc.), with automatic fallback model switching
+- **Multi Provider**: Built on LiteLLM unified interface, supports 100+ AI providers (DeepSeek, OpenAI, Gemini, Anthropic, MiniMax, local Ollama, etc.), with automatic fallback model switching
 - **Independent Analysis Mode**: AI analysis scope can differ from push content — push only new items (less noise), while AI analyzes the full day's news (complete trend picture)
 - **Flexible Push**: Choose original content only, AI analysis only, or both
 - **Custom Prompts**: Customize analysis perspective via `config/ai_analysis_prompt.txt`
@@ -3382,6 +3383,7 @@ The simplest way is via environment variables (Recommended for GitHub Secrets or
 | **DeepSeek** (Recommended) | `deepseek/deepseek-chat` | Excellent cost-performance ratio for high-frequency analysis |
 | **OpenAI** | `openai/gpt-4o`<br>`openai/gpt-4o-mini` | GPT-4o series |
 | **Google Gemini** | `gemini/gemini-1.5-flash`<br>`gemini/gemini-1.5-pro` | Gemini series |
+| **[MiniMax](https://www.minimax.io)** | `openai/MiniMax-M2.5` | 204K ultra-long context, use with `AI_API_BASE` |
 | **Custom API** | Any format | Use with `AI_API_BASE` |
 
 > 💡 **New Feature**: Now based on [LiteLLM](https://github.com/BerriAI/litellm) unified interface, supporting 100+ AI providers with simpler configuration and better error handling.

@@ -87,25 +87,24 @@ function closeQrModal() {
 window.openQrModal = openQrModal;
 window.closeQrModal = closeQrModal;
 const MODULE_DEFS = [
-    { id: 1, name: "1. 基础设置", key: "app", editable: false },
-    { id: 2, name: "2. 数据源 - 热榜平台", key: "platforms", editable: true },
-    { id: 3, name: "3. 数据源 - RSS 订阅", key: "rss", editable: true },
-    { id: 4, name: "4. 报告模式", key: "report", editable: true },
-    { id: "4.5", name: "4.5 筛选策略", key: "filter", editable: true },
-    { id: "4.6", name: "4.6 AI 智能筛选", key: "ai_filter", editable: true },
-    { id: 5, name: "5. 推送内容控制", key: "display", editable: true },
-    { id: 6, name: "6. 推送通知", key: "notification", editable: true, partial: true },
-    { id: 7, name: "7. 存储配置", key: "storage", editable: false },
-    { id: 8, name: "8. AI 模型配置", key: "ai", editable: true },
-    { id: 9, name: "9. AI 分析功能", key: "ai_analysis", editable: true },
-    { id: 10, name: "10. AI 翻译功能", key: "ai_translation", editable: true },
-    { id: 11, name: "11. 高级设置", key: "advanced", editable: false }
+    { id: 1, name: "1. 基础设置", key: "app", editable: true, icon: "fa-gear", shortName: "基础" },
+    { id: 2, name: "2. 数据源 - 热榜平台", key: "platforms", editable: true, icon: "fa-fire", shortName: "热榜" },
+    { id: 3, name: "3. 数据源 - RSS 订阅", key: "rss", editable: true, icon: "fa-rss", shortName: "RSS" },
+    { id: 4, name: "4. 报告模式", key: "report", editable: true, icon: "fa-chart-bar", shortName: "报告" },
+    { id: "4.5", name: "4.5 筛选策略", key: "filter", editable: true, icon: "fa-filter", shortName: "筛选" },
+    { id: "4.6", name: "4.6 AI 智能筛选", key: "ai_filter", editable: true, icon: "fa-robot", shortName: "AI筛选" },
+    { id: 5, name: "5. 推送内容控制", key: "display", editable: true, icon: "fa-list-check", shortName: "推送内容" },
+    { id: 6, name: "6. 推送通知", key: "notification", editable: true, partial: true, icon: "fa-bell", shortName: "通知" },
+    { id: 7, name: "7. 存储配置", key: "storage", editable: true, icon: "fa-database", shortName: "存储" },
+    { id: 8, name: "8. AI 模型配置", key: "ai", editable: true, icon: "fa-microchip", shortName: "AI模型" },
+    { id: 9, name: "9. AI 分析功能", key: "ai_analysis", editable: true, icon: "fa-chart-line", shortName: "AI分析" },
+    { id: 10, name: "10. AI 翻译功能", key: "ai_translation", editable: true, icon: "fa-language", shortName: "翻译" },
+    { id: 11, name: "11. 高级设置", key: "advanced", editable: true, icon: "fa-sliders", shortName: "高级" }
 ];
 
 // 初始默认内容 (用于空状态) - 只显示提示文本
 const INITIAL_YAML = `# 在此粘贴你的 config.yaml...
-# 或拖拽文件到编辑器区域
-# 或点击右上角"加载官网最新配置"`;
+# 或拖拽文件到编辑器区域`;
 
 // LocalStorage 键名
 const STORAGE_KEY_CONFIG = 'trendradar_config_yaml';
@@ -115,10 +114,6 @@ const STORAGE_KEY_CONFIG_TIME = 'trendradar_config_time';
 const STORAGE_KEY_FREQUENCY_TIME = 'trendradar_frequency_time';
 const STORAGE_KEY_TIMELINE_TIME = 'trendradar_timeline_time';
 
-// 官网配置文件 URL
-const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/config/config.yaml';
-const REMOTE_FREQUENCY_URL = 'https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/config/frequency_words.txt';
-const REMOTE_TIMELINE_URL = 'https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/config/timeline.yaml';
 const REMOTE_VERSION_URL = 'https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version_configs';
 
 let currentYaml = "";
@@ -135,16 +130,38 @@ let configSaveTimer = null;
 let frequencySaveTimer = null;
 let timelineSaveTimer = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+async function loadLocalProjectFile(path) {
+    try {
+        const res = await fetch(path, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const text = await res.text();
+        return text && text.trim() ? text : null;
+    } catch {
+        return null;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     const yamlEditor = document.getElementById('yaml-editor');
     const frequencyEditor = document.getElementById('frequency-editor');
 
     // 尝试从 LocalStorage 恢复配置
     const savedConfig = localStorage.getItem(STORAGE_KEY_CONFIG);
     const savedFrequency = localStorage.getItem(STORAGE_KEY_FREQUENCY);
+    const savedTimeline = localStorage.getItem(STORAGE_KEY_TIMELINE);
+
+    // 优先读取当前项目本地文件，避免被浏览器里其他项目/旧会话的缓存串台
+    const [projectConfig, projectFrequency, projectTimeline] = await Promise.all([
+        loadLocalProjectFile('../config/config.yaml'),
+        loadLocalProjectFile('../config/frequency_words.txt'),
+        loadLocalProjectFile('../config/timeline.yaml'),
+    ]);
 
     // 初始化编辑器
-    if (savedConfig && savedConfig.trim() && savedConfig !== INITIAL_YAML) {
+    if (projectConfig) {
+        yamlEditor.value = projectConfig;
+        currentYaml = projectConfig;
+    } else if (savedConfig && savedConfig.trim() && savedConfig !== INITIAL_YAML) {
         yamlEditor.value = savedConfig;
         currentYaml = savedConfig;
         showToast('已恢复上次保存的配置', 'info');
@@ -153,7 +170,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentYaml = INITIAL_YAML;
     }
 
-    if (savedFrequency && savedFrequency.trim()) {
+    if (projectFrequency) {
+        frequencyEditor.value = projectFrequency;
+        currentFrequency = projectFrequency;
+        currentFrequencyData = null;
+    } else if (savedFrequency && savedFrequency.trim()) {
         frequencyEditor.value = savedFrequency;
         currentFrequency = savedFrequency;
     } else {
@@ -163,11 +184,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初始化 Timeline 编辑器
     const timelineEditor = document.getElementById('timeline-editor');
-    const savedTimeline = localStorage.getItem(STORAGE_KEY_TIMELINE);
 
-    const INITIAL_TIMELINE = `# 在此粘贴你的 timeline.yaml...\n# 或拖拽文件到编辑器区域\n# 或点击右上角"加载官网最新配置"`;
+    const INITIAL_TIMELINE = `# 在此粘贴你的 timeline.yaml...\n# 或拖拽文件到编辑器区域`;
 
-    if (savedTimeline && savedTimeline.trim() && savedTimeline !== INITIAL_TIMELINE) {
+    if (projectTimeline) {
+        timelineEditor.value = projectTimeline;
+        currentTimeline = projectTimeline;
+    } else if (savedTimeline && savedTimeline.trim() && savedTimeline !== INITIAL_TIMELINE) {
         timelineEditor.value = savedTimeline;
         currentTimeline = savedTimeline;
     } else {
@@ -229,6 +252,69 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBackdrop('timeline-editor', 'timeline-backdrop');
 
     updateSaveTimeDisplay();
+
+    // Restore tab/module from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTab = urlParams.get('tab');
+    if (urlTab && ['config', 'frequency', 'timeline'].includes(urlTab)) {
+        switchTab(urlTab, true);
+    }
+    const urlMod = urlParams.get('mod');
+    if (urlMod && (!urlTab || urlTab === 'config')) {
+        requestAnimationFrame(() => {
+            const moduleEl = document.getElementById(`module-${urlMod}`);
+            if (moduleEl) moduleEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+        });
+    }
+
+    const codePanelState = localStorage.getItem('trendradar_code_panel');
+    if (codePanelState !== 'open') {
+        const panel = document.getElementById('code-editor-panel');
+        const toggle = document.getElementById('code-panel-toggle');
+        const label = document.getElementById('code-toggle-label');
+        const codeBtn = document.querySelector('.tr-btn-code');
+        if (panel) panel.classList.add('collapsed');
+        if (toggle) { toggle.classList.add('collapsed'); toggle.querySelector('i').className = 'fa-solid fa-chevron-right'; }
+        if (label) label.textContent = '显示代码';
+        if (codeBtn) codeBtn.classList.remove('active');
+    } else {
+        const codeBtn = document.querySelector('.tr-btn-code');
+        if (codeBtn) codeBtn.classList.add('active');
+    }
+
+    // Scroll-spy: highlight active module in nav
+    const configPanel = document.getElementById('config-panel');
+    if (configPanel) {
+        let scrollSpyRaf = null;
+        configPanel.addEventListener('scroll', () => {
+            if (scrollSpyRaf) return;
+            scrollSpyRaf = requestAnimationFrame(() => {
+                scrollSpyRaf = null;
+                const navBtns = document.querySelectorAll('.tr-module-nav-btn');
+                const panelRect = configPanel.getBoundingClientRect();
+                let activeKey = null;
+                for (const mod of MODULE_DEFS) {
+                    const el = document.getElementById(`module-${mod.key}`);
+                    if (!el) continue;
+                    const rect = el.getBoundingClientRect();
+                    if (rect.top <= panelRect.top + panelRect.height * 0.3) {
+                        activeKey = mod.key;
+                    }
+                }
+                navBtns.forEach(btn => {
+                    const isActive = activeKey && btn.getAttribute('title') === MODULE_DEFS.find(m => m.key === activeKey)?.name;
+                    btn.classList.toggle('active', !!isActive);
+                });
+                if (activeKey) {
+                    const url = new URL(window.location);
+                    if (url.searchParams.get('mod') !== activeKey) {
+                        url.searchParams.set('mod', activeKey);
+                        history.replaceState(null, '', url);
+                    }
+                }
+            });
+        }, { passive: true });
+    }
 });
 
 // 防抖保存 config.yaml
@@ -509,152 +595,26 @@ function updateSaveTimeDisplay() {
 }
 
 // ==========================================
-// 2.3 加载官网最新配置
-// ==========================================
-window.openLoadConfigModal = function() {
-    // 创建选择弹窗
-    const modal = document.createElement('div');
-    modal.id = 'load-config-modal';
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 420px;">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-cloud-arrow-down mr-2 text-blue-500"></i>加载官网最新配置</h3>
-                <button onclick="closeLoadConfigModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
-            </div>
-            <div class="text-sm text-gray-600 mb-4">
-                选择要从 GitHub 加载的配置文件：
-            </div>
-            <div class="space-y-3">
-                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors">
-                    <input type="checkbox" id="load-config-yaml" checked class="w-4 h-4 text-blue-600 rounded">
-                    <div class="flex-1">
-                        <div class="font-medium text-gray-800">config.yaml</div>
-                        <div class="text-xs text-gray-500">系统配置、平台、AI、通知等</div>
-                    </div>
-                    <i class="fa-solid fa-file-code text-blue-400"></i>
-                </label>
-                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors">
-                    <input type="checkbox" id="load-frequency-txt" checked class="w-4 h-4 text-blue-600 rounded">
-                    <div class="flex-1">
-                        <div class="font-medium text-gray-800">frequency_words.txt</div>
-                        <div class="text-xs text-gray-500">关键词组、过滤规则、正则逻辑</div>
-                    </div>
-                    <i class="fa-solid fa-filter text-orange-400"></i>
-                </label>
-                <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors">
-                    <input type="checkbox" id="load-timeline-yaml" checked class="w-4 h-4 text-blue-600 rounded">
-                    <div class="flex-1">
-                        <div class="font-medium text-gray-800">timeline.yaml</div>
-                        <div class="text-xs text-gray-500">调度时间线、预设模板、自定义时间段</div>
-                    </div>
-                    <i class="fa-solid fa-calendar-week text-purple-400"></i>
-                </label>
-            </div>
-            <div class="text-xs text-gray-400 mt-3 p-2 bg-gray-50 rounded">
-                <i class="fa-solid fa-info-circle mr-1"></i>
-                数据来源：<a href="https://github.com/sansan0/TrendRadar" target="_blank" class="text-blue-500 hover:underline">sansan0/TrendRadar</a>
-            </div>
-            <div class="flex justify-end gap-2 mt-4">
-                <button onclick="closeLoadConfigModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
-                <button onclick="confirmLoadConfig()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    <i class="fa-solid fa-download mr-1"></i>加载选中
-                </button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-}
-
-window.closeLoadConfigModal = function() {
-    const modal = document.getElementById('load-config-modal');
-    if (modal) modal.remove();
-}
-
-window.confirmLoadConfig = async function() {
-    const loadConfig = document.getElementById('load-config-yaml')?.checked;
-    const loadFrequency = document.getElementById('load-frequency-txt')?.checked;
-    const loadTimeline = document.getElementById('load-timeline-yaml')?.checked;
-
-    if (!loadConfig && !loadFrequency && !loadTimeline) {
-        showToast('请至少选择一个文件', 'warning');
-        return;
-    }
-
-    closeLoadConfigModal();
-    showToast('正在从 GitHub 加载...', 'info');
-
-    try {
-        const promises = [];
-        if (loadConfig) promises.push(fetch(REMOTE_CONFIG_URL).then(r => ({ type: 'config', res: r })));
-        if (loadFrequency) promises.push(fetch(REMOTE_FREQUENCY_URL).then(r => ({ type: 'frequency', res: r })));
-        if (loadTimeline) promises.push(fetch(REMOTE_TIMELINE_URL).then(r => ({ type: 'timeline', res: r })));
-
-        const results = await Promise.all(promises);
-
-        for (const { type, res } of results) {
-            if (!res.ok) {
-                const names = { config: 'config.yaml', frequency: 'frequency_words.txt', timeline: 'timeline.yaml' };
-                throw new Error(`${names[type]} 加载失败: ${res.status}`);
-            }
-
-            const text = await res.text();
-
-            if (type === 'config') {
-                try {
-                    jsyaml.load(text);
-                } catch (yamlErr) {
-                    showToast(`YAML 语法错误: ${yamlErr.message}`, 'error');
-                    continue;
-                }
-                document.getElementById('yaml-editor').value = text;
-                currentYaml = text;
-                updateBackdrop('yaml-editor', 'yaml-backdrop');
-                syncYamlToUI();
-            } else if (type === 'timeline') {
-                try {
-                    jsyaml.load(text);
-                } catch (yamlErr) {
-                    showToast(`YAML 语法错误: ${yamlErr.message}`, 'error');
-                    continue;
-                }
-                document.getElementById('timeline-editor').value = text;
-                currentTimeline = text;
-                updateBackdrop('timeline-editor', 'timeline-backdrop');
-                syncTimelineToUI();
-            } else {
-                document.getElementById('frequency-editor').value = text;
-                currentFrequency = text;
-                currentFrequencyData = null;
-                updateBackdrop('frequency-editor', 'frequency-backdrop');
-                syncFrequencyToUI();
-            }
-        }
-
-        saveToLocalStorage();
-
-        const loadedFiles = [];
-        if (loadConfig) loadedFiles.push('config.yaml');
-        if (loadFrequency) loadedFiles.push('frequency_words.txt');
-        if (loadTimeline) loadedFiles.push('timeline.yaml');
-        showToast(`已加载: ${loadedFiles.join(', ')}`, 'success');
-
-    } catch (err) {
-        console.error('加载远程配置失败:', err);
-        showToast(`加载失败: ${err.message}`, 'error');
-    }
-}
-
-// ==========================================
 // 2.4 Toast 提示
 // ==========================================
 function showToast(message, type = 'info') {
-    // 移除已有的 toast
+    let liveRegion = document.getElementById('toast-live-region');
+    if (!liveRegion) {
+        liveRegion = document.createElement('div');
+        liveRegion.id = 'toast-live-region';
+        liveRegion.setAttribute('aria-live', 'polite');
+        liveRegion.setAttribute('aria-atomic', 'true');
+        liveRegion.className = 'sr-only';
+        document.body.appendChild(liveRegion);
+    }
+    liveRegion.textContent = message;
+
     const existingToast = document.querySelector('.toast-notification');
     if (existingToast) existingToast.remove();
 
     const toast = document.createElement('div');
     toast.className = `toast-notification toast-${type}`;
+    toast.setAttribute('role', 'status');
 
     const icons = {
         success: 'fa-check-circle',
@@ -664,7 +624,7 @@ function showToast(message, type = 'info') {
     };
 
     toast.innerHTML = `
-        <i class="fa-solid ${icons[type] || icons.info}"></i>
+        <i class="fa-solid ${icons[type] || icons.info}" aria-hidden="true"></i>
         <span>${message}</span>
     `;
 
@@ -697,15 +657,16 @@ function renderModules() {
         card.id = `module-${mod.key}`;
 
         const header = `
-            <div class="module-header px-4 py-3 flex items-center justify-between cursor-pointer" onclick="scrollToModuleInEditor('${mod.key}')">
-                <div class="flex items-center">
+            <button type="button" class="module-header w-full px-4 py-3 flex items-center justify-between cursor-pointer text-left" onclick="scrollToModuleInEditor('${mod.key}')" aria-label="跳转到 ${mod.name} 对应代码位置">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid ${mod.icon} text-xs ${mod.editable ? 'text-blue-500' : 'text-gray-400'}" aria-hidden="true"></i>
                     <span class="text-sm font-bold">${mod.name}</span>
-                    <i class="fa-solid fa-arrow-up-right-from-square text-blue-400 text-[10px] ml-2 opacity-0 group-hover:opacity-100" title="跳转到左侧编辑器"></i>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-blue-400 text-[10px] ml-1 opacity-0 group-hover:opacity-100" title="跳转到代码编辑器" aria-hidden="true"></i>
                 </div>
                 ${!mod.editable ?
-                    '<span class="locked-badge text-[10px] text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded">只读 (请在左侧编辑)</span>' :
-                    '<i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>'}
-            </div>
+                    '<span class="locked-badge text-[10px] text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded">只读 (请在代码编辑器中修改)</span>' :
+                    '<i class="fa-solid fa-chevron-down text-gray-400 text-xs" aria-hidden="true"></i>'}
+            </button>
         `;
 
         const body = mod.editable ? `<div class="module-body p-5 border-t border-gray-50 space-y-4" id="controls-${mod.key}"></div>` : '';
@@ -719,16 +680,17 @@ function renderModules() {
     });
 }
 
-// 渲染模块导航栏
 function renderModuleNav() {
     const nav = document.getElementById('module-nav');
     if (!nav) return;
 
     nav.innerHTML = MODULE_DEFS.map(mod => `
-        <button onclick="scrollToModuleInEditor('${mod.key}')"
-                class="module-nav-btn text-[10px] px-2 py-1 rounded ${mod.editable ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} transition-colors"
-                title="跳转到模块 ${mod.id}">
-            ${mod.id}
+        <button onclick="scrollToModule('${mod.key}')"
+                class="tr-module-nav-btn ${mod.editable ? 'editable' : 'readonly'}"
+                title="${mod.name}"
+                aria-label="${mod.name}">
+            <i class="fa-solid ${mod.icon} nav-icon" aria-hidden="true"></i>
+            <span>${mod.shortName}</span>
         </button>
     `).join('');
 }
@@ -846,6 +808,43 @@ window.scrollToModuleInEditor = function(modKey) {
     }, 300);
 }
 
+window.scrollToModule = function(modKey) {
+    const moduleEl = document.getElementById(`module-${modKey}`);
+    if (moduleEl) {
+        moduleEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        moduleEl.style.transition = 'box-shadow 0.3s';
+        moduleEl.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.4)';
+        setTimeout(() => { moduleEl.style.boxShadow = ''; }, 1200);
+
+        const url = new URL(window.location);
+        url.searchParams.set('mod', modKey);
+        history.replaceState(null, '', url);
+    }
+}
+
+window.toggleCodePanel = function() {
+    const panel = document.getElementById('code-editor-panel');
+    const toggle = document.getElementById('code-panel-toggle');
+    const label = document.getElementById('code-toggle-label');
+    const codeBtn = document.querySelector('.tr-btn-code');
+
+    if (panel.classList.contains('collapsed')) {
+        panel.classList.remove('collapsed');
+        if (toggle) toggle.classList.remove('collapsed');
+        if (toggle) toggle.querySelector('i').className = 'fa-solid fa-chevron-left';
+        if (label) label.textContent = '隐藏代码';
+        if (codeBtn) codeBtn.classList.add('active');
+        localStorage.setItem('trendradar_code_panel', 'open');
+    } else {
+        panel.classList.add('collapsed');
+        if (toggle) toggle.classList.add('collapsed');
+        if (toggle) toggle.querySelector('i').className = 'fa-solid fa-chevron-right';
+        if (label) label.textContent = '显示代码';
+        if (codeBtn) codeBtn.classList.remove('active');
+        localStorage.setItem('trendradar_code_panel', 'closed');
+    }
+}
+
 function renderControls(mod) {
     const body = document.getElementById(`controls-${mod.key}`);
 
@@ -853,6 +852,23 @@ function renderControls(mod) {
     let html = "";
 
     switch(mod.key) {
+        case "app":
+            html = `<div class="text-xs text-gray-500 mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                        <i class="fa-solid fa-info-circle mr-1 text-blue-500"></i>
+                        基础运行参数和调度入口都放在这里，详细时段规则仍在 <strong>timeline.yaml</strong> 标签页中配置。
+                    </div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">应用基础</div>`;
+            html += createInputControl(mod.key, "timezone", "时区", "text", "app");
+            html += createToggleControl(mod.key, "show_version_update", "显示版本更新提示", "app");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">调度系统</div>`;
+            html += createToggleControl(mod.key, "enabled", "启用调度系统", "schedule");
+            html += createSelectControl(mod.key, "preset", "调度预设", ["always_on", "morning_evening", "office_hours", "night_owl", "custom"], "schedule");
+            html += `<div class="text-xs text-gray-500 mt-2">
+                        <i class="fa-solid fa-lightbulb mr-1"></i>
+                        如果要改具体时间段、星期映射和推送/分析时机，请切换到 <code>timeline.yaml</code> 标签页。
+                     </div>`;
+            break;
         case "platforms":
             html = createToggleControl(mod.key, "enabled", "启用热榜抓取");
             html += `<div class="mt-4 mb-2 text-xs font-bold text-gray-700">平台列表 <span class="text-gray-400 font-normal">(可拖拽排序)</span></div>`;
@@ -953,8 +969,63 @@ function renderControls(mod) {
             html = `<div class="text-xs text-gray-500 mb-2 p-2 bg-blue-50 rounded border border-blue-200">
                         <i class="fa-solid fa-info-circle mr-1 text-blue-500"></i>
                         推送时间由 <strong>timeline.yaml</strong> 控制，切换到 timeline.yaml 标签页可可视化编辑调度规则。<br>
-                        此处仅配置通知渠道（Telegram / 企业微信等），请在左侧编辑器中修改。
+                        这里负责配置“是否推送”以及各通知渠道参数。
                     </div>`;
+            html += createToggleControl(mod.key, "enabled", "启用通知功能");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">飞书 / 钉钉 / 企业微信</div>`;
+            html += createInputControl(mod.key, "channels.feishu.webhook_url", "飞书 Webhook URL");
+            html += createInputControl(mod.key, "channels.dingtalk.webhook_url", "钉钉 Webhook URL");
+            html += createInputControl(mod.key, "channels.wework.webhook_url", "企业微信 Webhook URL");
+            html += createSelectControl(mod.key, "channels.wework.msg_type", "企业微信消息类型", ["markdown", "text"]);
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">Telegram</div>`;
+            html += createInputControl(mod.key, "channels.telegram.bot_token", "Bot Token", "password");
+            html += createInputControl(mod.key, "channels.telegram.chat_id", "Chat ID");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">Email</div>`;
+            html += createInputControl(mod.key, "channels.email.from", "发件人邮箱");
+            html += createInputControl(mod.key, "channels.email.password", "邮箱密码/授权码", "password");
+            html += createInputControl(mod.key, "channels.email.to", "收件人邮箱");
+            html += createInputControl(mod.key, "channels.email.smtp_server", "SMTP 服务器");
+            html += createInputControl(mod.key, "channels.email.smtp_port", "SMTP 端口");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">Ntfy / Bark / Slack / Webhook</div>`;
+            html += createInputControl(mod.key, "channels.ntfy.server_url", "Ntfy 服务地址");
+            html += createInputControl(mod.key, "channels.ntfy.topic", "Ntfy Topic");
+            html += createInputControl(mod.key, "channels.ntfy.token", "Ntfy Token", "password");
+            html += createInputControl(mod.key, "channels.bark.url", "Bark URL");
+            html += createInputControl(mod.key, "channels.slack.webhook_url", "Slack Webhook URL");
+            html += createInputControl(mod.key, "channels.generic_webhook.webhook_url", "通用 Webhook URL");
+            html += createInputControl(mod.key, "channels.generic_webhook.payload_template", "通用 Webhook Payload 模板");
+            break;
+        case "storage":
+            html = `<div class="text-xs text-gray-500 mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                        <i class="fa-solid fa-shield-halved mr-1 text-blue-500"></i>
+                        存储相关的敏感字段仅保存在本地浏览器和本地配置文件中，不会上传到远端服务。
+                    </div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">存储后端</div>`;
+            html += createSelectControl(mod.key, "backend", "后端模式", ["auto", "local", "remote"]);
+            html += `<div class="mt-3 mb-2 text-xs font-bold text-gray-700">输出格式</div>`;
+            html += createToggleControl(mod.key, "formats.sqlite", "启用 SQLite 主存储");
+            html += createToggleControl(mod.key, "formats.txt", "生成 TXT 快照");
+            html += createToggleControl(mod.key, "formats.html", "生成 HTML 报告");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">本地存储</div>`;
+            html += createInputControl(mod.key, "local.data_dir", "数据目录");
+            html += createNumberControl(mod.key, "local.retention_days", "本地保留天数");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">远程存储 (S3 兼容)</div>`;
+            html += createNumberControl(mod.key, "remote.retention_days", "远程保留天数");
+            html += createInputControl(mod.key, "remote.endpoint_url", "服务端点");
+            html += createInputControl(mod.key, "remote.bucket_name", "Bucket 名称");
+            html += createInputControl(mod.key, "remote.access_key_id", "Access Key ID");
+            html += createInputControl(mod.key, "remote.secret_access_key", "Secret Access Key", "password");
+            html += createInputControl(mod.key, "remote.region", "区域 (可选)");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">数据拉取</div>`;
+            html += createToggleControl(mod.key, "pull.enabled", "启动时自动拉取");
+            html += createNumberControl(mod.key, "pull.days", "拉取最近天数");
             break;
         case "ai":
             html = createInputControl(mod.key, "model", "模型名称");
@@ -963,6 +1034,14 @@ function renderControls(mod) {
             html += createNumberControl(mod.key, "timeout", "请求超时 (秒)");
             html += createNumberControl(mod.key, "temperature", "采样温度 (0.0-2.0)");
             html += createNumberControl(mod.key, "max_tokens", "最大生成 Token 数");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">高级模型参数</div>`;
+            html += createNumberControl(mod.key, "num_retries", "失败重试次数");
+            html += createCsvControl(mod.key, "fallback_models", "备用模型列表 (逗号分隔)");
+            html += `<div class="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                        <i class="fa-solid fa-code mr-1"></i>
+                        <code>extra_params</code> 仍建议在代码编辑器中维护，因为它可能包含不同模型专属的复杂结构。
+                     </div>`;
             break;
         case "ai_analysis":
             html = createToggleControl(mod.key, "enabled", "开启 AI 分析报告");
@@ -987,6 +1066,49 @@ function renderControls(mod) {
             html = createToggleControl(mod.key, "enabled", "开启 AI 自动翻译");
             html += createInputControl(mod.key, "language", "目标语言");
             html += createInputControl(mod.key, "prompt_file", "提示词配置文件");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">翻译范围</div>`;
+            html += createToggleControl(mod.key, "scope.hotlist", "翻译主资讯区");
+            html += createToggleControl(mod.key, "scope.rss", "翻译 RSS 补充区");
+            html += createToggleControl(mod.key, "scope.standalone", "翻译独立展示区");
+            break;
+        case "advanced":
+            html = `<div class="text-xs text-amber-700 mb-3 p-2 bg-amber-50 rounded border border-amber-200">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                        高级参数会直接影响抓取频率、代理和消息切分，建议只有在明确知道用途时再调整。
+                    </div>`;
+            html += createToggleControl(mod.key, "debug", "开启调试模式");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">版本检查地址</div>`;
+            html += createInputControl(mod.key, "version_check_url", "主程序版本地址");
+            html += createInputControl(mod.key, "mcp_version_check_url", "MCP 版本地址");
+            html += createInputControl(mod.key, "configs_version_check_url", "配置版本地址");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">热榜爬虫</div>`;
+            html += createNumberControl(mod.key, "crawler.request_interval", "请求间隔 (ms)");
+            html += createToggleControl(mod.key, "crawler.use_proxy", "启用默认代理");
+            html += createInputControl(mod.key, "crawler.default_proxy", "默认代理地址");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">RSS 抓取</div>`;
+            html += createNumberControl(mod.key, "rss.request_interval", "RSS 请求间隔 (ms)");
+            html += createNumberControl(mod.key, "rss.timeout", "RSS 请求超时 (秒)");
+            html += createToggleControl(mod.key, "rss.use_proxy", "RSS 使用代理");
+            html += createInputControl(mod.key, "rss.proxy_url", "RSS 专属代理");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">排序权重</div>`;
+            html += createNumberControl(mod.key, "weight.rank", "排名权重");
+            html += createNumberControl(mod.key, "weight.frequency", "频次权重");
+            html += createNumberControl(mod.key, "weight.hotness", "热度权重");
+            html += `<div class="border-t border-gray-200 pt-4 mt-4"></div>`;
+            html += `<div class="text-xs font-bold text-gray-700 mb-2">消息分批与账号限制</div>`;
+            html += createNumberControl(mod.key, "max_accounts_per_channel", "每渠道最大账号数");
+            html += createNumberControl(mod.key, "batch_send_interval", "分批发送间隔 (秒)");
+            html += createInputControl(mod.key, "feishu_message_separator", "飞书消息分隔符");
+            html += createNumberControl(mod.key, "batch_size.default", "默认批次大小");
+            html += createNumberControl(mod.key, "batch_size.dingtalk", "钉钉批次大小");
+            html += createNumberControl(mod.key, "batch_size.feishu", "飞书批次大小");
+            html += createNumberControl(mod.key, "batch_size.bark", "Bark 批次大小");
+            html += createNumberControl(mod.key, "batch_size.slack", "Slack 批次大小");
             break;
     }
 
@@ -995,7 +1117,7 @@ function renderControls(mod) {
     // 绑定事件
     body.querySelectorAll('input, select').forEach(el => {
         el.addEventListener('change', (e) => {
-            updateYamlFromUI(mod.key, e.target.dataset.path, e.target);
+            updateYamlFromUI(e.target.dataset.module || mod.key, e.target.dataset.path, e.target);
         });
     });
 }
@@ -1009,19 +1131,19 @@ function syncYamlToUI() {
         if (!doc) return;
 
         MODULE_DEFS.filter(m => m.editable).forEach(mod => {
-            const modData = doc[mod.key];
-            if (!modData) return;
-
             const controls = document.querySelectorAll(`#controls-${mod.key} [data-path]`);
             controls.forEach(ctrl => {
+                const rootKey = ctrl.dataset.module || mod.key;
                 const path = ctrl.dataset.path.split('.');
-                let val = modData;
+                let val = doc[rootKey];
                 for (const part of path) {
                     val = val ? val[part] : undefined;
                 }
 
                 if (ctrl.type === 'checkbox') {
                     ctrl.checked = !!val;
+                } else if (ctrl.dataset.valueType === 'csv') {
+                    ctrl.value = Array.isArray(val) ? val.join(', ') : "";
                 } else {
                     ctrl.value = val !== undefined ? val : "";
                 }
@@ -1046,6 +1168,11 @@ function updateYamlFromUI(modKey, path, el) {
     if (el.type === 'number') {
         newVal = parseFloat(newVal);
         if (isNaN(newVal)) newVal = 0;
+    } else if (el.dataset.valueType === 'csv') {
+        newVal = String(newVal)
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean);
     }
 
     const editor = document.getElementById('yaml-editor');
@@ -1053,115 +1180,20 @@ function updateYamlFromUI(modKey, path, el) {
     const lines = yaml.split('\n');
     const pathParts = path.split('.');
 
-    // 找到模块的起始行
-    let moduleStartLine = -1;
-    let moduleEndLine = lines.length;
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        // 匹配模块开始（非缩进的 key:）
-        const moduleMatch = line.match(/^([a-z_]+):/);
-        if (moduleMatch) {
-            if (moduleMatch[1] === modKey) {
-                moduleStartLine = i;
-            } else if (moduleStartLine >= 0) {
-                // 找到下一个模块，记录当前模块结束位置
-                moduleEndLine = i;
-                break;
-            }
-        }
-    }
-
+    const { start: moduleStartLine, end: moduleEndLine } = findTopLevelBlockRange(lines, modKey);
     if (moduleStartLine < 0) return;
 
-    // 在模块内查找目标路径
-    let targetLine = -1;
-    let currentIndent = 0;
-    let searchKey = pathParts[pathParts.length - 1];
-
-    for (let i = moduleStartLine + 1; i < moduleEndLine; i++) {
-        const line = lines[i];
-        if (line.trim() === '' || line.trim().startsWith('#')) continue;
-
-        // 检查是否匹配目标键
-        const indent = line.search(/\S/);
-        const keyMatch = line.match(/^\s*([a-z_]+):\s*(.*)/i);
-
-        if (keyMatch && keyMatch[1] === searchKey) {
-            // 如果是嵌套路径，需要检查缩进层级是否正确
-            if (pathParts.length > 1) {
-                // 简化处理：对于嵌套路径，确保在正确的父级下
-                let valid = true;
-                for (let j = 0; j < pathParts.length - 1; j++) {
-                    let found = false;
-                    for (let k = moduleStartLine + 1; k < i; k++) {
-                        const parentMatch = lines[k].match(/^\s*([a-z_]+):/i);
-                        if (parentMatch && parentMatch[1] === pathParts[j]) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        valid = false;
-                        break;
-                    }
-                }
-                if (!valid) continue;
-            }
-
-            targetLine = i;
-            break;
-        }
-    }
+    const targetLine = findYamlPathLine(lines, moduleStartLine, moduleEndLine, pathParts);
 
     if (targetLine < 0) {
-        // 允许为模块新增一级字段（例如默认被注释掉的 ai_filter.interests_file）
-        if (pathParts.length === 1) {
-            let formattedVal = newVal;
-            if (typeof newVal === 'string') {
-                formattedVal = `"${newVal.replace(/"/g, '\\"')}"`;
-            }
-
-            lines.splice(moduleEndLine, 0, `  ${searchKey}: ${formattedVal}`);
-            editor.value = lines.join('\n');
-            currentYaml = editor.value;
-            updateBackdrop('yaml-editor', 'yaml-backdrop');
-            debounceSaveConfig();
-        }
+        insertYamlPathLine(lines, moduleStartLine, moduleEndLine, pathParts, newVal);
+        editor.value = lines.join('\n');
+        currentYaml = editor.value;
+        updateBackdrop('yaml-editor', 'yaml-backdrop');
+        debounceSaveConfig();
         return;
     }
-
-    // 更新该行，保留注释
-    const originalLine = lines[targetLine];
-    const match = originalLine.match(/^(\s*[a-z_]+:\s*)(.*)$/i);
-
-    if (match) {
-        const prefix = match[1];
-        const rest = match[2];
-
-        // 提取原有注释
-        const commentMatch = rest.match(/(\s*#.*)$/);
-        const comment = commentMatch ? commentMatch[1] : '';
-
-        // 格式化新值
-        let formattedVal = newVal;
-        if (typeof newVal === 'string') {
-            // 获取原值部分（去除注释后的部分）
-            const valPart = rest.slice(0, rest.length - comment.length).trim();
-            // 检查原值是否带有引号
-            const isOriginalQuoted = (valPart.startsWith('"') && valPart.endsWith('"')) ||
-                                     (valPart.startsWith("'") && valPart.endsWith("'"));
-
-            // 如果原值有引号，或者新值包含特殊字符（空格、冒号、井号、引号）或者是空字符串，则添加双引号
-            if (isOriginalQuoted || newVal.includes(':') || newVal.includes('#') ||
-                newVal.includes('"') || newVal.includes(' ') || newVal === "") {
-                formattedVal = `"${newVal.replace(/"/g, '\\"')}"`;
-            }
-        }
-
-        // 构建新行
-        lines[targetLine] = `${prefix}${formattedVal}${comment}`;
-    }
+    replaceLineValue(lines, targetLine, newVal);
 
     // 更新编辑器
     editor.value = lines.join('\n');
@@ -1173,47 +1205,174 @@ function updateYamlFromUI(modKey, path, el) {
 // ==========================================
 // 6. UI 组件工厂
 // ==========================================
-function createToggleControl(mod, path, label) {
-    const id = `toggle-${mod}-${path.replace('.', '-')}`;
+function createToggleControl(mod, path, label, rootKey = mod) {
+    const id = `toggle-${mod}-${path.replace(/\./g, '-')}`;
     return `
         <div class="flex items-center justify-between">
             <label for="${id}" class="text-xs font-medium text-gray-700">${label}</label>
             <div class="relative inline-block w-10 mr-2 align-middle select-none">
-                <input type="checkbox" id="${id}" data-path="${path}" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200 ease-in-out"/>
+                <input type="checkbox" id="${id}" name="${rootKey}.${path}" data-path="${path}" data-module="${rootKey}" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200 ease-in-out" autocomplete="off"/>
                 <label for="${id}" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
             </div>
         </div>
     `;
 }
 
-function createInputControl(mod, path, label, type = "text") {
+function getInputControlMeta(path, label, type) {
+    if (type === 'password') {
+        return { type: 'password', autocomplete: 'off', placeholder: '输入密钥或密码…' };
+    }
+    if (/(\.|^)smtp_port$/.test(path)) {
+        return { type: 'number', autocomplete: 'off', placeholder: '例如: 587…', inputmode: 'numeric' };
+    }
+    if (/(\.|^)(webhook_url|server_url|api_base|version_check_url|mcp_version_check_url|configs_version_check_url|proxy_url|endpoint_url|url)$/.test(path)) {
+        return { type: 'url', autocomplete: 'url', placeholder: 'https://example.com/…' };
+    }
+    if (/(\.|^)(from|to)$/.test(path) && label.includes('邮箱')) {
+        return { type: 'email', autocomplete: 'off', placeholder: 'name@example.com…', spellcheck: 'false' };
+    }
+    if (/timezone$/.test(path)) {
+        return { type: 'text', autocomplete: 'off', placeholder: '例如: Asia/Shanghai…' };
+    }
+    if (/default_proxy$/.test(path)) {
+        return { type: 'url', autocomplete: 'off', placeholder: 'http://127.0.0.1:7890…' };
+    }
+    if (/model$/.test(path) && label.includes('模型')) {
+        return { type: 'text', autocomplete: 'off', placeholder: '例如: openai/gpt-4o-mini…' };
+    }
+    if (/prompt_file|extract_prompt_file|update_tags_prompt_file|interests_file|frequency_file/.test(path)) {
+        return { type: 'text', autocomplete: 'off', placeholder: '例如: prompt.txt…' };
+    }
+    if (/data_dir$/.test(path)) {
+        return { type: 'text', autocomplete: 'off', placeholder: '例如: output…' };
+    }
+    if (/language$/.test(path)) {
+        return { type: 'text', autocomplete: 'off', placeholder: '例如: Chinese…' };
+    }
+    return { type: type || 'text', autocomplete: 'off', placeholder: '例如: 输入内容…' };
+}
+
+function createInputControl(mod, path, label, type = "text", rootKey = mod) {
+    const id = `input-${mod}-${path.replace(/\./g, '-')}`;
+    const meta = getInputControlMeta(path, label, type);
     return `
         <div>
-            <label class="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">${label}</label>
-            <input type="${type}" data-path="${path}" class="bg-white border-gray-300 focus:border-blue-500" placeholder="未设置">
+            <label for="${id}" class="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">${label}</label>
+            <input type="${meta.type}" id="${id}" name="${rootKey}.${path}" data-path="${path}" data-module="${rootKey}" class="bg-white border-gray-300 focus:border-blue-500" placeholder="${meta.placeholder}" autocomplete="${meta.autocomplete}"${meta.inputmode ? ` inputmode="${meta.inputmode}"` : ''}${meta.spellcheck ? ` spellcheck="${meta.spellcheck}"` : ''}>
         </div>
     `;
 }
 
-function createNumberControl(mod, path, label) {
+function createCsvControl(mod, path, label, rootKey = mod) {
+    const id = `csv-${mod}-${path.replace(/\./g, '-')}`;
+    return `
+        <div>
+            <label for="${id}" class="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">${label}</label>
+            <input type="text" id="${id}" name="${rootKey}.${path}" data-path="${path}" data-module="${rootKey}" data-value-type="csv" class="bg-white border-gray-300 focus:border-blue-500" placeholder="model-a, model-b" autocomplete="off">
+        </div>
+    `;
+}
+
+function createNumberControl(mod, path, label, rootKey = mod) {
+    const id = `num-${mod}-${path.replace(/\./g, '-')}`;
     return `
         <div class="flex items-center justify-between">
-            <label class="text-xs font-medium text-gray-700">${label}</label>
-            <input type="number" data-path="${path}" class="w-20 text-right bg-white border-gray-300" style="width: 80px">
+            <label for="${id}" class="text-xs font-medium text-gray-700">${label}</label>
+            <input type="number" id="${id}" name="${rootKey}.${path}" step="any" data-path="${path}" data-module="${rootKey}" class="w-20 text-right bg-white border-gray-300" style="width: 80px" autocomplete="off">
         </div>
     `;
 }
 
-function createSelectControl(mod, path, label, options) {
+function createSelectControl(mod, path, label, options, rootKey = mod) {
+    const id = `sel-${mod}-${path.replace(/\./g, '-')}`;
     const optionsHtml = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
     return `
         <div>
-            <label class="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">${label}</label>
-            <select data-path="${path}" class="bg-white border-gray-300">
+            <label for="${id}" class="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">${label}</label>
+            <select id="${id}" name="${rootKey}.${path}" data-path="${path}" data-module="${rootKey}" class="bg-white border-gray-300" autocomplete="off">
                 ${optionsHtml}
             </select>
         </div>
     `;
+}
+
+function findTopLevelBlockRange(lines, rootKey) {
+    let start = -1;
+    let end = lines.length;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const match = line.match(/^([a-z_][a-z0-9_]*):/i);
+        if (!match) continue;
+
+        if (match[1] === rootKey) {
+            start = i;
+            continue;
+        }
+
+        if (start >= 0) {
+            end = i;
+            break;
+        }
+    }
+
+    return { start, end };
+}
+
+function findYamlPathLine(lines, blockStart, blockEnd, pathParts) {
+    let parentLine = blockStart;
+    let parentIndent = lines[blockStart].search(/\S/);
+
+    for (const part of pathParts) {
+        const lineIdx = findChildKey(lines, parentLine, blockEnd, parentIndent, part);
+        if (lineIdx < 0) return -1;
+        parentLine = lineIdx;
+        parentIndent = lines[lineIdx].search(/\S/);
+    }
+
+    return parentLine;
+}
+
+function formatYamlValue(value) {
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    if (typeof value === 'string') {
+        if (value === '' || value.includes(':') || value.includes('#') || value.includes('"') || value.includes(' ')) {
+            return `"${value.replace(/"/g, '\\"')}"`;
+        }
+        return value;
+    }
+    return String(value);
+}
+
+function insertYamlPathLine(lines, blockStart, blockEnd, pathParts, value) {
+    let parentLine = blockStart;
+    let parentIndent = lines[blockStart].search(/\S/);
+    let currentBlockEnd = blockEnd;
+
+    for (let i = 0; i < pathParts.length - 1; i++) {
+        const part = pathParts[i];
+        let childLine = findChildKey(lines, parentLine, currentBlockEnd, parentIndent, part);
+
+        if (childLine < 0) {
+            const newLine = `${' '.repeat(parentIndent + 2)}${part}:`;
+            lines.splice(currentBlockEnd, 0, newLine);
+            childLine = currentBlockEnd;
+            currentBlockEnd += 1;
+        }
+
+        parentLine = childLine;
+        parentIndent = lines[parentLine].search(/\S/);
+        currentBlockEnd = findBlockEnd(lines, parentLine, parentIndent, lines.length);
+    }
+
+    const field = pathParts[pathParts.length - 1];
+    const targetLine = findChildKey(lines, parentLine, currentBlockEnd, parentIndent, field);
+    if (targetLine >= 0) {
+        replaceLineValue(lines, targetLine, value);
+        return;
+    }
+
+    lines.splice(currentBlockEnd, 0, `${' '.repeat(parentIndent + 2)}${field}: ${formatYamlValue(value)}`);
 }
 
 // ==========================================
@@ -1249,7 +1408,7 @@ window.resetToDefault = function() {
             updateSaveTimeDisplay();
         } else if (currentTab === 'timeline') {
             const timelineEditor = document.getElementById('timeline-editor');
-            const initialTimeline = `# 在此粘贴你的 timeline.yaml...\n# 或拖拽文件到编辑器区域\n# 或点击右上角"加载官网最新配置"`;
+            const initialTimeline = `# 在此粘贴你的 timeline.yaml...\n# 或拖拽文件到编辑器区域`;
             timelineEditor.value = initialTimeline;
             currentTimeline = initialTimeline;
             updateBackdrop('timeline-editor', 'timeline-backdrop');
@@ -1274,20 +1433,32 @@ window.resetToDefault = function() {
 // ==========================================
 // 8. Tab 切换功能
 // ==========================================
-window.switchTab = function(tab) {
+window.switchTab = function(tab, skipUrlUpdate) {
     currentTab = tab;
 
-    const activeClass = "tab-button active px-4 py-2 text-xs font-bold text-gray-300 hover:bg-[#2d2d30] transition-colors border-b-2 border-blue-500";
-    const inactiveClass = "tab-button px-4 py-2 text-xs font-bold text-gray-500 hover:bg-[#2d2d30] transition-colors border-b-2 border-transparent";
-
-    // 更新 Tab 按钮状态
     const configBtn = document.getElementById('tab-config');
     const freqBtn = document.getElementById('tab-frequency');
     const timelineBtn = document.getElementById('tab-timeline');
 
-    configBtn.className = tab === 'config' ? activeClass : inactiveClass;
-    freqBtn.className = tab === 'frequency' ? activeClass : inactiveClass;
-    timelineBtn.className = tab === 'timeline' ? activeClass : inactiveClass;
+    [configBtn, freqBtn, timelineBtn].forEach(btn => {
+        btn.classList.remove('tr-file-tab-active');
+    });
+    if (tab === 'config') configBtn.classList.add('tr-file-tab-active');
+    if (tab === 'frequency') freqBtn.classList.add('tr-file-tab-active');
+    if (tab === 'timeline') timelineBtn.classList.add('tr-file-tab-active');
+
+    if (!skipUrlUpdate) {
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tab);
+        if (tab !== 'config') url.searchParams.delete('mod');
+        history.replaceState(null, '', url);
+    }
+
+    const filenameEl = document.getElementById('code-panel-filename');
+    if (filenameEl) {
+        const names = { config: 'config.yaml', frequency: 'frequency_words.txt', timeline: 'timeline.yaml' };
+        filenameEl.textContent = names[tab] || '';
+    }
 
     // 更新编辑器显示
     document.getElementById('yaml-editor-wrap').classList.toggle('hidden', tab !== 'config');
@@ -1724,12 +1895,12 @@ function renderFrequencyPanel(data) {
                             ${indexBadge}
                             <span class="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded font-bold">组别名</span>
                             ${relatedGroupBadge}
-                            <input type="text" value="${group.name || ''}" placeholder="组别名（如：东亚）"
-                                   class="text-sm font-bold border-0 border-b-2 border-orange-300 focus:border-orange-500 outline-none px-2 py-1 flex-1 bg-transparent"
+                            <input type="text" value="${group.name || ''}" placeholder="组别名（如：东亚）" aria-label="组别名"
+                                   class="text-sm font-bold border-0 border-b-2 border-orange-300 focus:border-orange-500 focus-visible:ring-2 focus-visible:ring-orange-300 px-2 py-1 flex-1 bg-transparent"
                                    onclick="event.stopPropagation()"
                                    onchange="updateGroupName(${idx}, this.value)">
                         </div>
-                        <button onclick="event.stopPropagation(); removeWordGroup(${idx})" class="text-red-500 hover:text-red-700 text-xs ml-2">
+                        <button onclick="event.stopPropagation(); removeWordGroup(${idx})" class="text-red-500 hover:text-red-700 text-xs ml-2" aria-label="删除词组">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
@@ -1747,7 +1918,7 @@ function renderFrequencyPanel(data) {
                                     </span>
                                 `;
                             }).join('')}
-                            <input type="text" class="tag-input" placeholder="输入关键词后按回车..."
+                            <input type="text" class="tag-input" placeholder="输入关键词后按回车..." aria-label="添加关键词"
                                    onkeydown="handleKeywordInput(event, ${idx})">
                         </div>
                         <div class="flex items-center justify-between mt-2">
@@ -1771,18 +1942,18 @@ function renderFrequencyPanel(data) {
                             <span class="text-[10px] bg-teal-500 text-white px-2 py-0.5 rounded font-bold">单个别名</span>
                             ${relatedGroupBadge}
                         </div>
-                        <button onclick="event.stopPropagation(); removeWordGroup(${idx})" class="text-red-500 hover:text-red-700 text-xs">
+                        <button onclick="event.stopPropagation(); removeWordGroup(${idx})" class="text-red-500 hover:text-red-700 text-xs" aria-label="删除词组">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
                     <div class="bg-white rounded p-3 border border-teal-200 editable-area" onclick="event.stopPropagation()">
                         <div class="flex items-center gap-2">
-                            <input type="text" value="${item.keyword || ''}" placeholder="/正则/ 或 关键词"
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-teal-500 outline-none text-sm font-mono"
+                            <input type="text" value="${item.keyword || ''}" placeholder="/正则/ 或 关键词" aria-label="别名匹配规则"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-teal-500 focus-visible:ring-2 focus-visible:ring-teal-300 text-sm font-mono"
                                    onblur="updateAliasItem(${idx}, 0, 'keyword', this.value)">
                             <span class="text-teal-600 font-bold">=></span>
-                            <input type="text" value="${item.alias || ''}" placeholder="别名"
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-teal-500 outline-none text-sm"
+                            <input type="text" value="${item.alias || ''}" placeholder="别名" aria-label="别名名称"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-teal-500 focus-visible:ring-2 focus-visible:ring-teal-300 text-sm"
                                    onblur="updateAliasItem(${idx}, 0, 'alias', this.value)">
                         </div>
                         <div class="flex items-center justify-between mt-2">
@@ -1817,14 +1988,14 @@ function renderFrequencyPanel(data) {
                         </div>
                         ${group.items.map((item, itemIdx) => `
                             <div class="flex items-center gap-2">
-                                <input type="text" value="${item.keyword || ''}" placeholder="/正则/ 或 关键词"
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-purple-500 outline-none text-sm font-mono"
+                                <input type="text" value="${item.keyword || ''}" placeholder="/正则/ 或 关键词" aria-label="连续别名匹配规则"
+                                       class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-purple-500 focus-visible:ring-2 focus-visible:ring-purple-300 text-sm font-mono"
                                        onblur="updateAliasItem(${idx}, ${itemIdx}, 'keyword', this.value)">
                                 <span class="text-purple-600 font-bold">=></span>
-                                <input type="text" value="${item.alias || ''}" placeholder="别名"
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-purple-500 outline-none text-sm"
+                                <input type="text" value="${item.alias || ''}" placeholder="别名" aria-label="连续别名名称"
+                                       class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-purple-500 focus-visible:ring-2 focus-visible:ring-purple-300 text-sm"
                                        onblur="updateAliasItem(${idx}, ${itemIdx}, 'alias', this.value)">
-                                <button onclick="removeAliasItem(${idx}, ${itemIdx})" class="text-red-500 hover:text-red-700 text-xs">
+                                <button onclick="removeAliasItem(${idx}, ${itemIdx})" class="text-red-500 hover:text-red-700 text-xs" aria-label="删除别名行">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
@@ -1851,7 +2022,7 @@ function renderFrequencyPanel(data) {
                             <span class="text-[10px] bg-gray-500 text-white px-2 py-0.5 rounded font-bold">普通词组</span>
                             ${relatedGroupBadge}
                         </div>
-                        <button onclick="event.stopPropagation(); removeWordGroup(${idx})" class="text-red-500 hover:text-red-700 text-xs">
+                        <button onclick="event.stopPropagation(); removeWordGroup(${idx})" class="text-red-500 hover:text-red-700 text-xs" aria-label="删除词组">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
@@ -1868,7 +2039,7 @@ function renderFrequencyPanel(data) {
                                     </span>
                                 `;
                             }).join('')}
-                            <input type="text" class="tag-input" placeholder="输入关键词后按回车..."
+                            <input type="text" class="tag-input" placeholder="输入关键词后按回车..." aria-label="添加普通关键词"
                                    onkeydown="handleKeywordInput(event, ${idx})">
                         </div>
                         <div class="flex items-center justify-between mt-2">
@@ -1931,10 +2102,10 @@ function renderFrequencyPanel(data) {
                 ${data.globalFilter.map(f => `
                     <span class="tag-item ${getKeywordClass(f)}">
                         ${f}
-                        <button onclick="removeGlobalFilter('${f.replace(/'/g, "\\'")}')">×</button>
+                        <button onclick="removeGlobalFilter('${f.replace(/'/g, "\\'")}')" aria-label="删除过滤词">×</button>
                     </span>
                 `).join('')}
-                <input type="text" class="tag-input" placeholder="输入过滤词后按回车..." onkeydown="handleGlobalFilterInput(event)">
+                <input type="text" class="tag-input" placeholder="输入过滤词后按回车..." aria-label="添加全局过滤词" onkeydown="handleGlobalFilterInput(event)">
             </div>
             <div class="text-xs text-gray-500 mt-2">
                 <i class="fa-solid fa-lightbulb mr-1"></i>提示：支持正则表达式（用 /.../ 包裹）
@@ -1958,7 +2129,7 @@ function renderFrequencyPanel(data) {
                     if (idx < data.wordGroups.length - 1) {
                         return card + `
                             <div class="insert-zone group/insert" data-insert-index="${idx + 1}">
-                                <button onclick="insertWordGroupAt(${idx + 1})" class="insert-button">
+                                <button onclick="insertWordGroupAt(${idx + 1})" class="insert-button" aria-label="在此处插入词组">
                                     <i class="fa-solid fa-plus"></i>
                                 </button>
                             </div>
@@ -2414,7 +2585,7 @@ function renderPlatformsList() {
                 <span class="text-xs font-medium text-gray-700">${p.name}</span>
                 <span class="text-[10px] text-gray-400">(${p.id})</span>
             </div>
-            <button onclick="removePlatform(${idx})" class="text-red-400 hover:text-red-600 text-xs" title="删除">
+            <button onclick="removePlatform(${idx})" class="text-red-400 hover:text-red-600 text-xs" title="删除" aria-label="删除平台">
                 <i class="fa-solid fa-trash"></i>
             </button>
         </div>
@@ -2627,7 +2798,7 @@ function renderDisplayRegionsList() {
                 <span class="text-[10px] text-gray-400">(${r.key})</span>
             </div>
             <div class="relative inline-block w-10 align-middle select-none">
-                <input type="checkbox" id="toggle-region-${r.key}"
+                <input type="checkbox" id="toggle-region-${r.key}" aria-label="切换${r.label}"
                        ${r.enabled ? 'checked' : ''}
                        onchange="toggleDisplayRegion('${r.key}')"
                        class="toggle-checkbox absolute block w-4 h-4 mt-0.5 ml-0.5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200 ease-in-out"/>
@@ -2843,13 +3014,13 @@ function renderRssFeedsList() {
                     ${f.enabled === false ? '<span class="text-[9px] bg-gray-200 text-gray-500 px-1 rounded">已禁用</span>' : ''}
                 </div>
                 <div class="flex items-center gap-1">
-                    <button onclick="editRssFeed(${idx})" class="text-blue-400 hover:text-blue-600 text-xs px-1" title="编辑">
+                    <button onclick="editRssFeed(${idx})" class="text-blue-400 hover:text-blue-600 text-xs px-1" title="编辑" aria-label="编辑 RSS 源">
                         <i class="fa-solid fa-pen"></i>
                     </button>
-                    <button onclick="toggleRssFeed(${idx})" class="text-gray-400 hover:text-gray-600 text-xs px-1" title="${f.enabled === false ? '启用' : '禁用'}">
+                    <button onclick="toggleRssFeed(${idx})" class="text-gray-400 hover:text-gray-600 text-xs px-1" title="${f.enabled === false ? '启用' : '禁用'}" aria-label="${f.enabled === false ? '启用 RSS 源' : '禁用 RSS 源'}">
                         <i class="fa-solid fa-${f.enabled === false ? 'eye' : 'eye-slash'}"></i>
                     </button>
-                    <button onclick="removeRssFeed(${idx})" class="text-red-400 hover:text-red-600 text-xs px-1" title="删除">
+                    <button onclick="removeRssFeed(${idx})" class="text-red-400 hover:text-red-600 text-xs px-1" title="删除" aria-label="删除 RSS 源">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -3103,7 +3274,7 @@ function renderStandaloneLists() {
             const isChecked = standaloneConfig.platforms.includes(p.id);
             return `
                 <label class="flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors cursor-pointer">
-                    <input type="checkbox" onchange="toggleStandaloneItem('platforms', '${p.id}')"
+                    <input type="checkbox" onchange="toggleStandaloneItem('platforms', '${p.id}')" aria-label="切换平台 ${p.name}"
                            ${isChecked ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                     <div class="min-w-0">
                         <div class="text-xs font-medium text-gray-700 truncate">${p.name}</div>
@@ -3122,7 +3293,7 @@ function renderStandaloneLists() {
             const isChecked = standaloneConfig.rss_feeds.includes(f.id);
             return `
                 <label class="flex items-center gap-2 p-1.5 rounded hover:bg-white transition-colors cursor-pointer">
-                    <input type="checkbox" onchange="toggleStandaloneItem('rss_feeds', '${f.id}')"
+                    <input type="checkbox" onchange="toggleStandaloneItem('rss_feeds', '${f.id}')" aria-label="切换 RSS 源 ${f.name}"
                            ${isChecked ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center justify-between">
@@ -3309,20 +3480,14 @@ function showVersionComparisonModal(fileName, currentVersion, latestVersion) {
         statusText = '未检测到版本信息';
         statusColor = 'text-gray-600';
         actionButtons = `
-            <button onclick="closeVersionModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">关闭</button>
-            <button onclick="updateToLatest()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                <i class="fa-solid fa-download mr-1"></i>更新到最新版本
-            </button>
+            <button onclick="closeVersionModal()" class="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg">关闭</button>
         `;
     } else if (comparison < 0) {
         statusIcon = '<i class="fa-solid fa-arrow-up text-orange-500 text-3xl"></i>';
         statusText = '发现新版本';
         statusColor = 'text-orange-600';
         actionButtons = `
-            <button onclick="closeVersionModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">稍后更新</button>
-            <button onclick="updateToLatest()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
-                <i class="fa-solid fa-download mr-1"></i>立即更新
-            </button>
+            <button onclick="closeVersionModal()" class="px-4 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg">关闭</button>
         `;
     } else if (comparison > 0) {
         statusIcon = '<i class="fa-solid fa-flask text-purple-500 text-3xl"></i>';
@@ -3349,7 +3514,7 @@ function showVersionComparisonModal(fileName, currentVersion, latestVersion) {
                 <h3 class="text-lg font-bold text-gray-800">
                     <i class="fa-solid fa-code-compare mr-2 text-blue-500"></i>版本检测结果
                 </h3>
-                <button onclick="closeVersionModal()" class="text-gray-400 hover:text-gray-600">
+                <button onclick="closeVersionModal()" class="text-gray-400 hover:text-gray-600" aria-label="关闭版本对比弹窗">
                     <i class="fa-solid fa-times text-xl"></i>
                 </button>
             </div>
@@ -3380,7 +3545,7 @@ function showVersionComparisonModal(fileName, currentVersion, latestVersion) {
             ${comparison < 0 || !currentVersion ? `
                 <div class="text-xs text-gray-500 bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
                     <i class="fa-solid fa-lightbulb mr-1 text-yellow-600"></i>
-                    <strong>提示：</strong>更新将从 GitHub 加载最新的 ${fileName}，你当前的修改将被覆盖。建议先复制保存你的自定义配置。
+                    <strong>提示：</strong>当前页面已切换为纯本地模式。你可以参考版本信息，但不会再自动从远端覆盖本地配置。
                 </div>
             ` : ''}
 
@@ -3518,7 +3683,7 @@ function renderAvailablePlatforms() {
                         <div class="text-xs text-gray-400 font-mono">${p.key}</div>
                     </div>
                 </div>
-                <button class="text-gray-300 group-hover:text-blue-600">
+                <button class="text-gray-300 group-hover:text-blue-600" aria-label="添加平台">
                     <i class="fa-solid fa-plus-circle text-lg"></i>
                 </button>
             `;
@@ -3582,55 +3747,6 @@ window.confirmAddPlatform = function(key, name) {
     renderPlatformsList();
 
     showToast(`平台 ${platformName} 已添加`, 'success');
-}
-
-// 绑定到全局
-window.updateToLatest = async function() {
-    closeVersionModal();
-
-    const currentTab = getCurrentTab();
-    const fileName = currentTab === 'config' ? 'config.yaml' : 'frequency_words.txt';
-
-    if (!confirm(`确定要从 GitHub 更新 ${fileName} 到最新版本吗？\n\n你当前的自定义配置将被覆盖，建议先复制保存。`)) {
-        return;
-    }
-
-    showToast('正在从 GitHub 加载最新版本...', 'info');
-
-    try {
-        const url = currentTab === 'config' ? REMOTE_CONFIG_URL : REMOTE_FREQUENCY_URL;
-        const res = await fetch(url);
-
-        if (!res.ok) {
-            throw new Error(`加载失败: ${res.status}`);
-        }
-
-        const text = await res.text();
-
-        if (currentTab === 'config') {
-            try {
-                jsyaml.load(text);
-            } catch (yamlErr) {
-                showToast(`YAML 语法错误: ${yamlErr.message}`, 'error');
-                return;
-            }
-            document.getElementById('yaml-editor').value = text;
-            currentYaml = text;
-            syncYamlToUI();
-        } else {
-            document.getElementById('frequency-editor').value = text;
-            currentFrequency = text;
-            syncFrequencyToUI();
-        }
-
-        saveToLocalStorage();
-
-        showToast(`已更新到最新版本`, 'success');
-
-    } catch (err) {
-        console.error('更新失败:', err);
-        showToast(`更新失败: ${err.message}`, 'error');
-    }
 }
 
 // ==========================================
@@ -3719,7 +3835,7 @@ function syncTimelineToUI() {
             <div class="text-center py-12 text-gray-400">
                 <i class="fa-solid fa-calendar-xmark text-4xl mb-3"></i>
                 <p class="text-sm">请在左侧粘贴 timeline.yaml 内容</p>
-                <p class="text-xs mt-1">或点击右上角「加载官网最新配置」</p>
+                <p class="text-xs mt-1">也可以直接拖拽文件到编辑器区域</p>
             </div>`;
         return;
     }
@@ -3754,8 +3870,8 @@ function syncTimelineToUI() {
                     </div>
                 </div>
                 <div class="tl-card-actions">
-                    <button onclick="event.stopPropagation();duplicateTlPreset('${name}')" class="tl-card-action-btn" title="复制"><i class="fa-regular fa-copy"></i></button>
-                    ${!isProtected ? `<button onclick="event.stopPropagation();deleteTlPreset('${name}')" class="tl-card-action-btn text-red-400 hover:text-red-600" title="删除"><i class="fa-regular fa-trash-can"></i></button>` : ''}
+                    <button onclick="event.stopPropagation();duplicateTlPreset('${name}')" class="tl-card-action-btn" title="复制" aria-label="复制预设"><i class="fa-regular fa-copy"></i></button>
+                    ${!isProtected ? `<button onclick="event.stopPropagation();deleteTlPreset('${name}')" class="tl-card-action-btn text-red-400 hover:text-red-600" title="删除" aria-label="删除预设"><i class="fa-regular fa-trash-can"></i></button>` : ''}
                 </div>
                 ${isActive ? '<div class="absolute bottom-1 right-2 text-[9px] text-blue-500 font-bold"><i class="fa-solid fa-check-circle mr-0.5"></i>当前</div>' : ''}
             </div>`;
@@ -4018,8 +4134,8 @@ function renderPeriodDetails(config, presetName) {
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-gray-500 font-mono">${p.start || '?'} - ${p.end || '?'}</span>
-                        <button onclick="duplicateTlPeriod('${presetName}','${key}')" class="tl-inline-btn" title="复制"><i class="fa-regular fa-copy"></i></button>
-                        <button onclick="deleteTlPeriod('${presetName}','${key}')" class="tl-inline-btn text-red-400 hover:text-red-600" title="删除"><i class="fa-regular fa-trash-can"></i></button>
+                        <button onclick="duplicateTlPeriod('${presetName}','${key}')" class="tl-inline-btn" title="复制" aria-label="复制时间段"><i class="fa-regular fa-copy"></i></button>
+                        <button onclick="deleteTlPeriod('${presetName}','${key}')" class="tl-inline-btn text-red-400 hover:text-red-600" title="删除" aria-label="删除时间段"><i class="fa-regular fa-trash-can"></i></button>
                     </div>
                 </div>
                 ${renderBehaviorToggles(merged, presetName, key, p)}
@@ -4051,7 +4167,7 @@ function renderPeriodDetails(config, presetName) {
             html += `<div class="bg-white border border-gray-200 rounded-lg px-3 py-2 tl-dayplan-card">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-xs font-bold text-gray-700">${name}</span>
-                    <button onclick="deleteTlDayPlan('${presetName}','${name}')" class="tl-inline-btn text-red-400 hover:text-red-600" title="删除日计划"><i class="fa-regular fa-trash-can"></i></button>
+                    <button onclick="deleteTlDayPlan('${presetName}','${name}')" class="tl-inline-btn text-red-400 hover:text-red-600" title="删除日计划" aria-label="删除日计划"><i class="fa-regular fa-trash-can"></i></button>
                 </div>
                 <div class="flex flex-wrap gap-1 items-center tl-dayplan-sortable" data-plan-key="${name}">
                     ${pList.length > 0 ? pList.map(pn => {
@@ -4060,11 +4176,11 @@ function renderPeriodDetails(config, presetName) {
                         const cc = getBlockColorClass(merged);
                         return `<span class="tl-period-tag ${cc}" data-period-key="${pn}">
                             ${p?.name || pn}
-                            <button onclick="removePeriodFromDayPlanUI('${presetName}','${name}','${pn}')" class="tl-tag-remove" title="移除">&times;</button>
+                            <button onclick="removePeriodFromDayPlanUI('${presetName}','${name}','${pn}')" class="tl-tag-remove" title="移除" aria-label="移除时间段">&times;</button>
                         </span>`;
                     }).join('') : '<span class="text-[10px] text-gray-400">空 (全天走 default)</span>'}
                     ${availablePeriods.length > 0 ? `
-                        <select class="tl-add-period-select" onchange="if(this.value){addPeriodToDayPlan('${presetName}','${name}',this.value);this.value=''}">
+                        <select class="tl-add-period-select" aria-label="为 ${name} 添加时间段" onchange="if(this.value){addPeriodToDayPlan('${presetName}','${name}',this.value);this.value=''}">
                             <option value="">+ 添加</option>
                             ${availablePeriods.map(([k, p]) => `<option value="${k}">${p.name || k}</option>`).join('')}
                         </select>
@@ -4097,7 +4213,7 @@ function renderPeriodDetails(config, presetName) {
         ).join('');
         html += `<div class="tl-dayplan-row ${rowColor} rounded px-2">
             <div class="tl-dayplan-label">${DAY_NAMES[d-1]}</div>
-            <select class="tl-weekmap-select"
+            <select class="tl-weekmap-select" aria-label="${DAY_NAMES[d-1]} 的日计划"
                     onchange="onTlWeekMap('${presetName}',${d},this.value)">
                 ${options}
             </select>
@@ -4171,7 +4287,7 @@ function renderBehaviorToggles(cfg, presetName, periodKey, rawCfg = null) {
         const toggleId = `${uid}-${item.k}`;
         html += `<label class="tl-toggle-item ${on ? 'on' : 'off'}" for="${toggleId}" style="cursor:pointer">
             <div class="relative inline-block w-8 mr-1 align-middle select-none">
-                <input type="checkbox" id="${toggleId}" ${on ? 'checked' : ''}
+                <input type="checkbox" id="${toggleId}" aria-label="${item.label}" ${on ? 'checked' : ''}
                     onchange="onTlToggle('${presetName}','${periodKey}','${item.k}',this.checked)"
                     class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200 ease-in-out" style="top:0"/>
                 <label for="${toggleId}" class="toggle-label block overflow-hidden h-4 rounded-full bg-gray-300 cursor-pointer"></label>
@@ -4190,7 +4306,7 @@ function renderBehaviorToggles(cfg, presetName, periodKey, rawCfg = null) {
     // report_mode
     html += `<div class="flex items-center gap-1">
         <span class="text-[10px] text-gray-400">报告:</span>
-        <select class="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white"
+        <select class="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white" aria-label="报告模式"
                 onchange="onTlSelect('${presetName}','${periodKey}','report_mode',this.value)">
             ${reportModes.map(m => `<option value="${m}" ${cfg.report_mode === m ? 'selected' : ''}>${m}</option>`).join('')}
         </select>
@@ -4199,7 +4315,7 @@ function renderBehaviorToggles(cfg, presetName, periodKey, rawCfg = null) {
     // ai_mode
     html += `<div class="flex items-center gap-1">
         <span class="text-[10px] text-gray-400">AI:</span>
-        <select class="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white"
+        <select class="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white" aria-label="AI 模式"
                 onchange="onTlSelect('${presetName}','${periodKey}','ai_mode',this.value)">
             ${aiModes.map(m => `<option value="${m}" ${(cfg.ai_mode || 'follow_report') === m ? 'selected' : ''}>${m}</option>`).join('')}
         </select>
@@ -4209,12 +4325,12 @@ function renderBehaviorToggles(cfg, presetName, periodKey, rawCfg = null) {
     const onceAnalyze = cfg.once?.analyze === true;
     const oncePush = cfg.once?.push === true;
     html += `<label class="flex items-center gap-1 text-[10px] ${onceAnalyze ? 'text-blue-600' : 'text-gray-400'}" style="cursor:pointer">
-        <input type="checkbox" ${onceAnalyze ? 'checked' : ''}
+        <input type="checkbox" aria-label="仅分析一次" ${onceAnalyze ? 'checked' : ''}
                onchange="onTlToggle('${presetName}','${periodKey}','once.analyze',this.checked)"
                class="w-3 h-3 rounded">仅分析一次
     </label>`;
     html += `<label class="flex items-center gap-1 text-[10px] ${oncePush ? 'text-blue-600' : 'text-gray-400'}" style="cursor:pointer">
-        <input type="checkbox" ${oncePush ? 'checked' : ''}
+        <input type="checkbox" aria-label="仅推送一次" ${oncePush ? 'checked' : ''}
                onchange="onTlToggle('${presetName}','${periodKey}','once.push',this.checked)"
                class="w-3 h-3 rounded">仅推送一次
     </label>`;
@@ -4225,10 +4341,10 @@ function renderBehaviorToggles(cfg, presetName, periodKey, rawCfg = null) {
     if (periodKey !== 'default' && (cfg.start || cfg.end)) {
         html += `<div class="flex items-center gap-2 mt-2">
             <span class="text-[10px] text-gray-400">时间:</span>
-            <input type="time" value="${cfg.start || ''}" class="text-xs border border-gray-200 rounded px-1.5 py-0.5"
+            <input type="time" value="${cfg.start || ''}" aria-label="开始时间" class="text-xs border border-gray-200 rounded px-1.5 py-0.5"
                    onchange="onTlSelect('${presetName}','${periodKey}','start',this.value)">
             <span class="text-gray-300">~</span>
-            <input type="time" value="${cfg.end || ''}" class="text-xs border border-gray-200 rounded px-1.5 py-0.5"
+            <input type="time" value="${cfg.end || ''}" aria-label="结束时间" class="text-xs border border-gray-200 rounded px-1.5 py-0.5"
                    onchange="onTlSelect('${presetName}','${periodKey}','end',this.value)">
         </div>`;
     }
@@ -4245,7 +4361,7 @@ function renderBehaviorToggles(cfg, presetName, periodKey, rawCfg = null) {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
             <div>
                 <label class="block text-[10px] text-gray-400 mb-1">filter_method</label>
-                <select class="text-[10px] w-full border border-gray-200 rounded px-1.5 py-1 bg-white"
+                <select class="text-[10px] w-full border border-gray-200 rounded px-1.5 py-1 bg-white" aria-label="filter_method"
                         onchange="onTlOptionalSelect('${presetName}','${periodKey}','filter_method',this.value)">
                     <option value="" ${filterMethod === '' ? 'selected' : ''}>继承</option>
                     <option value="keyword" ${filterMethod === 'keyword' ? 'selected' : ''}>keyword</option>
@@ -4254,13 +4370,13 @@ function renderBehaviorToggles(cfg, presetName, periodKey, rawCfg = null) {
             </div>
             <div>
                 <label class="block text-[10px] text-gray-400 mb-1">frequency_file</label>
-                <input type="text" value="${frequencyFile}" placeholder="如 tech.txt"
+                <input type="text" value="${frequencyFile}" placeholder="如 tech.txt" aria-label="frequency_file"
                        class="text-[10px] w-full border border-gray-200 rounded px-1.5 py-1 bg-white"
                        onchange="onTlOptionalInput('${presetName}','${periodKey}','frequency_file',this.value)">
             </div>
             <div>
                 <label class="block text-[10px] text-gray-400 mb-1">interests_file</label>
-                <input type="text" value="${interestsFile}" placeholder="如 geopolitics.txt"
+                <input type="text" value="${interestsFile}" placeholder="如 geopolitics.txt" aria-label="interests_file"
                        class="text-[10px] w-full border border-gray-200 rounded px-1.5 py-1 bg-white"
                        onchange="onTlOptionalInput('${presetName}','${periodKey}','interests_file',this.value)">
             </div>

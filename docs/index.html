@@ -3,263 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f8f9fb">
+    <meta name="color-scheme" content="light">
     <title>TrendRadar 配置文件编辑器</title>
-    <!-- Tailwind CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- js-yaml -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
-    <!-- SortableJS (拖拽排序库) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <!-- 自定义样式 -->
-    <link rel="stylesheet" href="./assets/style.css">
+    <link rel="stylesheet" href="./assets/style.css?v=6">
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
+<body class="tr-body h-screen flex flex-col overflow-hidden">
+
+    <!-- Skip link -->
+    <a href="#config-panel" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-blue-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm">跳到主内容</a>
 
     <!-- 顶部导航 -->
-    <nav class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0 z-20">
+    <nav class="tr-nav flex-shrink-0 z-20" aria-label="主导航">
         <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-            <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <i class="fa-solid fa-sliders text-blue-600 text-lg"></i>
-                <span class="font-bold text-lg tracking-tight text-gray-900">TrendRadar <span class="text-gray-500 text-xs font-normal ml-2">可视化配置编辑器 </span></span>
-            </a>
-
-            <!-- 隐私安全提示 -->
-            <div class="hidden lg:flex items-center text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 select-none">
-                <i class="fa-solid fa-shield-halved mr-1.5 text-green-500"></i>
-                <span>纯静态页面，数据仅保存在你的本地浏览器，请放心使用</span>
+            <!-- 左侧: Logo + 文件标签 -->
+            <div class="flex items-center gap-1">
+                <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="tr-logo-link flex items-center gap-2 mr-3" aria-label="TrendRadar GitHub">
+                    <div class="tr-logo-mark">
+                        <i class="fa-solid fa-radar" aria-hidden="true"></i>
+                    </div>
+                    <span class="tr-logo-text hidden sm:inline">TrendRadar</span>
+                </a>
+                <div class="flex items-center rounded-lg p-0.5" style="background: var(--color-bg-subtle)">
+                    <button id="tab-config" onclick="switchTab('config')" class="tr-file-tab tr-file-tab-active">
+                        <i class="fa-solid fa-code text-[10px]" aria-hidden="true"></i>config.yaml
+                    </button>
+                    <button id="tab-frequency" onclick="switchTab('frequency')" class="tr-file-tab">
+                        <i class="fa-solid fa-filter text-[10px]" aria-hidden="true"></i>frequency_words.txt
+                    </button>
+                    <button id="tab-timeline" onclick="switchTab('timeline')" class="tr-file-tab">
+                        <i class="fa-solid fa-calendar-week text-[10px]" aria-hidden="true"></i>timeline.yaml
+                    </button>
+                </div>
             </div>
 
-            <div class="flex gap-3">
-                <button onclick="openLoadConfigModal()" class="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
-                    <i class="fa-solid fa-cloud-arrow-down"></i>加载官网最新配置
-                </button>
-                <button onclick="copyResult()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors shadow-sm">
-                    <i class="fa-regular fa-copy mr-1.5"></i>复制配置
+            <!-- 中间: 安全提示 -->
+            <div class="hidden lg:flex items-center text-xs select-none gap-1.5" style="color: var(--color-text-tertiary); font-family: var(--font-sans)">
+                <i class="fa-solid fa-shield-halved" style="color: #22c55e" aria-hidden="true"></i>
+                <span>纯本地运行, 数据不上传</span>
+            </div>
+
+            <!-- 右侧: 操作按钮 -->
+            <div class="flex items-center gap-2">
+                <button onclick="copyResult()" class="tr-btn-primary text-xs">
+                    <i class="fa-regular fa-copy" aria-hidden="true"></i>复制配置
                 </button>
             </div>
         </div>
     </nav>
 
-    <!-- 主界面：左右分栏 -->
+    <!-- 主界面 -->
     <main class="flex-grow flex overflow-hidden">
 
-        <!-- 左侧：源代码编辑器 (Source) -->
-        <div class="w-1/2 flex flex-col border-r border-gray-200 bg-[#1e1e1e]">
-            <!-- Tab 切换 -->
-            <div class="flex items-center bg-[#252526] border-b border-[#333]">
-                <button id="tab-config" onclick="switchTab('config')" class="tab-button active px-4 py-2 text-xs font-bold text-gray-300 hover:bg-[#2d2d30] transition-colors border-b-2 border-blue-500">
-                    <i class="fa-solid fa-code mr-2"></i>config.yaml
-                </button>
-                <button id="tab-frequency" onclick="switchTab('frequency')" class="tab-button px-4 py-2 text-xs font-bold text-gray-500 hover:bg-[#2d2d30] transition-colors border-b-2 border-transparent">
-                    <i class="fa-solid fa-filter mr-2"></i>frequency_words.txt
-                </button>
-                <button id="tab-timeline" onclick="switchTab('timeline')" class="tab-button px-4 py-2 text-xs font-bold text-gray-500 hover:bg-[#2d2d30] transition-colors border-b-2 border-transparent">
-                    <i class="fa-solid fa-calendar-week mr-2"></i>timeline.yaml
-                </button>
+        <!-- 左侧: 代码编辑器 (可折叠) -->
+        <div id="code-editor-panel" class="code-panel">
+            <div class="flex items-center bg-[#232328] border-b border-[#2a2a30] px-3 h-9 flex-shrink-0">
+                <span class="text-[10px] text-gray-400 font-mono flex items-center gap-1.5">
+                    <i class="fa-solid fa-code text-gray-500" aria-hidden="true"></i>
+                    <span id="code-panel-filename">config.yaml</span>
+                </span>
                 <div class="flex-grow"></div>
-                <!-- 保存时间显示 -->
-                <div id="save-time-config" class="save-time-badge px-3 text-[10px] text-gray-500 flex items-center gap-1">
-                    <i class="fa-regular fa-clock"></i>
+                <div id="save-time-config" class="save-time-badge text-[10px] text-gray-500 flex items-center gap-1">
+                    <i class="fa-regular fa-clock" aria-hidden="true"></i>
                     <span id="config-save-label" class="hidden">已保存: </span>
                     <span id="config-save-time" class="text-gray-400" title="未保存">未保存</span>
                 </div>
-                <div id="save-time-frequency" class="save-time-badge hidden px-3 text-[10px] text-gray-500 flex items-center gap-1">
-                    <i class="fa-regular fa-clock"></i>
+                <div id="save-time-frequency" class="save-time-badge hidden text-[10px] text-gray-500 flex items-center gap-1">
+                    <i class="fa-regular fa-clock" aria-hidden="true"></i>
                     <span id="frequency-save-label" class="hidden">已保存: </span>
                     <span id="frequency-save-time" class="text-gray-400" title="未保存">未保存</span>
                 </div>
-                <div id="save-time-timeline" class="save-time-badge hidden px-3 text-[10px] text-gray-500 flex items-center gap-1">
-                    <i class="fa-regular fa-clock"></i>
+                <div id="save-time-timeline" class="save-time-badge hidden text-[10px] text-gray-500 flex items-center gap-1">
+                    <i class="fa-regular fa-clock" aria-hidden="true"></i>
                     <span id="timeline-save-label" class="hidden">已保存: </span>
                     <span id="timeline-save-time" class="text-gray-400" title="未保存">未保存</span>
                 </div>
             </div>
 
-            <!-- Config 编辑器 -->
-            <div id="yaml-editor-wrap" class="tab-content highlight-editor-wrap flex-grow w-full h-full bg-[#1e1e1e]">
+            <div id="yaml-editor-wrap" class="tab-content highlight-editor-wrap flex-grow w-full h-full bg-[#1b1b1f]">
                 <div id="yaml-backdrop" class="highlight-backdrop"></div>
-                <textarea id="yaml-editor" class="highlight-textarea" spellcheck="false"></textarea>
+                <textarea id="yaml-editor" class="highlight-textarea" spellcheck="false" aria-label="config.yaml 编辑器"></textarea>
             </div>
-
-            <!-- Frequency 编辑器 -->
-            <div id="frequency-editor-wrap" class="tab-content hidden highlight-editor-wrap flex-grow w-full h-full bg-[#1e1e1e]">
+            <div id="frequency-editor-wrap" class="tab-content hidden highlight-editor-wrap flex-grow w-full h-full bg-[#1b1b1f]">
                 <div id="frequency-backdrop" class="highlight-backdrop"></div>
-                <textarea id="frequency-editor" class="highlight-textarea" spellcheck="false"></textarea>
+                <textarea id="frequency-editor" class="highlight-textarea" spellcheck="false" aria-label="frequency_words.txt 编辑器"></textarea>
             </div>
-
-            <!-- Timeline 编辑器 -->
-            <div id="timeline-editor-wrap" class="tab-content hidden highlight-editor-wrap flex-grow w-full h-full bg-[#1e1e1e]">
+            <div id="timeline-editor-wrap" class="tab-content hidden highlight-editor-wrap flex-grow w-full h-full bg-[#1b1b1f]">
                 <div id="timeline-backdrop" class="highlight-backdrop"></div>
-                <textarea id="timeline-editor" class="highlight-textarea" spellcheck="false"></textarea>
+                <textarea id="timeline-editor" class="highlight-textarea" spellcheck="false" aria-label="timeline.yaml 编辑器"></textarea>
             </div>
         </div>
 
-        <!-- 右侧：可视化配置 + 支持侧栏 -->
-        <div class="w-1/2 flex">
-        <!-- 可视化配置 (Visual) -->
-        <div class="flex-1 flex flex-col bg-gray-50 min-w-0">
-            <div class="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-bold text-gray-700"><i class="fa-solid fa-list-check mr-2"></i><span id="right-panel-title">配置模块</span></span>
-                    <button id="version-check-btn" onclick="checkVersion()" class="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded shadow-sm transition-all flex items-center gap-1.5" title="检测 config.yaml 版本">
-                        <i class="fa-solid fa-code-compare"></i>
+        <!-- 代码面板切换按钮 -->
+        <button id="code-panel-toggle" onclick="toggleCodePanel()" class="code-panel-toggle" title="显示/隐藏代码编辑器" aria-label="显示/隐藏代码编辑器">
+            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+        </button>
+
+        <!-- 右侧: 可视化配置 -->
+        <div id="visual-panel" class="flex-1 flex flex-col min-w-0" style="background: var(--color-bg)">
+            <!-- 面板头部 -->
+            <div class="tr-panel-header flex items-center justify-between px-5 py-2.5">
+                <div class="flex items-center gap-2.5">
+                    <h1 class="text-sm font-bold text-gray-700 flex items-center gap-2 m-0">
+                        <i class="fa-solid fa-list-check text-blue-500" aria-hidden="true"></i>
+                        <span id="right-panel-title">配置模块</span>
+                    </h1>
+                    <button id="version-check-btn" onclick="checkVersion()" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2.5 py-1 rounded-md transition-colors flex items-center gap-1.5 border border-indigo-100" title="检测 config.yaml 版本">
+                        <i class="fa-solid fa-code-compare text-[10px]" aria-hidden="true"></i>
                         <span>版本检测</span>
                     </button>
-                    <button onclick="resetToDefault()" class="text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1" title="重置当前内容为默认状态">
-                        <i class="fa-solid fa-rotate-left"></i>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="resetToDefault()" class="text-xs text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50" title="重置当前内容为默认状态" aria-label="重置为默认">
+                        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                    </button>
+                    <button onclick="toggleCodePanel()" class="tr-btn-code text-[11px]" title="显示/隐藏代码编辑器">
+                        <i class="fa-solid fa-code" aria-hidden="true"></i>
+                        <span id="code-toggle-label">显示代码</span>
                     </button>
                 </div>
             </div>
 
             <!-- 模块导航栏 -->
-            <div id="module-nav" class="tab-content bg-white border-b border-gray-200 px-4 py-2 flex flex-wrap gap-1">
+            <div id="module-nav" class="tab-content tr-module-nav">
             </div>
 
             <!-- Config 可视化面板 -->
-            <div id="config-panel" class="tab-content flex-grow overflow-y-auto p-6 space-y-6">
+            <div id="config-panel" class="tab-content flex-grow overflow-y-auto p-5 space-y-5">
             </div>
 
             <!-- Frequency 可视化面板 -->
-            <div id="frequency-panel" class="tab-content hidden flex-grow overflow-y-auto p-6 space-y-6">
+            <div id="frequency-panel" class="tab-content hidden flex-grow overflow-y-auto p-5 space-y-5">
             </div>
 
             <!-- Timeline 可视化面板 -->
-            <div id="timeline-panel" class="tab-content hidden flex-grow overflow-y-auto p-6 space-y-6">
+            <div id="timeline-panel" class="tab-content hidden flex-grow overflow-y-auto p-5 space-y-5">
             </div>
-        </div>
-
-        <!-- 支持侧栏 (固定，不随内容滚动) -->
-        <div class="support-sidebar-wrap flex-shrink-0 relative">
-            <!-- 折叠/展开按钮 (侧栏左边缘) -->
-            <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" onclick="toggleSupportSidebar()" title="收起侧栏">
-                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-            </button>
-            <div id="support-sidebar" class="support-sidebar border-l border-gray-200 bg-gradient-to-b from-orange-50/30 via-white to-pink-50/20 flex flex-col">
-            <!-- 侧栏标题 -->
-            <div class="px-3 py-3 border-b border-gray-100 bg-white/80 sidebar-header-hover group/header">
-                <div class="flex items-center gap-2">
-                    <div class="w-6 h-6 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center">
-                        <i class="fa-solid fa-heart text-white text-[10px]"></i>
-                    </div>
-                    <span class="text-sm font-bold text-gray-700 tracking-tight">支持项目</span>
-                </div>
-                <p class="sidebar-quote text-[10px] text-gray-400 mt-1.5 leading-relaxed italic">若 TrendRadar 曾为你捕捉价值，不妨为它注入动力，助其持续进化</p>
-            </div>
-
-            <!-- 卡片列表 -->
-            <div class="flex-1 p-3 space-y-3 overflow-y-auto sidebar-scroll">
-
-                <!-- 01: 点亮 Star -->
-                <a href="https://github.com/sansan0/TrendRadar" target="_blank" class="sidebar-card group block">
-                    <div class="flex items-center gap-2 mb-2.5">
-                        <div class="sidebar-card-icon bg-orange-100 text-orange-500 group-hover:bg-orange-200">
-                            <i class="fa-solid fa-star"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="text-xs font-bold text-gray-800 leading-tight">点亮 Star</div>
-                            <div class="text-[10px] text-gray-400 leading-tight mt-0.5">让更多人发现它</div>
-                        </div>
-                    </div>
-                    <div class="sidebar-cta bg-gradient-to-r from-orange-400 to-red-500 text-white group-hover:from-orange-500 group-hover:to-red-600 shadow-sm group-hover:shadow-md">
-                        <i class="fa-brands fa-github mr-1"></i>前往 GitHub
-                    </div>
-                </a>
-
-                <!-- 02: 不迷路 (微信) -->
-                <div class="sidebar-card sidebar-card-clickable group" onclick="openQrModal('weixin')">
-                    <div class="flex items-center gap-2 mb-2.5">
-                        <div class="sidebar-card-icon bg-green-100 text-green-600 group-hover:bg-green-200">
-                            <i class="fa-brands fa-weixin"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="text-xs font-bold text-gray-800 leading-tight">不迷路</div>
-                            <div class="text-[10px] text-gray-400 leading-tight mt-0.5">获取更新通知</div>
-                        </div>
-                    </div>
-                    <div class="flex justify-center relative">
-                        <div class="sidebar-qr group-hover:shadow-md">
-                            <img src="./assets/weixin.webp" alt="微信公众号" class="w-full h-full object-contain">
-                        </div>
-                        <div class="sidebar-enlarge-hint">
-                            <i class="fa-solid fa-expand mr-1"></i>点击放大
-                        </div>
-                    </div>
-                    <p class="text-[10px] text-gray-400 text-center mt-2">扫码关注公众号</p>
-                </div>
-
-                <!-- 03: 随心赞赏 -->
-                <div class="sidebar-card sidebar-card-clickable group" onclick="openQrModal('donate')">
-                    <div class="flex items-center gap-2 mb-2.5">
-                        <div class="sidebar-card-icon bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200">
-                            <i class="fa-solid fa-hand-holding-heart"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="text-xs font-bold text-gray-800 leading-tight">随心赞赏</div>
-                            <div class="text-[10px] text-gray-400 leading-tight mt-0.5">1 元也是鼓励</div>
-                        </div>
-                    </div>
-                    <div class="flex justify-center relative">
-                        <div class="sidebar-qr group-hover:shadow-md">
-                            <img src="https://cdn-1258574687.cos.ap-shanghai.myqcloud.com/img/%2F2026%2F01%2F18ecce7c224ce0ea4c59394c29e408f8-e0d1db45.webp" alt="微信支付" class="w-full h-full object-contain">
-                        </div>
-                        <div class="sidebar-enlarge-hint">
-                            <i class="fa-solid fa-expand mr-1"></i>点击放大
-                        </div>
-                    </div>
-                    <p class="text-[10px] text-gray-400 text-center mt-2">微信扫码 · 丰俭由人</p>
-                </div>
-
-                <!-- 04: 探索更多 -->
-                <a href="https://sansan0.github.io/mao-map/" target="_blank" class="sidebar-card group block">
-                    <div class="flex items-center gap-2 mb-2.5">
-                        <div class="sidebar-card-icon bg-red-100 text-red-500 group-hover:bg-red-200">
-                            <i class="fa-solid fa-map-location-dot"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="text-xs font-bold text-gray-800 leading-tight">探索更多</div>
-                            <div class="text-[10px] text-gray-400 leading-tight mt-0.5">另一个用心的作品</div>
-                        </div>
-                    </div>
-                    <div class="sidebar-cta bg-red-50 text-red-600 border border-red-100 group-hover:bg-red-100 group-hover:text-red-700">
-                        <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>去看看
-                    </div>
-                </a>
-            </div>
-
-            <!-- 底部寄语 -->
-            <div class="px-3 py-2.5 border-t border-gray-100 bg-white/60">
-                <p class="text-[10px] text-gray-300 text-center italic font-serif tracking-wide">"开源不易，感谢支持"</p>
-            </div>
-            </div>
-        </div>
         </div>
     </main>
 
     <!-- RSS 添加弹窗 -->
-    <div id="rss-modal" class="modal-overlay hidden">
+    <div id="rss-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rss-modal-title">
         <div class="modal-content">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-rss mr-2 text-orange-500"></i>添加 RSS 源</h3>
-                <button onclick="closeRssModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+                <h2 id="rss-modal-title" class="text-lg font-bold text-gray-800"><i class="fa-solid fa-rss mr-2 text-orange-500" aria-hidden="true"></i>添加 RSS 源</h2>
+                <button onclick="closeRssModal()" class="text-gray-400 hover:text-gray-600" aria-label="关闭"><i class="fa-solid fa-times text-xl" aria-hidden="true"></i></button>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">源 ID（唯一标识，英文）</label>
-                    <input type="text" id="rss-id" placeholder="例如: my-blog" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label for="rss-id" class="block text-xs font-bold text-gray-600 mb-1">源 ID (唯一标识, 英文)</label>
+                    <input type="text" id="rss-id" name="rss-id" placeholder="例如: my-blog…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">显示名称</label>
-                    <input type="text" id="rss-name" placeholder="例如: 我的博客" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label for="rss-name" class="block text-xs font-bold text-gray-600 mb-1">显示名称</label>
+                    <input type="text" id="rss-name" name="rss-name" placeholder="例如: 我的博客…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">RSS URL</label>
-                    <input type="text" id="rss-url" placeholder="https://example.com/feed.xml" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label for="rss-url" class="block text-xs font-bold text-gray-600 mb-1">RSS URL</label>
+                    <input type="url" id="rss-url" name="rss-url" placeholder="https://example.com/feed.xml" autocomplete="url" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">最大文章年龄（天，可选）</label>
-                    <input type="number" id="rss-max-age" placeholder="留空使用全局设置" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label for="rss-max-age" class="block text-xs font-bold text-gray-600 mb-1">最大文章年龄 (天, 可选)</label>
+                    <input type="number" id="rss-max-age" name="rss-max-age" placeholder="留空使用全局设置…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
 
@@ -267,9 +181,9 @@
             <div class="mt-5 border-t border-gray-100 pt-4">
                 <button type="button" onclick="toggleRssTips()" class="w-full flex items-center justify-between text-xs text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-2 rounded-lg transition-all group">
                     <span class="font-bold flex items-center gap-1.5">
-                        <i class="fa-regular fa-lightbulb"></i> RSS 订阅灵感 & 参考库 <span class="font-normal opacity-70 ml-1">(内附常用源)</span>
+                        <i class="fa-regular fa-lightbulb" aria-hidden="true"></i> RSS 订阅灵感 &amp; 参考库 <span class="font-normal opacity-70 ml-1">(内附常用源)</span>
                     </span>
-                    <i id="rss-tips-icon" class="fa-solid fa-chevron-down transition-transform duration-200 text-orange-400 group-hover:text-orange-600" style="transform: rotate(180deg);"></i>
+                    <i id="rss-tips-icon" class="fa-solid fa-chevron-down transition-transform duration-200 text-orange-400 group-hover:text-orange-600" style="transform: rotate(180deg);" aria-hidden="true"></i>
                 </button>
 
                 <div id="rss-tips-panel" class="mt-2 space-y-3 pl-1">
@@ -277,7 +191,7 @@
                     <!-- 必应新闻 -->
                     <div class="bg-white border border-gray-100 rounded-lg p-3 shadow-sm">
                         <div class="flex items-center gap-2 mb-2">
-                            <i class="fa-brands fa-microsoft text-blue-500"></i>
+                            <i class="fa-brands fa-microsoft text-blue-500" aria-hidden="true"></i>
                             <span class="font-bold text-gray-700">Bing 新闻 (支持任意关键词)</span>
                         </div>
                         <div class="grid grid-cols-2 gap-2 mb-2">
@@ -303,22 +217,22 @@
                     <!-- 更多参考 -->
                     <div class="bg-white border border-gray-100 rounded-lg p-3 shadow-sm">
                         <div class="flex items-center gap-2 mb-2">
-                            <i class="fa-solid fa-book-open text-purple-500"></i>
+                            <i class="fa-solid fa-book-open text-purple-500" aria-hidden="true"></i>
                             <span class="font-bold text-gray-700">更多 RSS 源参考</span>
                         </div>
                         <div class="flex flex-wrap gap-2 text-xs">
-                             <a href="https://github.com/tuan3w/awesome-tech-rss" target="_blank" class="text-blue-600 hover:underline flex items-center bg-blue-50 px-2 py-1 rounded">
-                                <i class="fa-brands fa-github mr-1"></i>科技/编程
+                             <a href="https://github.com/tuan3w/awesome-tech-rss" target="_blank" rel="noopener" class="text-blue-600 hover:underline flex items-center bg-blue-50 px-2 py-1 rounded">
+                                <i class="fa-brands fa-github mr-1" aria-hidden="true"></i>科技/编程
                             </a>
-                             <a href="https://github.com/plenaryapp/awesome-rss-feeds" target="_blank" class="text-blue-600 hover:underline flex items-center bg-blue-50 px-2 py-1 rounded">
-                                <i class="fa-brands fa-github mr-1"></i>全球新闻
+                             <a href="https://github.com/plenaryapp/awesome-rss-feeds" target="_blank" rel="noopener" class="text-blue-600 hover:underline flex items-center bg-blue-50 px-2 py-1 rounded">
+                                <i class="fa-brands fa-github mr-1" aria-hidden="true"></i>全球新闻
                             </a>
                         </div>
                     </div>
 
                     <!-- 免责声明 -->
                     <div class="text-[10px] text-gray-400 italic leading-relaxed px-1">
-                        <i class="fa-solid fa-shield-halved mr-1 text-gray-300"></i>免责声明：以上 RSS 示例及第三方工具均源自互联网，开发者未一一验证其长期有效性，请你在使用前自行核实。
+                        <i class="fa-solid fa-shield-halved mr-1 text-gray-300" aria-hidden="true"></i>免责声明: 以上 RSS 示例及第三方工具均源自互联网, 开发者未一一验证其长期有效性, 请在使用前自行核实。
                     </div>
                 </div>
             </div>
@@ -331,20 +245,20 @@
     </div>
 
     <!-- 平台添加弹窗 -->
-    <div id="platform-modal" class="modal-overlay hidden">
+    <div id="platform-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="platform-modal-title">
         <div class="modal-content">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-layer-group mr-2 text-green-600"></i>添加热榜平台</h3>
-                <button onclick="closePlatformModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+                <h2 id="platform-modal-title" class="text-lg font-bold text-gray-800"><i class="fa-solid fa-layer-group mr-2 text-green-600" aria-hidden="true"></i>添加热榜平台</h2>
+                <button onclick="closePlatformModal()" class="text-gray-400 hover:text-gray-600" aria-label="关闭"><i class="fa-solid fa-times text-xl" aria-hidden="true"></i></button>
             </div>
 
             <!-- 标签页切换 -->
-            <div class="flex border-b border-gray-200 mb-4">
-                <button onclick="switchPlatformTab('select')" id="tab-platform-select" class="flex-1 py-2 text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-colors">
-                    <i class="fa-solid fa-list mr-1"></i>选择预设
+            <div class="flex border-b border-gray-200 mb-4" role="tablist">
+                <button onclick="switchPlatformTab('select')" id="tab-platform-select" role="tab" aria-selected="true" class="flex-1 py-2 text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-colors">
+                    <i class="fa-solid fa-list mr-1" aria-hidden="true"></i>选择预设
                 </button>
-                <button onclick="switchPlatformTab('custom')" id="tab-platform-custom" class="flex-1 py-2 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700 transition-colors">
-                    <i class="fa-solid fa-pen-to-square mr-1"></i>手动输入
+                <button onclick="switchPlatformTab('custom')" id="tab-platform-custom" role="tab" aria-selected="false" class="flex-1 py-2 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700 transition-colors">
+                    <i class="fa-solid fa-pen-to-square mr-1" aria-hidden="true"></i>手动输入
                 </button>
             </div>
 
@@ -361,15 +275,15 @@
             <!-- 2. 手动输入平台 -->
             <div id="platform-custom-panel" class="hidden space-y-4">
                 <div class="bg-blue-50 border border-blue-100 rounded p-3 mb-3 text-xs text-blue-800">
-                    <i class="fa-solid fa-info-circle mr-1"></i>自定义平台需要后端爬虫支持，此处仅用于配置占位。
+                    <i class="fa-solid fa-info-circle mr-1" aria-hidden="true"></i>自定义平台需要后端爬虫支持, 此处仅用于配置占位。
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">平台 Key（英文）</label>
-                    <input type="text" id="custom-platform-key" placeholder="例如: sspai" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label for="custom-platform-key" class="block text-xs font-bold text-gray-600 mb-1">平台 Key (英文)</label>
+                    <input type="text" id="custom-platform-key" name="platform-key" placeholder="例如: sspai…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">显示名称</label>
-                    <input type="text" id="custom-platform-name" placeholder="例如: 少数派" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label for="custom-platform-name" class="block text-xs font-bold text-gray-600 mb-1">显示名称</label>
+                    <input type="text" id="custom-platform-name" name="platform-name" placeholder="例如: 少数派…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
 
@@ -381,18 +295,18 @@
     </div>
 
     <!-- 词组类型选择弹窗 -->
-    <div id="wordgroup-type-modal" class="modal-overlay hidden">
+    <div id="wordgroup-type-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="wordgroup-modal-title">
         <div class="modal-content max-w-2xl">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-layer-group mr-2 text-blue-500"></i>选择词组类型</h3>
-                <button onclick="closeWordGroupTypeModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+                <h2 id="wordgroup-modal-title" class="text-lg font-bold text-gray-800"><i class="fa-solid fa-layer-group mr-2 text-blue-500" aria-hidden="true"></i>选择词组类型</h2>
+                <button onclick="closeWordGroupTypeModal()" class="text-gray-400 hover:text-gray-600" aria-label="关闭"><i class="fa-solid fa-times text-xl" aria-hidden="true"></i></button>
             </div>
             <div class="space-y-3">
                 <!-- 组别名类型 -->
-                <div onclick="confirmAddWordGroup('group')" class="cursor-pointer border-2 border-orange-200 bg-orange-50 rounded-lg p-4 hover:border-orange-400 hover:bg-orange-100 transition-all">
+                <button type="button" onclick="confirmAddWordGroup('group')" class="w-full text-left cursor-pointer border-2 border-orange-200 bg-orange-50 rounded-lg p-4 hover:border-orange-400 hover:bg-orange-100 transition-colors">
                     <div class="flex items-center gap-3">
                         <span class="text-xs bg-orange-500 text-white px-2 py-1 rounded font-bold">组别名</span>
-                        <span class="font-bold text-gray-800">多关键词词组（推荐）</span>
+                        <span class="font-bold text-gray-800">多关键词词组 (推荐)</span>
                     </div>
                     <div class="mt-2 text-sm text-gray-600">
                         <div class="font-mono bg-white rounded p-2 text-xs border border-orange-200">
@@ -402,12 +316,12 @@
                             <div>朝鲜</div>
                         </div>
                         <div class="mt-2 text-xs text-gray-500">
-                            <i class="fa-solid fa-check-circle text-orange-500 mr-1"></i>适用于：多个关键词归为一组，统一显示为组名
+                            <i class="fa-solid fa-check-circle text-orange-500 mr-1" aria-hidden="true"></i>适用于: 多个关键词归为一组, 统一显示为组名
                         </div>
                     </div>
-                </div>
+                </button>
                 <!-- 单个别名类型 -->
-                <div onclick="confirmAddWordGroup('alias')" class="cursor-pointer border-2 border-teal-200 bg-teal-50 rounded-lg p-4 hover:border-teal-400 hover:bg-teal-100 transition-all">
+                <button type="button" onclick="confirmAddWordGroup('alias')" class="w-full text-left cursor-pointer border-2 border-teal-200 bg-teal-50 rounded-lg p-4 hover:border-teal-400 hover:bg-teal-100 transition-colors">
                     <div class="flex items-center gap-3">
                         <span class="text-xs bg-teal-500 text-white px-2 py-1 rounded font-bold">单个别名</span>
                         <span class="font-bold text-gray-800">正则/关键词 + 别名</span>
@@ -417,12 +331,12 @@
                             <div>/胖东来|于东来/ <span class="text-teal-600">=></span> 胖东来</div>
                         </div>
                         <div class="mt-2 text-xs text-gray-500">
-                            <i class="fa-solid fa-check-circle text-teal-500 mr-1"></i>适用于：用正则匹配多个词，显示为一个别名（前后有空行分隔）
+                            <i class="fa-solid fa-check-circle text-teal-500 mr-1" aria-hidden="true"></i>适用于: 用正则匹配多个词, 显示为一个别名 (前后有空行分隔)
                         </div>
                     </div>
-                </div>
+                </button>
                 <!-- 连续别名类型 -->
-                <div onclick="confirmAddWordGroup('multi-alias')" class="cursor-pointer border-2 border-purple-200 bg-purple-50 rounded-lg p-4 hover:border-purple-400 hover:bg-purple-100 transition-all">
+                <button type="button" onclick="confirmAddWordGroup('multi-alias')" class="w-full text-left cursor-pointer border-2 border-purple-200 bg-purple-50 rounded-lg p-4 hover:border-purple-400 hover:bg-purple-100 transition-colors">
                     <div class="flex items-center gap-3">
                         <span class="text-xs bg-purple-500 text-white px-2 py-1 rounded font-bold">连续别名组</span>
                         <span class="font-bold text-gray-800">多个相关品牌/词组</span>
@@ -433,12 +347,12 @@
                             <div>/众擎|EngineAI/ <span class="text-purple-600">=></span> 众擎机器人</div>
                         </div>
                         <div class="mt-2 text-xs text-gray-500">
-                            <i class="fa-solid fa-check-circle text-purple-500 mr-1"></i>适用于：多个相关品牌放在一起（<strong>无空行分隔</strong>）
+                            <i class="fa-solid fa-check-circle text-purple-500 mr-1" aria-hidden="true"></i>适用于: 多个相关品牌放在一起 (<strong>无空行分隔</strong>)
                         </div>
                     </div>
-                </div>
+                </button>
                 <!-- 普通词组类型 -->
-                <div onclick="confirmAddWordGroup('plain')" class="cursor-pointer border-2 border-gray-200 bg-gray-50 rounded-lg p-4 hover:border-gray-400 hover:bg-gray-100 transition-all">
+                <button type="button" onclick="confirmAddWordGroup('plain')" class="w-full text-left cursor-pointer border-2 border-gray-200 bg-gray-50 rounded-lg p-4 hover:border-gray-400 hover:bg-gray-100 transition-colors">
                     <div class="flex items-center gap-3">
                         <span class="text-xs bg-gray-500 text-white px-2 py-1 rounded font-bold">普通词组</span>
                         <span class="font-bold text-gray-800">简单关键词</span>
@@ -448,10 +362,10 @@
                             <div>申奥</div>
                         </div>
                         <div class="mt-2 text-xs text-gray-500">
-                            <i class="fa-solid fa-check-circle text-gray-500 mr-1"></i>适用于：单个或少量普通关键词
+                            <i class="fa-solid fa-check-circle text-gray-500 mr-1" aria-hidden="true"></i>适用于: 单个或少量普通关键词
                         </div>
                     </div>
-                </div>
+                </button>
             </div>
             <div class="flex justify-end gap-2 mt-6">
                 <button onclick="closeWordGroupTypeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
@@ -470,13 +384,13 @@
                         <p id="qr-modal-subtitle" class="text-xs text-gray-500 mt-0.5"></p>
                     </div>
                 </div>
-                <button onclick="closeQrModal()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors">
-                    <i class="fa-solid fa-times"></i>
+                <button onclick="closeQrModal()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors" aria-label="关闭">
+                    <i class="fa-solid fa-times" aria-hidden="true"></i>
                 </button>
             </div>
             <div class="flex justify-center">
                 <div class="w-56 h-56 bg-white border border-gray-100 rounded-2xl p-3 shadow-sm">
-                    <img id="qr-modal-img" src="" alt="" class="w-full h-full object-contain">
+                    <img id="qr-modal-img" src="" alt="二维码" class="w-full h-full object-contain" width="200" height="200" loading="lazy">
                 </div>
             </div>
             <p id="qr-modal-hint" class="text-xs text-gray-400 mt-4"></p>
@@ -484,30 +398,30 @@
     </div>
 
     <!-- 新建调度模式弹窗 -->
-    <div id="tl-new-preset-modal" class="modal-overlay hidden">
+    <div id="tl-new-preset-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tl-preset-modal-title">
         <div class="modal-content">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-calendar-plus mr-2 text-purple-600"></i>新建调度模式</h3>
-                <button onclick="closeTlNewPresetModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+                <h2 id="tl-preset-modal-title" class="text-lg font-bold text-gray-800"><i class="fa-solid fa-calendar-plus mr-2 text-purple-600" aria-hidden="true"></i>新建调度模式</h2>
+                <button onclick="closeTlNewPresetModal()" class="text-gray-400 hover:text-gray-600" aria-label="关闭"><i class="fa-solid fa-times text-xl" aria-hidden="true"></i></button>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">模式标识 (key)</label>
-                    <input type="text" id="tl-new-preset-key" placeholder="英文标识，如 my_schedule" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
-                    <p class="text-[10px] text-gray-400 mt-1">仅支持英文、数字和下划线，将作为 YAML 中的 key</p>
+                    <label for="tl-new-preset-key" class="block text-xs font-bold text-gray-600 mb-1">模式标识 (key)</label>
+                    <input type="text" id="tl-new-preset-key" name="preset-key" placeholder="英文标识, 如 my_schedule…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                    <p class="text-[10px] text-gray-400 mt-1">仅支持英文, 数字和下划线, 将作为 YAML 中的 key</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">显示名称</label>
-                    <input type="text" id="tl-new-preset-name" placeholder="如：我的调度" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                    <label for="tl-new-preset-name" class="block text-xs font-bold text-gray-600 mb-1">显示名称</label>
+                    <input type="text" id="tl-new-preset-name" name="preset-name" placeholder="如: 我的调度…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">描述（可选）</label>
-                    <input type="text" id="tl-new-preset-desc" placeholder="简短描述此模式的用途" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                    <label for="tl-new-preset-desc" class="block text-xs font-bold text-gray-600 mb-1">描述 (可选)</label>
+                    <input type="text" id="tl-new-preset-desc" name="preset-desc" placeholder="简短描述此模式的用途…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">基于模板</label>
-                    <select id="tl-new-preset-template" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
-                        <option value="">空白模板（仅采集，不推送不分析）</option>
+                    <label for="tl-new-preset-template" class="block text-xs font-bold text-gray-600 mb-1">基于模板</label>
+                    <select id="tl-new-preset-template" name="preset-template" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                        <option value="">空白模板 (仅采集, 不推送不分析)</option>
                     </select>
                     <p class="text-[10px] text-gray-400 mt-1">复制已有模式的全部配置作为起点</p>
                 </div>
@@ -520,34 +434,34 @@
     </div>
 
     <!-- 新增时间段弹窗 -->
-    <div id="tl-new-period-modal" class="modal-overlay hidden">
+    <div id="tl-new-period-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tl-period-modal-title">
         <div class="modal-content">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-clock-rotate-left mr-2 text-blue-600"></i>新增时间段</h3>
-                <button onclick="closeTlNewPeriodModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
+                <h2 id="tl-period-modal-title" class="text-lg font-bold text-gray-800"><i class="fa-solid fa-clock-rotate-left mr-2 text-blue-600" aria-hidden="true"></i>新增时间段</h2>
+                <button onclick="closeTlNewPeriodModal()" class="text-gray-400 hover:text-gray-600" aria-label="关闭"><i class="fa-solid fa-times text-xl" aria-hidden="true"></i></button>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">时间段标识 (key)</label>
-                    <input type="text" id="tl-new-period-key" placeholder="英文标识，如 morning_push" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                    <p class="text-[10px] text-gray-400 mt-1">仅支持英文、数字和下划线</p>
+                    <label for="tl-new-period-key" class="block text-xs font-bold text-gray-600 mb-1">时间段标识 (key)</label>
+                    <input type="text" id="tl-new-period-key" name="period-key" placeholder="英文标识, 如 morning_push…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <p class="text-[10px] text-gray-400 mt-1">仅支持英文, 数字和下划线</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">显示名称</label>
-                    <input type="text" id="tl-new-period-name" placeholder="如：晨间推送" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <label for="tl-new-period-name" class="block text-xs font-bold text-gray-600 mb-1">显示名称</label>
+                    <input type="text" id="tl-new-period-name" name="period-name" placeholder="如: 晨间推送…" autocomplete="off" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">开始时间</label>
-                        <input type="time" id="tl-new-period-start" value="09:00" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label for="tl-new-period-start" class="block text-xs font-bold text-gray-600 mb-1">开始时间</label>
+                        <input type="time" id="tl-new-period-start" name="period-start" value="09:00" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">结束时间</label>
-                        <input type="time" id="tl-new-period-end" value="11:00" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <label for="tl-new-period-end" class="block text-xs font-bold text-gray-600 mb-1">结束时间</label>
+                        <input type="time" id="tl-new-period-end" name="period-end" value="11:00" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                     </div>
                 </div>
                 <div class="bg-blue-50 border border-blue-100 rounded p-3 text-xs text-blue-700">
-                    <i class="fa-solid fa-info-circle mr-1"></i>如果开始时间 > 结束时间（如 22:00～01:00），将自动识别为跨午夜时间段。
+                    <i class="fa-solid fa-info-circle mr-1" aria-hidden="true"></i>如果开始时间 > 结束时间 (如 22:00–01:00), 将自动识别为跨午夜时间段。
                 </div>
             </div>
             <div class="flex justify-end gap-2 mt-6">
@@ -557,6 +471,6 @@
         </div>
     </div>
 
-    <script src="./assets/script.js"></script>
+    <script src="./assets/script.js?v=7"></script>
 </body>
 </html>

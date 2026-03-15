@@ -73,6 +73,15 @@ class NotificationDispatcher:
         self.max_accounts = config.get("MAX_ACCOUNTS_PER_CHANNEL", 3)
         self.translator = translator
 
+    @staticmethod
+    def _mask_main_section(report_data: Dict) -> Dict:
+        """隐藏主资讯区，但保留错误信息与其他附加区块所需上下文。"""
+        masked = dict(report_data)
+        masked["stats"] = []
+        masked["new_titles"] = []
+        masked["total_new_count"] = 0
+        return masked
+
     def _translate_content(
         self,
         report_data: Dict,
@@ -370,7 +379,7 @@ class NotificationDispatcher:
         """发送到飞书（多账号，支持热榜+RSS合并+AI分析+独立展示区）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
-            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+            report_data = self._mask_main_section(report_data)
 
         return self._send_to_multi_accounts(
             channel_name="飞书",
@@ -411,7 +420,7 @@ class NotificationDispatcher:
         """发送到钉钉（多账号，支持热榜+RSS合并+AI分析+独立展示区）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
-            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+            report_data = self._mask_main_section(report_data)
 
         return self._send_to_multi_accounts(
             channel_name="钉钉",
@@ -451,7 +460,7 @@ class NotificationDispatcher:
         """发送到企业微信（多账号，支持热榜+RSS合并+AI分析+独立展示区）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
-            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+            report_data = self._mask_main_section(report_data)
 
         return self._send_to_multi_accounts(
             channel_name="企业微信",
@@ -492,7 +501,7 @@ class NotificationDispatcher:
         """发送到 Telegram（多账号，需验证 token 和 chat_id 配对，支持热榜+RSS合并+AI分析+独立展示区）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
-            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+            report_data = self._mask_main_section(report_data)
 
         telegram_tokens = parse_multi_account_config(self.config["TELEGRAM_BOT_TOKEN"])
         telegram_chat_ids = parse_multi_account_config(self.config["TELEGRAM_CHAT_ID"])
@@ -555,7 +564,7 @@ class NotificationDispatcher:
         """发送到 ntfy（多账号，需验证 topic 和 token 配对，支持热榜+RSS合并+AI分析+独立展示区）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
-            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+            report_data = self._mask_main_section(report_data)
 
         ntfy_server_url = self.config["NTFY_SERVER_URL"]
         ntfy_topics = parse_multi_account_config(self.config["NTFY_TOPIC"])
@@ -617,7 +626,7 @@ class NotificationDispatcher:
         """发送到 Bark（多账号，支持热榜+RSS合并+AI分析+独立展示区）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
-            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+            report_data = self._mask_main_section(report_data)
 
         return self._send_to_multi_accounts(
             channel_name="Bark",
@@ -657,7 +666,7 @@ class NotificationDispatcher:
         """发送到 Slack（多账号，支持热榜+RSS合并+AI分析+独立展示区）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
-            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+            report_data = self._mask_main_section(report_data)
 
         return self._send_to_multi_accounts(
             channel_name="Slack",
@@ -697,7 +706,7 @@ class NotificationDispatcher:
         """发送到通用 Webhook（多账号，支持热榜+RSS合并+AI分析+独立展示区）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
-            report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
+            report_data = self._mask_main_section(report_data)
 
         urls = parse_multi_account_config(self.config.get("GENERIC_WEBHOOK_URL", ""))
         templates = parse_multi_account_config(self.config.get("GENERIC_WEBHOOK_TEMPLATE", ""))

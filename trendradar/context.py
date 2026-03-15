@@ -685,10 +685,16 @@ class AppContext:
         print(f"[AI筛选] 使用 {len(active_tags)} 个标签")
 
         # 4. 收集待分类新闻
-        # 热榜
-        all_news = storage.get_all_news_ids()
-        analyzed_hotlist = storage.get_analyzed_news_ids("hotlist", interests_file=effective_interests_file)
-        pending_news = [n for n in all_news if n["id"] not in analyzed_hotlist]
+        # 热榜：当热榜抓取关闭时，禁止从历史热榜库回流旧数据参与主区分类
+        all_news = []
+        analyzed_hotlist = []
+        pending_news = []
+        if self.config.get("ENABLE_CRAWLER", True) and self.platforms:
+            all_news = storage.get_all_news_ids()
+            analyzed_hotlist = storage.get_analyzed_news_ids(
+                "hotlist", interests_file=effective_interests_file
+            )
+            pending_news = [n for n in all_news if n["id"] not in analyzed_hotlist]
 
         # RSS（先做新鲜度过滤，再去除已分类的）
         pending_rss = []
@@ -821,6 +827,8 @@ class AppContext:
 
         # 8. 查询并组装返回结果
         all_results = storage.get_active_ai_filter_results(interests_file=effective_interests_file)
+        if not self.config.get("ENABLE_CRAWLER", True):
+            all_results = [r for r in all_results if r.get("source_type") == "rss"]
 
         if debug:
             print(f"[AI筛选][DEBUG] === 最终汇总 ===")

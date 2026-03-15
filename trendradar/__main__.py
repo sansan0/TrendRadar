@@ -526,8 +526,9 @@ class NewsAnalyzer:
             # 提取平台列表
             platforms = list(ai_id_to_name.values()) if ai_id_to_name else []
 
-            # 提取关键词列表
-            keywords = [s.get("word", "") for s in ai_stats if s.get("word")] if ai_stats else []
+            # 提取关键词列表；当 RSS 接管主区时，回退使用 RSS 分组词
+            keyword_source = ai_stats or rss_items or []
+            keywords = [s.get("word", "") for s in keyword_source if s.get("word")]
 
             # 确定报告类型
             if ai_mode != mode:
@@ -588,18 +589,38 @@ class NewsAnalyzer:
     ) -> Optional[Tuple[Dict, Dict, Dict, Dict, List, List]]:
         """统一的数据加载和预处理，使用当前监控平台列表过滤历史数据"""
         try:
+            if not self.ctx.config.get("ENABLE_CRAWLER", True):
+                if not quiet:
+                    print("热榜抓取已关闭，分析流水线将使用空热榜数据并继续处理 RSS / AI")
+                word_groups, filter_words, global_filters = self.ctx.load_frequency_words(
+                    self.frequency_file
+                )
+                return ({}, {}, {}, {}, word_groups, filter_words, global_filters)
+
             # 获取当前配置的监控平台ID列表
             current_platform_ids = self.ctx.platform_ids
             if not quiet:
                 print(f"当前监控平台: {current_platform_ids}")
+
+            if not current_platform_ids:
+                if not quiet:
+                    print("未配置热榜平台，分析流水线将继续处理 RSS / AI")
+                word_groups, filter_words, global_filters = self.ctx.load_frequency_words(
+                    self.frequency_file
+                )
+                return ({}, {}, {}, {}, word_groups, filter_words, global_filters)
 
             all_results, id_to_name, title_info = self.ctx.read_today_titles(
                 current_platform_ids, quiet=quiet
             )
 
             if not all_results:
-                print("没有找到当天的数据")
-                return None
+                if not quiet:
+                    print("没有找到当天的热榜数据，将继续处理 RSS / AI")
+                word_groups, filter_words, global_filters = self.ctx.load_frequency_words(
+                    self.frequency_file
+                )
+                return ({}, {}, {}, {}, word_groups, filter_words, global_filters)
 
             total_titles = sum(len(titles) for titles in all_results.values())
             if not quiet:
@@ -791,6 +812,53 @@ class NewsAnalyzer:
 
         return standalone_data
 
+    @staticmethod
+    def _count_grouped_titles(grouped_stats: Optional[List[Dict]]) -> int:
+        """统计 grouped stats 中实际展示的标题数"""
+        if not grouped_stats:
+            return 0
+        return sum(
+            len(stat.get("titles", []))
+            for stat in grouped_stats
+            if stat.get("count", 0) > 0
+        )
+
+    def _select_primary_stats(
+        self,
+        hotlist_stats: Optional[List[Dict]],
+        rss_stats: Optional[List[Dict]],
+    ) -> Tuple[List[Dict], Optional[List[Dict]], bool]:
+        """选择主资讯区的 grouped stats，并避免 RSS 在主区/副区重复展示"""
+        normalized_hotlist_stats = hotlist_stats or []
+        normalized_rss_stats = rss_stats or []
+
+        if normalized_hotlist_stats:
+            return normalized_hotlist_stats, rss_stats, False
+
+        if normalized_rss_stats:
+            print("[展示] 热榜主区为空，使用 RSS / AI 结果作为主资讯区")
+            return normalized_rss_stats, None, True
+
+        return [], rss_stats, False
+
+    def _normalize_ai_analysis_inputs(
+        self,
+        stats: Optional[List[Dict]],
+        rss_items: Optional[List[Dict]],
+    ) -> Tuple[List[Dict], Optional[List[Dict]]]:
+        """热榜关闭且 RSS 已接管主区时，按 RSS 语义组织 AI 分析输入。"""
+        normalized_stats = stats or []
+        normalized_rss_items = rss_items or None
+
+        if (
+            not self.ctx.config.get("ENABLE_CRAWLER", True)
+            and normalized_stats
+            and not normalized_rss_items
+        ):
+            return [], normalized_stats
+
+        return normalized_stats, normalized_rss_items
+
     def _run_analysis_pipeline(
         self,
         data_source: Dict,
@@ -810,6 +878,7 @@ class NewsAnalyzer:
         rss_new_urls: Optional[set] = None,
     ) -> Tuple[List[Dict], Optional[str], Optional[AIAnalysisResult], Optional[List[Dict]]]:
         """统一的分析流水线：数据处理 → 统计计算（关键词/AI筛选）→ AI分析 → HTML生成"""
+        total_titles = 0
 
         # 根据筛选策略选择数据处理方式
         if self.filter_method == "ai":
@@ -824,7 +893,6 @@ class NewsAnalyzer:
                     ai_filter_result, mode=mode,
                     new_titles=new_titles, rss_new_urls=rss_new_urls,
                 )
-                total_titles = sum(len(titles) for titles in data_source.values())
 
                 # AI 筛选的 RSS 结果替换关键词匹配的 RSS 结果
                 if ai_rss_stats:
@@ -846,6 +914,8 @@ class NewsAnalyzer:
                 mode=mode, global_filters=global_filters, quiet=quiet,
             )
 
+        stats, rss_items, rss_promoted = self._select_primary_stats(stats, rss_items)
+
         # 如果是 platform 模式，转换数据结构
         if self.ctx.display_mode == "platform" and stats:
             stats = convert_keyword_stats_to_platform_stats(
@@ -854,15 +924,32 @@ class NewsAnalyzer:
                 self.ctx.rank_threshold,
             )
 
+        if self.ctx.display_mode == "platform" and rss_items:
+            rss_items = convert_keyword_stats_to_platform_stats(
+                rss_items,
+                self.ctx.weight_config,
+                self.ctx.rank_threshold,
+            )
+
+        total_titles = (
+            self._count_grouped_titles(stats)
+            + self._count_grouped_titles(rss_items)
+        )
+
+        if rss_promoted:
+            print(f"[展示] 主资讯区已切换为 RSS / AI 分组，共 {self._count_grouped_titles(stats)} 条")
+
+        ai_stats_input, ai_rss_input = self._normalize_ai_analysis_inputs(stats, rss_items)
+
         # AI 分析（如果启用，用于 HTML 报告）
         ai_result = None
         ai_config = self.ctx.config.get("AI_ANALYSIS", {})
-        if ai_config.get("ENABLED", False) and stats:
+        if ai_config.get("ENABLED", False) and (ai_stats_input or ai_rss_input):
             # 获取模式策略来确定报告类型
             mode_strategy = self._get_mode_strategy()
             report_type = mode_strategy["report_type"]
             ai_result = self._run_ai_analysis(
-                stats, rss_items, mode, report_type, id_to_name,
+                ai_stats_input, ai_rss_input, mode, report_type, id_to_name,
                 current_results=data_source, schedule=schedule,
                 standalone_data=standalone_data
             )
@@ -907,12 +994,12 @@ class NewsAnalyzer:
         has_notification = self._has_notification_configured()
         cfg = self.ctx.config
 
-        # 检查是否有有效内容（热榜或RSS）
+        # 检查是否有有效内容（主资讯区或 RSS 补充区）
         has_news_content = self._has_valid_content(stats, new_titles)
         has_rss_content = bool(rss_items and len(rss_items) > 0)
         has_any_content = has_news_content or has_rss_content
 
-        # 计算热榜匹配条数
+        # 计算主资讯区与 RSS 补充区条数
         news_count = sum(len(stat.get("titles", [])) for stat in stats) if stats else 0
         rss_count = sum(stat.get("count", 0) for stat in rss_items) if rss_items else 0
 
@@ -924,7 +1011,7 @@ class NewsAnalyzer:
             # 输出推送内容统计
             content_parts = []
             if news_count > 0:
-                content_parts.append(f"热榜 {news_count} 条")
+                content_parts.append(f"主区 {news_count} 条")
             if rss_count > 0:
                 content_parts.append(f"RSS {rss_count} 条")
             total_count = news_count + rss_count
@@ -948,8 +1035,11 @@ class NewsAnalyzer:
             if ai_result is None:
                 ai_config = cfg.get("AI_ANALYSIS", {})
                 if ai_config.get("ENABLED", False):
+                    ai_stats_input, ai_rss_input = self._normalize_ai_analysis_inputs(
+                        stats, rss_items
+                    )
                     ai_result = self._run_ai_analysis(
-                        stats, rss_items, mode, report_type, id_to_name,
+                        ai_stats_input, ai_rss_input, mode, report_type, id_to_name,
                         current_results=current_results, schedule=schedule
                     )
 
@@ -1015,8 +1105,7 @@ class NewsAnalyzer:
         print(f"当前北京时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
         if not self.ctx.config["ENABLE_CRAWLER"]:
-            print("爬虫功能已禁用（ENABLE_CRAWLER=False），程序退出")
-            return
+            print("热榜抓取已禁用（ENABLE_CRAWLER=False），将继续处理 RSS / AI 流程")
 
         has_notification = self._has_notification_configured()
         if not self.ctx.config["ENABLE_NOTIFICATION"]:
@@ -1032,6 +1121,14 @@ class NewsAnalyzer:
 
     def _crawl_data(self) -> Tuple[Dict, Dict, List]:
         """执行数据爬取"""
+        if not self.ctx.config.get("ENABLE_CRAWLER", True):
+            print("跳过热榜抓取：平台抓取已关闭")
+            return {}, {}, []
+
+        if not self.ctx.platforms:
+            print("跳过热榜抓取：未配置任何监控平台")
+            return {}, {}, []
+
         ids = []
         for platform in self.ctx.platforms:
             if "name" in platform:
@@ -1504,9 +1601,13 @@ class NewsAnalyzer:
             print("[调度] 当前时间段不执行数据采集，跳过分析流水线")
             return None
         # 获取当前监控平台ID列表
-        current_platform_ids = self.ctx.platform_ids
+        current_platform_ids = (
+            self.ctx.platform_ids if self.ctx.config.get("ENABLE_CRAWLER", True) else []
+        )
 
-        new_titles = self.ctx.detect_new_titles(current_platform_ids)
+        new_titles = (
+            self.ctx.detect_new_titles(current_platform_ids) if current_platform_ids else {}
+        )
         time_info = self.ctx.format_time()
         word_groups, filter_words, global_filters = self.ctx.load_frequency_words(self.frequency_file)
 

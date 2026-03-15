@@ -58,7 +58,7 @@ def render_html_content(
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>热点新闻分析</title>
+        <title>主资讯分析</title>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <style>
             * { box-sizing: border-box; }
@@ -741,7 +741,7 @@ def render_html_content(
                     <button class="save-btn" onclick="saveAsImage()">保存为图片</button>
                     <button class="save-btn" onclick="saveAsMultipleImages()">分段保存</button>
                 </div>
-                <div class="header-title">热点新闻分析</div>
+                <div class="header-title">主资讯分析</div>
                 <div class="header-info">
                     <div class="info-item">
                         <span class="info-label">报告类型</span>
@@ -763,13 +763,13 @@ def render_html_content(
 
     html += f"{total_titles} 条"
 
-    # 计算筛选后的热点新闻数量
+    # 计算主资讯区展示数量
     hot_news_count = sum(len(stat["titles"]) for stat in report_data["stats"])
 
     html += """</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">热点新闻</span>
+                        <span class="info-label">主资讯</span>
                         <span class="info-value">"""
 
     html += f"{hot_news_count} 条"
@@ -806,15 +806,22 @@ def render_html_content(
                     </ul>
                 </div>"""
 
-    # 生成热点词汇统计部分的HTML
-    stats_html = ""
-    if report_data["stats"]:
-        total_count = len(report_data["stats"])
+    def render_grouped_stats_html(
+        stats: List[Dict],
+        *,
+        section_class: str = "hotlist-section",
+        section_title: Optional[str] = None,
+    ) -> str:
+        """渲染统一的分组资讯区块，主区与 RSS 补充区共享同一套卡片样式"""
+        if not stats:
+            return ""
 
-        for i, stat in enumerate(report_data["stats"], 1):
-            count = stat["count"]
+        grouped_html = ""
+        total_groups = len(stats)
 
-            # 确定热度等级
+        for i, stat in enumerate(stats, 1):
+            count = stat.get("count", 0)
+
             if count >= 10:
                 count_class = "hot"
             elif count >= 5:
@@ -822,47 +829,41 @@ def render_html_content(
             else:
                 count_class = ""
 
-            escaped_word = html_escape(stat["word"])
+            escaped_word = html_escape(stat.get("word", ""))
 
-            stats_html += f"""
+            grouped_html += f"""
                 <div class="word-group">
                     <div class="word-header">
                         <div class="word-info">
                             <div class="word-name">{escaped_word}</div>
                             <div class="word-count {count_class}">{count} 条</div>
                         </div>
-                        <div class="word-index">{i}/{total_count}</div>
+                        <div class="word-index">{i}/{total_groups}</div>
                     </div>"""
 
-            # 处理每个词组下的新闻标题，给每条新闻标上序号
-            for j, title_data in enumerate(stat["titles"], 1):
+            for j, title_data in enumerate(stat.get("titles", []), 1):
                 is_new = title_data.get("is_new", False)
                 new_class = "new" if is_new else ""
 
-                stats_html += f"""
+                grouped_html += f"""
                     <div class="news-item {new_class}">
                         <div class="news-number">{j}</div>
                         <div class="news-content">
                             <div class="news-header">"""
 
-                # 根据 display_mode 决定显示来源还是关键词
                 if display_mode == "keyword":
-                    # keyword 模式：显示来源
-                    stats_html += f'<span class="source-name">{html_escape(title_data["source_name"])}</span>'
+                    grouped_html += f'<span class="source-name">{html_escape(title_data["source_name"])}</span>'
                 else:
-                    # platform 模式：显示关键词
                     matched_keyword = title_data.get("matched_keyword", "")
                     if matched_keyword:
-                        stats_html += f'<span class="keyword-tag">[{html_escape(matched_keyword)}]</span>'
+                        grouped_html += f'<span class="keyword-tag">[{html_escape(matched_keyword)}]</span>'
 
-                # 处理排名显示
                 ranks = title_data.get("ranks", [])
                 if ranks:
                     min_rank = min(ranks)
                     max_rank = max(ranks)
                     rank_threshold = title_data.get("rank_threshold", 10)
 
-                    # 确定排名等级
                     if min_rank <= 3:
                         rank_class = "top"
                     elif min_rank <= rank_threshold:
@@ -870,65 +871,66 @@ def render_html_content(
                     else:
                         rank_class = ""
 
-                    if min_rank == max_rank:
-                        rank_text = str(min_rank)
-                    else:
-                        rank_text = f"{min_rank}-{max_rank}"
+                    rank_text = str(min_rank) if min_rank == max_rank else f"{min_rank}-{max_rank}"
+                    grouped_html += f'<span class="rank-num {rank_class}">{rank_text}</span>'
 
-                    stats_html += f'<span class="rank-num {rank_class}">{rank_text}</span>'
-
-                # 处理时间显示
                 time_display = title_data.get("time_display", "")
                 if time_display:
-                    # 简化时间显示格式，将波浪线替换为~
                     simplified_time = (
                         time_display.replace(" ~ ", "~")
                         .replace("[", "")
                         .replace("]", "")
                     )
-                    stats_html += (
+                    grouped_html += (
                         f'<span class="time-info">{html_escape(simplified_time)}</span>'
                     )
 
-                # 处理出现次数
                 count_info = title_data.get("count", 1)
                 if count_info > 1:
-                    stats_html += f'<span class="count-info">{count_info}次</span>'
+                    grouped_html += f'<span class="count-info">{count_info}次</span>'
 
-                stats_html += """
+                grouped_html += """
                             </div>
                             <div class="news-title">"""
 
-                # 处理标题和链接
                 escaped_title = html_escape(title_data["title"])
                 link_url = title_data.get("mobile_url") or title_data.get("url", "")
 
                 if link_url:
                     escaped_url = html_escape(link_url)
-                    stats_html += f'<a href="{escaped_url}" target="_blank" class="news-link">{escaped_title}</a>'
+                    grouped_html += f'<a href="{escaped_url}" target="_blank" class="news-link">{escaped_title}</a>'
                 else:
-                    stats_html += escaped_title
+                    grouped_html += escaped_title
 
-                stats_html += """
+                grouped_html += """
                             </div>
                         </div>
                     </div>"""
 
-            stats_html += """
+            grouped_html += """
                 </div>"""
 
-    # 给热榜统计添加外层包装
-    if stats_html:
-        stats_html = f"""
-                <div class="hotlist-section">{stats_html}
+        section_header = ""
+        if section_title:
+            total_items = sum(len(stat.get("titles", [])) for stat in stats)
+            section_header = f"""
+                    <div class="rss-section-header">
+                        <div class="rss-section-title">{html_escape(section_title)}</div>
+                        <div class="rss-section-count">{total_items} 条</div>
+                    </div>"""
+
+        return f"""
+                <div class="{section_class}">{section_header}{grouped_html}
                 </div>"""
+
+    stats_html = render_grouped_stats_html(report_data["stats"])
 
     # 生成新增新闻区域的HTML
     new_titles_html = ""
     if show_new_section and report_data["new_titles"]:
         new_titles_html += f"""
                 <div class="new-section">
-                    <div class="new-section-title">本次新增热点 (共 {report_data['total_new_count']} 条)</div>"""
+                    <div class="new-section-title">本次新增资讯 (共 {report_data['total_new_count']} 条)</div>"""
 
         for source_data in report_data["new_titles"]:
             escaped_source = html_escape(source_data["source_name"])
@@ -987,103 +989,13 @@ def render_html_content(
                 </div>"""
 
     # 生成 RSS 统计内容
-    def render_rss_stats_html(stats: List[Dict], title: str = "RSS 订阅更新") -> str:
-        """渲染 RSS 统计区块 HTML
-
-        Args:
-            stats: RSS 分组统计列表，格式与热榜一致：
-                [
-                    {
-                        "word": "关键词",
-                        "count": 5,
-                        "titles": [
-                            {
-                                "title": "标题",
-                                "source_name": "Feed 名称",
-                                "time_display": "12-29 08:20",
-                                "url": "...",
-                                "is_new": True/False
-                            }
-                        ]
-                    }
-                ]
-            title: 区块标题
-
-        Returns:
-            渲染后的 HTML 字符串
-        """
-        if not stats:
-            return ""
-
-        # 计算总条目数
-        total_count = sum(stat.get("count", 0) for stat in stats)
-        if total_count == 0:
-            return ""
-
-        rss_html = f"""
-                <div class="rss-section">
-                    <div class="rss-section-header">
-                        <div class="rss-section-title">{title}</div>
-                        <div class="rss-section-count">{total_count} 条</div>
-                    </div>"""
-
-        # 按关键词分组渲染（与热榜格式一致）
-        for stat in stats:
-            keyword = stat.get("word", "")
-            titles = stat.get("titles", [])
-            if not titles:
-                continue
-
-            keyword_count = len(titles)
-
-            rss_html += f"""
-                    <div class="feed-group">
-                        <div class="feed-header">
-                            <div class="feed-name">{html_escape(keyword)}</div>
-                            <div class="feed-count">{keyword_count} 条</div>
-                        </div>"""
-
-            for title_data in titles:
-                item_title = title_data.get("title", "")
-                url = title_data.get("url", "")
-                time_display = title_data.get("time_display", "")
-                source_name = title_data.get("source_name", "")
-                is_new = title_data.get("is_new", False)
-
-                rss_html += """
-                        <div class="rss-item">
-                            <div class="rss-meta">"""
-
-                if time_display:
-                    rss_html += f'<span class="rss-time">{html_escape(time_display)}</span>'
-
-                if source_name:
-                    rss_html += f'<span class="rss-author">{html_escape(source_name)}</span>'
-
-                if is_new:
-                    rss_html += '<span class="rss-author" style="color: #dc2626;">NEW</span>'
-
-                rss_html += """
-                            </div>
-                            <div class="rss-title">"""
-
-                escaped_title = html_escape(item_title)
-                if url:
-                    escaped_url = html_escape(url)
-                    rss_html += f'<a href="{escaped_url}" target="_blank" class="rss-link">{escaped_title}</a>'
-                else:
-                    rss_html += escaped_title
-
-                rss_html += """
-                            </div>
-                        </div>"""
-
-            rss_html += """
-                    </div>"""
-
-        rss_html += """
-                </div>"""
-        return rss_html
+    def render_rss_stats_html(stats: List[Dict], title: str = "RSS 补充资讯") -> str:
+        """渲染 RSS 统计区块 HTML，复用主资讯区的 grouped renderer。"""
+        return render_grouped_stats_html(
+            stats,
+            section_class="rss-section",
+            section_title=title,
+        )
 
     # 生成独立展示区内容
     def render_standalone_html(data: Optional[Dict]) -> str:
@@ -1311,8 +1223,8 @@ def render_html_content(
         return standalone_html
 
     # 生成 RSS 统计和新增 HTML
-    rss_stats_html = render_rss_stats_html(rss_items, "RSS 订阅更新") if rss_items else ""
-    rss_new_html = render_rss_stats_html(rss_new_items, "RSS 新增更新") if rss_new_items else ""
+    rss_stats_html = render_rss_stats_html(rss_items, "RSS 补充资讯") if rss_items else ""
+    rss_new_html = render_rss_stats_html(rss_new_items, "RSS 新增资讯") if rss_new_items else ""
 
     # 生成独立展示区 HTML
     standalone_html = render_standalone_html(standalone_data)
@@ -1429,7 +1341,7 @@ def render_html_content(
 
                     const link = document.createElement('a');
                     const now = new Date();
-                    const filename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
+                    const filename = `TrendRadar_主资讯分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.png`;
 
                     link.download = filename;
                     link.href = canvas.toDataURL('image/png', 1.0);
@@ -1655,7 +1567,7 @@ def render_html_content(
 
                     // 下载所有图片
                     const now = new Date();
-                    const baseFilename = `TrendRadar_热点新闻分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+                    const baseFilename = `TrendRadar_主资讯分析_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
 
                     for (let i = 0; i < images.length; i++) {
                         const link = document.createElement('a');

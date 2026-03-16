@@ -167,12 +167,34 @@ def send_to_feishu(
         )
 
         # 飞书 webhook 只显示 content.text，所有信息都整合到 text 中
-        payload = {
-            "msg_type": "interactive",
-            "content": {
-                "text": batch_content,
-            },
-        }
+        # payload = {
+        #     "msg_type": "interactive",
+        #     "content": {
+        #         "text": batch_content,
+        #     },
+        # }
+        # 根据 webhook 类型选择不同的消息格式
+        if "flow/api/trigger-webhook" in webhook_url:
+            # 自建机器人（飞书流程），使用纯文本格式
+            payload = {
+                "msg_type": "text",
+                "content": {
+                    "text": batch_content,
+                },
+            }
+        else:
+            # 群机器人，使用消息卡片格式支持 Markdown 渲染
+            payload = {
+                "msg_type": "interactive",
+                "card": {
+                    "elements": [
+                        {
+                            "tag": "markdown",
+                            "content": batch_content,
+                        }
+                    ]
+                },
+            }
 
         try:
             response = requests.post(

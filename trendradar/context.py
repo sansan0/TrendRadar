@@ -1044,6 +1044,12 @@ class AppContext:
                         if item_source_id in new_titles:
                             is_new = item_title in new_titles[item_source_id]
 
+                # incremental 模式下仅保留本轮新增命中的条目。
+                # run_ai_filter() 返回的是 active 结果集合，因此这里需要
+                # 显式过滤掉历史已命中的旧条目，才能与 keyword 模式行为对齐。
+                if mode == "incremental" and not is_new:
+                    continue
+
                 title_entry = {
                     "title": item.get("title", ""),
                     "source_name": item.get("source_name", ""),

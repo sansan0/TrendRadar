@@ -169,9 +169,12 @@ def send_to_feishu(
         # 飞书卡片格式（interactive），支持 markdown 富文本渲染
         import re as _re
         card_content = _re.sub(r"<font[^>]*>(.*?)</font>", r"\1", batch_content)
-        # 提取第一行作为卡片标题
-        first_line = card_content.strip().split("\n")[0].strip("# ").strip()
-        card_title = first_line[:50] if first_line else "TrendRadar 热榜"
+        # 提取时间生成卡片标题，格式：🔥 TrendRadar 热榜 · 2026-03-24 17:22
+        _time_match = _re.search(r"时间：\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})", card_content)
+        if _time_match:
+            card_title = f"🔥 TrendRadar 热榜 · {_time_match.group(1)} {_time_match.group(2)}"
+        else:
+            card_title = "🔥 TrendRadar 热榜"
         payload = {
             "msg_type": "interactive",
             "card": {

@@ -166,11 +166,25 @@ def send_to_feishu(
             f"发送{log_prefix}第 {i}/{len(batches)} 批次，大小：{content_size} 字节 [{report_type}]"
         )
 
-        # 飞书 webhook 只显示 content.text，所有信息都整合到 text 中
+        # 飞书卡片格式（interactive），支持 markdown 富文本渲染
+        import re as _re
+        card_content = _re.sub(r"<font[^>]*>(.*?)</font>", r"\1", batch_content)
+        # 提取第一行作为卡片标题
+        first_line = card_content.strip().split("\n")[0].strip("# ").strip()
+        card_title = first_line[:50] if first_line else "TrendRadar 热榜"
         payload = {
             "msg_type": "interactive",
-            "content": {
-                "text": batch_content,
+            "card": {
+                "schema": "2.0",
+                "header": {
+                    "title": {"tag": "plain_text", "content": card_title},
+                    "template": "blue",
+                },
+                "body": {
+                    "elements": [
+                        {"tag": "markdown", "content": card_content}
+                    ]
+                },
             },
         }
 

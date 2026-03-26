@@ -18,6 +18,10 @@
 import smtplib
 import time
 import json
+import hmac
+import hashlib
+import base64
+import urllib.parse
 from datetime import datetime
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
@@ -44,6 +48,25 @@ def _render_ai_analysis(ai_analysis: Any, channel: str) -> str:
         return renderer(ai_analysis)
     except ImportError:
         return ""
+
+
+def _generate_dingtalk_sign(secret: str) -> tuple:
+    """
+    生成钉钉加签参数
+
+    Args:
+        secret: 钉钉机器人的加签密钥（SEC开头）
+
+    Returns:
+        tuple: (timestamp, sign) 时间戳和签名
+    """
+    timestamp = str(int(round(time.time() * 1000)))
+    string_to_sign = f"{timestamp}\n{secret}"
+    string_to_sign_enc = string_to_sign.encode("utf-8")
+    secret_enc = secret.encode("utf-8")
+    hmac_code = hmac.new(secret_enc, string_to_sign_enc, digestmod=hashlib.sha256).digest()
+    sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
+    return timestamp, sign
 
 
 # === SMTP 邮件配置 ===
@@ -214,6 +237,7 @@ def send_to_dingtalk(
     proxy_url: Optional[str] = None,
     mode: str = "daily",
     account_label: str = "",
+    secret: str = "",
     *,
     batch_size: int = 20000,
     batch_interval: float = 1.0,
@@ -225,7 +249,7 @@ def send_to_dingtalk(
     standalone_data: Optional[Dict] = None,
 ) -> bool:
     """
-    发送到钉钉（支持分批发送，支持热榜+RSS合并+独立展示区）
+    发送到钉钉（支持分批发送，支持热榜+RSS合并+独立展示区，支持加签）
 
     Args:
         webhook_url: 钉钉 Webhook URL
@@ -235,6 +259,7 @@ def send_to_dingtalk(
         proxy_url: 代理 URL（可选）
         mode: 报告模式 (daily/current)
         account_label: 账号标签（多账号时显示）
+        secret: 钉钉机器人加签密钥（可选，SEC开头）
         batch_size: 批次大小（字节）
         batch_interval: 批次发送间隔（秒）
         split_content_func: 内容分批函数
@@ -310,20 +335,41 @@ def send_to_dingtalk(
             )
             if response.status_code == 200:
                 result = response.json()
-                if result.get("errcode") == 0:
+                errcode = result.get("errcode")
+                errmsg = result.get("errmsg", "")
+                
+                if errcode == 0:
                     print(f"{log_prefix}第 {i}/{len(batches)} 批次发送成功 [{report_type}]")
-                    # 批次间间隔
                     if i < len(batches):
                         time.sleep(batch_interval)
+                elif "签名" in errmsg or "sign" in errmsg.lower():
+                    if secret:
+                        print(f"{log_prefix}第 {i}/{len(batches)} 批次签名验证失败，重新计算签名发送 [{report_type}]")
+                        timestamp, sign = _generate_dingtalk_sign(secret)
+                        request_url = f"{webhook_url}&timestamp={timestamp}&sign={sign}"
+                        retry_response = requests.post(
+                            request_url, headers=headers, json=payload, proxies=proxies, timeout=30
+                        )
+                        if retry_response.status_code == 200:
+                            retry_result = retry_response.json()
+                            if retry_result.get("errcode") == 0:
+                                print(f"{log_prefix}第 {i}/{len(batches)} 批次发送成功(加签) [{report_type}]")
+                                if i < len(batches):
+                                    time.sleep(batch_interval)
+                            else:
+                                print(f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{retry_result.get('errmsg')}")
+                                return False
+                        else:
+                            print(f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{retry_response.status_code}")
+                            return False
+                    else:
+                        print(f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{errmsg}（未配置DINGTALK_SECRET）")
+                        return False
                 else:
-                    print(
-                        f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{result.get('errmsg')}"
-                    )
+                    print(f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，错误：{errmsg}")
                     return False
             else:
-                print(
-                    f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}"
-                )
+                print(f"{log_prefix}第 {i}/{len(batches)} 批次发送失败 [{report_type}]，状态码：{response.status_code}")
                 return False
         except Exception as e:
             print(f"{log_prefix}第 {i}/{len(batches)} 批次发送出错 [{report_type}]：{e}")

@@ -421,22 +421,32 @@ class NotificationDispatcher:
         display_regions: Optional[Dict] = None,
         standalone_data: Optional[Dict] = None,
     ) -> bool:
-        """发送到钉钉（多账号，支持热榜+RSS合并+AI分析+独立展示区）"""
+        """发送到钉钉（多账号，支持热榜+RSS合并+AI分析+独立展示区，支持加签）"""
         display_regions = display_regions or {}
         if not display_regions.get("HOTLIST", True):
             report_data = {"stats": [], "failed_ids": [], "new_titles": [], "id_to_name": {}}
 
-        return self._send_to_multi_accounts(
-            channel_name="钉钉",
-            config_value=self.config["DINGTALK_WEBHOOK_URL"],
-            send_func=lambda url, account_label: send_to_dingtalk(
-                webhook_url=url,
+        webhooks = parse_multi_account_config(self.config["DINGTALK_WEBHOOK_URL"])
+        secrets = parse_multi_account_config(self.config.get("DINGTALK_SECRET", ""))
+        webhooks = limit_accounts(webhooks, self.max_accounts, "钉钉")
+
+        results = []
+        for i, webhook_url in enumerate(webhooks):
+            if not webhook_url:
+                continue
+
+            account_label = f"账号{i+1}" if len(webhooks) > 1 else ""
+            secret = secrets[i] if i < len(secrets) else ""
+
+            result = send_to_dingtalk(
+                webhook_url=webhook_url,
                 report_data=report_data,
                 report_type=report_type,
                 update_info=update_info,
                 proxy_url=proxy_url,
                 mode=mode,
                 account_label=account_label,
+                secret=secret,
                 batch_size=self.config.get("DINGTALK_BATCH_SIZE", 20000),
                 batch_interval=self.config.get("BATCH_SEND_INTERVAL", 1.0),
                 split_content_func=self.split_content_func,
@@ -445,8 +455,10 @@ class NotificationDispatcher:
                 ai_analysis=ai_analysis if display_regions.get("AI_ANALYSIS", True) else None,
                 display_regions=display_regions,
                 standalone_data=standalone_data if display_regions.get("STANDALONE", False) else None,
-            ),
-        )
+            )
+            results.append(result)
+
+        return any(results) if results else False
 
     def _send_wework(
         self,

@@ -14,6 +14,22 @@ import pytz
 DEFAULT_TIMEZONE = "Asia/Shanghai"
 
 
+def _has_tz_info(iso_time: str) -> bool:
+    """检测 ISO 时间字符串末尾是否含有时区偏移信息（Z、+HH:MM 或 -HH:MM）。
+
+    旧实现仅检查 "+" 或 "Z"，会漏掉西向偏移（如 -05:00），导致 EST / CET 等
+    时区的时间被错误地当作 UTC 处理，造成最多 12 小时的时间偏差。
+    """
+    if iso_time.endswith("Z"):
+        return True
+    # RFC 3339 / ISO 8601 时区后缀形如 +08:00 或 -05:00（含负号），共 6 个字符
+    if len(iso_time) >= 6:
+        suffix = iso_time[-6:]
+        if suffix[0] in ("+", "-") and suffix[3] == ":":
+            return True
+    return False
+
+
 def get_configured_time(timezone: str = DEFAULT_TIMEZONE) -> datetime:
     """
     获取配置时区的当前时间
@@ -116,22 +132,21 @@ def format_iso_time_friendly(
         # 尝试解析各种 ISO 格式
         dt = None
 
-        # 尝试解析带时区的格式
-        if "+" in iso_time or iso_time.endswith("Z"):
-            iso_time = iso_time.replace("Z", "+00:00")
+        # 尝试解析带时区的格式（Z、+HH:MM 或 -HH:MM）
+        # 注意：旧逻辑只检查 "+"，会漏掉西向时区（如 -05:00 EST）
+        if _has_tz_info(iso_time):
+            iso_time_normalized = iso_time.replace("Z", "+00:00")
             try:
-                dt = datetime.fromisoformat(iso_time)
+                dt = datetime.fromisoformat(iso_time_normalized)
             except ValueError:
                 pass
 
         # 尝试解析不带时区的格式（假设为 UTC）
         if dt is None:
             try:
-                # 处理 T 分隔符
-                if "T" in iso_time:
-                    dt = datetime.fromisoformat(iso_time.replace("T", " ").split(".")[0])
-                else:
-                    dt = datetime.fromisoformat(iso_time.split(".")[0])
+                # 处理 T 分隔符和毫秒
+                iso_clean = iso_time.replace("T", " ").split(".")[0]
+                dt = datetime.fromisoformat(iso_clean)
                 # 假设为 UTC 时间
                 dt = pytz.UTC.localize(dt)
             except ValueError:
@@ -202,8 +217,9 @@ def is_within_days(
     try:
         dt = None
 
-        # 尝试解析带时区的格式
-        if "+" in iso_time or iso_time.endswith("Z"):
+        # 尝试解析带时区的格式（Z、+HH:MM 或 -HH:MM）
+        # 注意：旧逻辑只检查 "+"，会漏掉西向偏移（如 -05:00 EST）
+        if _has_tz_info(iso_time):
             iso_time_normalized = iso_time.replace("Z", "+00:00")
             try:
                 dt = datetime.fromisoformat(iso_time_normalized)
@@ -213,10 +229,8 @@ def is_within_days(
         # 尝试解析不带时区的格式（假设为 UTC）
         if dt is None:
             try:
-                if "T" in iso_time:
-                    dt = datetime.fromisoformat(iso_time.replace("T", " ").split(".")[0])
-                else:
-                    dt = datetime.fromisoformat(iso_time.split(".")[0])
+                iso_clean = iso_time.replace("T", " ").split(".")[0]
+                dt = datetime.fromisoformat(iso_clean)
                 dt = pytz.UTC.localize(dt)
             except ValueError:
                 pass
@@ -256,8 +270,9 @@ def calculate_days_old(iso_time: str, timezone: str = DEFAULT_TIMEZONE) -> Optio
     try:
         dt = None
 
-        # 尝试解析带时区的格式
-        if "+" in iso_time or iso_time.endswith("Z"):
+        # 尝试解析带时区的格式（Z、+HH:MM 或 -HH:MM）
+        # 注意：旧逻辑只检查 "+"，会漏掉西向偏移（如 -05:00 EST）
+        if _has_tz_info(iso_time):
             iso_time_normalized = iso_time.replace("Z", "+00:00")
             try:
                 dt = datetime.fromisoformat(iso_time_normalized)
@@ -267,10 +282,8 @@ def calculate_days_old(iso_time: str, timezone: str = DEFAULT_TIMEZONE) -> Optio
         # 尝试解析不带时区的格式（假设为 UTC）
         if dt is None:
             try:
-                if "T" in iso_time:
-                    dt = datetime.fromisoformat(iso_time.replace("T", " ").split(".")[0])
-                else:
-                    dt = datetime.fromisoformat(iso_time.split(".")[0])
+                iso_clean = iso_time.replace("T", " ").split(".")[0]
+                dt = datetime.fromisoformat(iso_clean)
                 dt = pytz.UTC.localize(dt)
             except ValueError:
                 pass

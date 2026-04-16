@@ -1,72 +1,380 @@
-name: Hot News Crawler
+# ============================================================
+# 工作流名称：热点新闻爬虫
+# 描述：定时抓取热点新闻并推送通知
+# 作者：GitHub Actions
+# ============================================================
 
+name: 📰 Hot News Crawler
+
+# ============================================================
+# 触发条件配置
+# ============================================================
 on:
+  # 1. 定时触发（Cron 表达式）
   schedule:
-    # 我们使用的是 github 官方提供的资源来进行的推送，而每个账号的资源是限额的，为了不被官方判定为滥用而面临封号的风险，不建议比半小时更低
-    - cron: "0 * * * *" # 每小时整点运行一次(实际有偏差) 或者 "*/30 * * * *" (每半小时执行一次) 或者 "*/30 0-14 * * *"(每天早上 8 点到晚上 10 点期间，每半小时运行一次)
+    # ⚠️ 注意：Cron 使用 UTC 时间，北京时间 = UTC + 8
+    # 示例：
+    # - "0 * * * *"        → 每小时整点运行（每天24次）
+    # - "*/30 * * * *"     → 每30分钟运行（每天48次）
+    # - "0 */2 * * *"      → 每2小时运行（每天12次）✅ 推荐
+    # - "0 0,8,16 * * *"   → 每天8点、16点、0点运行（每天3次）
+    # - "*/30 0-14 * * *"  → 北京时间8:00-22:00，每30分钟运行
+    - cron: "0 */4 * * *"  # 当前配置：每4小时运行一次
+  
+  # 2. 手动触发（可在 Actions 页面点击运行）
   workflow_dispatch:
+    # 手动触发时的输入参数
+    inputs:
+      debug_mode:
+        description: '🐛 是否开启调试模式'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  
+  # 3. 推送代码时触发（可选，调试用）
+  # push:
+  #   branches: [ main, master ]
+  #   paths:
+  #     - 'main.py'
+  #     - 'requirements.txt'
+  #     - '.github/workflows/crawler.yml'
 
-# 添加权限设置
+# ============================================================
+# 权限配置
+# ============================================================
 permissions:
-  contents: write
+  contents: write          # 允许推送代码和文件
+  actions: read           # 允许读取工作流状态
 
+# ============================================================
+# 环境变量（全局）
+# ============================================================
+env:
+  PYTHON_VERSION: "3.10"
+  PIP_CACHE_DIR: ~/.cache/pip
+  TZ: Asia/Shanghai       # 设置时区为北京时间
+
+# ============================================================
+# 任务定义
+# ============================================================
 jobs:
   crawl:
+    # 运行环境：GitHub 提供的 Ubuntu 最新 LTS 版本
     runs-on: ubuntu-latest
-
+    
+    # 超时保护：防止任务卡死占用资源
+    timeout-minutes: 30
+    
+    # 条件控制：仅在主分支运行
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    # ============================================================
+    # 任务步骤
+    # ============================================================
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install dependencies
+      # ------------------------------------------------------------
+      # 步骤 1: 调试信息（便于排查问题）
+      # ------------------------------------------------------------
+      - name: 📋 显示运行环境信息
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Verify required files
+          echo "========================================"
+          echo "🚀 GitHub Actions 运行信息"
+          echo "========================================"
+          echo "📅 运行时间: $(date '+%Y-%m-%d %H:%M:%S')"
+          echo "🌍 时区: $(date '+%Z')"
+          echo "💻 系统信息: $(uname -a)"
+          echo "🐍 Python 版本: $(python3 --version)"
+          echo "📦 Node.js 版本: $(node --version || echo 'N/A')"
+          echo "🔧 工作流触发方式: ${{ github.event_name }}"
+          echo "📂 工作目录: $(pwd)"
+          echo "👤 触发用户: ${{ github.actor }}"
+          echo "🔖 分支/标签: ${{ github.ref }}"
+          echo "========================================"
+      
+      # ------------------------------------------------------------
+      # 步骤 2: 检出代码仓库
+      # ------------------------------------------------------------
+      - name: 📥 检出代码仓库
+        uses: actions/checkout@v4  # 使用最新版 v4
+        with:
+          fetch-depth: 1          # 只获取最近一次提交（加快速度）
+          persist-credentials: true  # 保留凭证以便后续推送
+      
+      # ------------------------------------------------------------
+      # 步骤 3: 设置 Python 环境
+      # ------------------------------------------------------------
+      - name: 🐍 设置 Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5  # 使用最新版 v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'  # 启用 pip 缓存（加速依赖安装）
+          cache-dependency-path: 'requirements.txt'
+      
+      # ------------------------------------------------------------
+      # 步骤 4: 安装 Python 依赖（带缓存）
+      # ------------------------------------------------------------
+      - name: 📦 安装 Python 依赖包
+        run: |
+          echo "⏳ 开始安装依赖..."
+          python -m pip install --upgrade pip setuptools wheel
+          
+          # 显示缓存信息
+          echo "📂 Pip 缓存目录: $PIP_CACHE_DIR"
+          if [ -d "$PIP_CACHE_DIR" ]; then
+            echo "📊 缓存大小: $(du -sh $PIP_CACHE_DIR | cut -f1)"
+          fi
+          
+          # 安装依赖（使用缓存）
+          pip install -r requirements.txt \
+            --cache-dir $PIP_CACHE_DIR \
+            --no-warn-script-location \
+            -q  # 安静模式，减少输出
+          
+          echo "✅ 依赖安装完成"
+          pip list  # 显示已安装的包
+      
+      # ------------------------------------------------------------
+      # 步骤 5: 验证必需文件
+      # ------------------------------------------------------------
+      - name: 🔍 验证配置文件完整性
         run: |
           echo "🔍 检查必需的配置文件..."
-
-          if [ ! -f config/config.yaml ]; then
-            echo "❌ 错误: config/config.yaml 文件不存在"
-            echo "请参考项目文档创建配置文件"
+          
+          # 检查主程序文件
+          if [ ! -f "main.py" ]; then
+            echo "❌ 错误: main.py 不存在"
             exit 1
           fi
-
-          if [ ! -f config/frequency_words.txt ]; then
-            echo "❌ 错误: config/frequency_words.txt 文件不存在"
-            echo "请参考项目文档创建频率词配置文件"
+          echo "✅ main.py 存在"
+          
+          # 检查配置文件
+          if [ ! -f "config/config.yaml" ]; then
+            echo "❌ 错误: config/config.yaml 不存在"
+            echo "💡 提示: 请创建配置文件，参考 config/config.yaml.example"
             exit 1
           fi
-
-          echo "✅ 配置文件检查通过"
-
-      - name: Run crawler
+          echo "✅ config/config.yaml 存在"
+          
+          # 检查频率词文件
+          if [ ! -f "config/frequency_words.txt" ]; then
+            echo "❌ 错误: config/frequency_words.txt 不存在"
+            echo "💡 提示: 请创建频率词配置文件"
+            exit 1
+          fi
+          echo "✅ config/frequency_words.txt 存在"
+          
+          # 检查 requirements.txt
+          if [ ! -f "requirements.txt" ]; then
+            echo "❌ 错误: requirements.txt 不存在"
+            exit 1
+          fi
+          echo "✅ requirements.txt 存在"
+          
+          echo "========================================"
+          echo "✨ 所有配置文件检查通过！"
+          echo "========================================"
+      
+      # ------------------------------------------------------------
+      # 步骤 6: 显示配置信息（不显示敏感信息）
+      # ------------------------------------------------------------
+      - name: ⚙️ 显示配置信息
+        run: |
+          echo "📋 爬虫配置信息："
+          echo "----------------------------------------"
+          
+          # 显示 config.yaml 内容（脱敏）
+          if [ -f "config/config.yaml" ]; then
+            echo "📄 config.yaml 预览："
+            # 过滤掉可能的敏感信息
+            grep -v -E "(password|secret|token|key|webhook)" config/config.yaml | head -20 || true
+          fi
+          
+          echo "----------------------------------------"
+          echo "🔔 通知渠道配置："
+          echo "  - 飞书 Webhook: $([ -n "$FEISHU_WEBHOOK_URL" ] && echo '✅ 已配置' || echo '⚪ 未配置')"
+          echo "  - Telegram Bot: $([ -n "$TELEGRAM_BOT_TOKEN" ] && echo '✅ 已配置' || echo '⚪ 未配置')"
+          echo "  - 钉钉 Webhook: $([ -n "$DINGTALK_WEBHOOK_URL" ] && echo '✅ 已配置' || echo '⚪ 未配置')"
+          echo "  - 企业微信 Webhook: $([ -n "$WEWORK_WEBHOOK_URL" ] && echo '✅ 已配置' || echo '⚪ 未配置')"
+          echo "  - 邮件通知: $([ -n "$EMAIL_FROM" ] && echo '✅ 已配置' || echo '⚪ 未配置')"
+          echo "  - Ntfy 通知: $([ -n "$NTFY_TOPIC" ] && echo '✅ 已配置' || echo '⚪ 未配置')"
+      
+      # ------------------------------------------------------------
+      # 步骤 7: 运行爬虫主程序
+      # ------------------------------------------------------------
+      - name: 🚀 运行新闻爬虫
+        id: crawler  # 给步骤添加 ID，便于后续引用
         env:
+          # 通知渠道配置（从 GitHub Secrets 读取）
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
           WEWORK_WEBHOOK_URL: ${{ secrets.WEWORK_WEBHOOK_URL }}
+          
+          # 邮件配置
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           EMAIL_SMTP_SERVER: ${{ secrets.EMAIL_SMTP_SERVER }}
           EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+          
+          # Ntfy 配置
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_SERVER_URL: ${{ secrets.NTFY_SERVER_URL }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          
+          # 系统变量
           GITHUB_ACTIONS: true
-        run: python main.py
-
-      - name: Commit and push if changes
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          DEBUG_MODE: ${{ github.event.inputs.debug_mode || 'false' }}
+          
+          # 时区设置
+          TZ: Asia/Shanghai
         run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
+          echo "🎬 开始执行爬虫程序..."
+          echo "⏰ 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
+          echo "----------------------------------------"
+          
+          # 运行主程序
+          python main.py
+          
+          # 记录退出码
+          EXIT_CODE=$?
+          
+          echo "----------------------------------------"
+          echo "⏰ 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
+          
+          # 根据退出码判断成功或失败
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ 爬虫执行成功！"
+          else
+            echo "❌ 爬虫执行失败！退出码: $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+      
+      # ------------------------------------------------------------
+      # 步骤 8: 检查运行结果
+      # ------------------------------------------------------------
+      - name: 📊 检查运行结果
+        if: always()  # 无论前面步骤成功或失败都执行
+        run: |
+          echo "📋 运行结果统计："
+          echo "----------------------------------------"
+          
+          # 显示工作目录文件变化
+          echo "📁 当前目录文件列表："
+          ls -la | head -20
+          
+          # 检查是否有新生成的文件
+          if [ -d "output" ]; then
+            echo "📂 output 目录内容："
+            ls -la output/ 2>/dev/null || echo "  (空目录)"
+          fi
+          
+          # 检查日志文件
+          if [ -f "crawler.log" ]; then
+            echo "📄 最后 20 行日志："
+            tail -20 crawler.log || true
+          fi
+      
+      # ------------------------------------------------------------
+      # 步骤 9: 自动提交更改（如果有）
+      # ------------------------------------------------------------
+      - name: 💾 自动提交数据更新
+        if: success()  # 仅在爬虫成功时执行
+        run: |
+          echo "🔍 检查是否有文件更改..."
+          
+          # 配置 Git 用户信息
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions-bot@users.noreply.github.com'
+          
+          # 添加所有更改
           git add -A
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update by GitHub Actions at $(TZ=Asia/Shanghai date)" && git push)
+          
+          # 检查是否有更改
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "✨ 没有文件更改，跳过提交"
+          else
+            echo "📝 检测到文件更改，准备提交..."
+            
+            # 生成提交信息
+            COMMIT_TIME=$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')
+            COMMIT_MSG="🤖 自动更新数据 - ${COMMIT_TIME} (UTC+8)
+            
+            运行 ID: ${{ github.run_id }}
+            触发方式: ${{ github.event_name }}
+            
+            变更文件:
+            $(git status --short)"
+            
+            # 提交并推送
+            git commit -m "$COMMIT_MSG"
+            
+            # 重试推送（最多3次）
+            MAX_RETRIES=3
+            RETRY_COUNT=0
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              echo "📤 尝试推送 (第 $((RETRY_COUNT + 1)) 次)..."
+              if git push origin ${{ github.ref_name }} --force; then
+                echo "✅ 推送成功！"
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                echo "⚠️ 推送失败，5秒后重试..."
+                sleep 5
+              fi
+            done
+            
+            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+              echo "❌ 推送失败，已达到最大重试次数"
+              exit 1
+            fi
+          fi
+      
+      # ------------------------------------------------------------
+      # 步骤 10: 清理临时文件（可选）
+      # ------------------------------------------------------------
+      - name: 🧹 清理临时文件
+        if: always()
+        run: |
+          echo "🧹 清理临时文件..."
+          
+          # 删除 Python 缓存
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find . -type f -name "*.pyc" -delete 2>/dev/null || true
+          find . -type f -name "*.pyo" -delete 2>/dev/null || true
+          
+          # 删除 pip 缓存（如果不需要）
+          # rm -rf $PIP_CACHE_DIR 2>/dev/null || true
+          
+          echo "✅ 清理完成"
+      
+      # ------------------------------------------------------------
+      # 步骤 11: 运行完成总结
+      # ------------------------------------------------------------
+      - name: 🎉 运行完成总结
+        if: always()
+        run: |
+          echo "========================================"
+          echo "🏁 工作流执行完成"
+          echo "========================================"
+          echo "📅 完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
+          echo "⏱️  总耗时: ${{ job.status }}"
+          echo "📊 执行状态: ${{ job.status }}"
+          echo "🔗 运行链接: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "========================================"
+          
+          # 根据状态显示不同表情
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 恭喜！任务执行成功！"
+          elif [ "${{ job.status }}" == "failure" ]; then
+            echo "💥 抱歉！任务执行失败！"
+          elif [ "${{ job.status }}" == "cancelled" ]; then
+            echo "🚫 任务已被取消！"
+          fi
+          echo "========================================"

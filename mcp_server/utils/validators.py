@@ -625,6 +625,53 @@ def validate_threshold(
     return threshold
 
 
+def validate_days(
+    days: Optional[Union[int, str]],
+    default: int = 7,
+    max_days: int = 365,
+    param_name: str = "days"
+) -> int:
+    """
+    验证天数参数
+
+    防止恶意或误传的超大 days 值导致 CPU 密集型循环（DoS）。
+
+    Args:
+        days: 天数（整数或字符串）
+        default: 默认值
+        max_days: 允许的最大天数
+        param_name: 参数名（用于错误消息）
+
+    Returns:
+        验证后的天数（>= 1 且 <= max_days）
+
+    Raises:
+        InvalidParameterError: 参数无效
+    """
+    if days is None:
+        return default
+
+    if isinstance(days, str):
+        days = _parse_string_to_int(days, param_name)
+
+    if not isinstance(days, int):
+        raise InvalidParameterError(f"{param_name} 必须是整数类型")
+
+    if days < 1:
+        raise InvalidParameterError(
+            f"{param_name} 必须大于 0，当前值: {days}",
+            suggestion=f"推荐值: {default}"
+        )
+
+    if days > max_days:
+        raise InvalidParameterError(
+            f"{param_name} 不能超过 {max_days}，当前值: {days}",
+            suggestion=f"推荐值: {default}"
+        )
+
+    return days
+
+
 def validate_date_query(
     date_query: str,
     allow_future: bool = False,

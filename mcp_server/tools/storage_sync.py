@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 import yaml
 
 from ..utils.errors import MCPError
+from ..utils.validators import validate_days
 
 
 class StorageSyncTools:
@@ -215,12 +216,15 @@ class StorageSyncTools:
         从远程存储拉取数据到本地
 
         Args:
-            days: 拉取最近 N 天的数据，默认 7 天
+            days: 拉取最近 N 天的数据，默认 7 天，最大 365 天
 
         Returns:
             同步结果字典
         """
         try:
+            # 验证 days 参数，防止超大值导致 DoS
+            days = validate_days(days, default=7, max_days=365)
+
             # 检查远程配置
             if not self._has_remote_config():
                 return {

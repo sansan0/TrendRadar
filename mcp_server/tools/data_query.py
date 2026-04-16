@@ -15,6 +15,7 @@ from ..utils.validators import (
     validate_top_n,
     validate_mode,
     validate_date_query,
+    validate_days,
     normalize_date_range
 )
 from ..utils.errors import MCPError
@@ -341,6 +342,7 @@ class DataQueryTools:
             RSS 条目列表字典
         """
         try:
+            days = validate_days(days, default=1, max_days=30)
             limit = validate_limit(limit, default=50)
 
             rss_list = self.data_service.get_latest_rss(
@@ -400,9 +402,7 @@ class DataQueryTools:
         try:
             keyword = validate_keyword(keyword)
             limit = validate_limit(limit, default=50)
-
-            if days < 1 or days > 30:
-                days = 7
+            days = validate_days(days, default=7, max_days=30)
 
             rss_list = self.data_service.search_rss(
                 keyword=keyword,

@@ -235,7 +235,11 @@ class Scheduler:
     @staticmethod
     def _in_range(now_hhmm: str, start: str, end: str) -> bool:
         """
-        检查时间是否在范围内（支持跨日）
+        检查时间是否在范围内（支持跨日）。区间采用半开形式
+        [start, end)：包含 start，不包含 end，这样相邻区间
+        （例如 08:00-12:00 与 12:00-18:00）不会在 12:00 同时命中，
+        也不会在启动时被 _ranges_overlap 误判为冲突。
+        详见 sansan0/TrendRadar#1071。
 
         Args:
             now_hhmm: 当前时间 HH:MM
@@ -247,10 +251,10 @@ class Scheduler:
         """
         if start <= end:
             # 正常范围，如 08:00-09:00
-            return start <= now_hhmm <= end
+            return start <= now_hhmm < end
         else:
             # 跨日范围，如 22:00-07:00
-            return now_hhmm >= start or now_hhmm <= end
+            return now_hhmm >= start or now_hhmm < end
 
     def _merge_with_default(self, period_key: Optional[str]) -> Dict[str, Any]:
         """合并默认配置和时间段配置"""
@@ -402,22 +406,24 @@ class Scheduler:
             return int(h) * 60 + int(m)
 
         def expand_range(start: str, end: str) -> List[tuple]:
-            """将时间范围展开为分钟段列表，跨日时拆分为两段"""
+            """将时间范围展开为分钟段列表，跨日时拆分为两段。
+            端点使用半开语义 [start, end)，与 _in_range 保持一致。
+            """
             s = to_minutes(start)
             e = to_minutes(end)
             if s <= e:
                 return [(s, e)]
             else:
-                # 跨日：拆分为 [start, 23:59] 和 [00:00, end]
-                return [(s, 24 * 60 - 1), (0, e)]
+                # 跨日：拆分为 [start, 24:00) 和 [00:00, end)
+                return [(s, 24 * 60), (0, e)]
 
         segs1 = expand_range(s1, e1)
         segs2 = expand_range(s2, e2)
 
         for a_start, a_end in segs1:
             for b_start, b_end in segs2:
-                # 两个区间有重叠的条件
-                if a_start <= b_end and b_start <= a_end:
+                # 半开区间重叠条件：a_start < b_end 且 b_start < a_end
+                if a_start < b_end and b_start < a_end:
                     return True
         return False
 

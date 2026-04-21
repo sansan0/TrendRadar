@@ -526,6 +526,36 @@ def _print_notification_sources(config: Dict) -> None:
         print("未配置任何通知渠道")
 
 
+def _normalize_platform_sources(sources: list) -> list:
+    """Normalize platform sources to ensure each entry is a dict with an ``id`` key.
+
+    The documented ``platforms.sources`` format is a list of dicts::
+
+        sources:
+          - id: "github"
+            name: "GitHub"
+
+    However users may write the shorthand string form::
+
+        sources: ["github"]
+
+    When a string entry is encountered it is expanded to ``{"id": <string>}``.
+    Dict entries are passed through unchanged.  Invalid types are silently
+    skipped so downstream code always receives ``List[Dict]``.
+    """
+    normalized: list = []
+    for item in sources:
+        if isinstance(item, dict):
+            normalized.append(item)
+        elif isinstance(item, str):
+            normalized.append({"id": item})
+        else:
+            # Skip unknown types (int, None, etc.) — the original code would
+            # crash on these too, so silently dropping is safer.
+            pass
+    return normalized
+
+
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     """
     加载配置文件
@@ -576,7 +606,9 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 
     # 平台配置
     platforms_config = config_data.get("platforms", {})
-    config["PLATFORMS"] = platforms_config.get("sources", [])
+    config["PLATFORMS"] = _normalize_platform_sources(
+        platforms_config.get("sources", [])
+    )
 
     # RSS 配置
     config["RSS"] = _load_rss_config(config_data)

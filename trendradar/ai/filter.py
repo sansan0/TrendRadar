@@ -8,6 +8,7 @@ AI 智能筛选模块
 """
 
 import hashlib
+import logging
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -291,6 +292,7 @@ class AIFilter:
         """解析标签提取的 AI 响应"""
         json_str = self._extract_json(response)
         if not json_str:
+            logging.warning("[AI filter] JSON extraction failed in tags response; raw snippet: %.200s", (response or ""))
             return []
 
         data = json.loads(json_str)
@@ -398,6 +400,7 @@ class AIFilter:
         """
         json_str = self._extract_json(response)
         if not json_str:
+            logging.warning("[AI filter] JSON extraction failed in classify response; raw snippet: %.200s", (response or ""))
             if self.debug:
                 print(f"[AI筛选][DEBUG] 无法从分类响应中提取 JSON，原始响应前 500 字符: {(response or '')[:500]}")
             return []

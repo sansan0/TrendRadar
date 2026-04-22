@@ -1,0 +1,146 @@
+name: MCP HTTP Compatibility
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "mcp_server/**"
+      - "docker/Dockerfile.mcp"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/mcp-http-compat.yml"
+  pull_request:
+    paths:
+      - "mcp_server/**"
+      - "docker/Dockerfile.mcp"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/mcp-http-compat.yml"
+  workflow_dispatch:
+
+jobs:
+  streamable-http-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install project dependencies
+        run: uv sync --frozen
+
+      - name: Start MCP server
+        run: |
+          nohup uv run python -m mcp_server.server --transport http --host 127.0.0.1 --port 3333 > /tmp/trendradar-mcp.log 2>&1 &
+
+      - name: Wait for MCP server
+        run: |
+          python - <<'PY'
+          import socket
+          import time
+
+          deadline = time.time() + 30
+          last_error = None
+          while time.time() < deadline:
+              try:
+                  with socket.create_connection(("127.0.0.1", 3333), timeout=1):
+                      break
+              except OSError as exc:
+                  last_error = exc
+                  time.sleep(1)
+          else:
+              raise SystemExit(f"MCP server did not start in time: {last_error}")
+          PY
+
+      - name: Verify raw initialize handshake
+        run: |
+          python - <<'PY'
+          import json
+          import httpx
+
+          client = httpx.Client(
+              base_url="http://127.0.0.1:3333",
+              headers={
+                  "accept": "application/json, text/event-stream",
+                  "content-type": "application/json",
+              },
+              timeout=30.0,
+          )
+
+          initialize = client.post(
+              "/mcp",
+              json={
+                  "jsonrpc": "2.0",
+                  "id": 1,
+                  "method": "initialize",
+                  "params": {
+                      "protocolVersion": "2024-11-05",
+                      "capabilities": {},
+                      "clientInfo": {"name": "compat-smoke", "version": "0.1"},
+                  },
+              },
+          )
+          initialize.raise_for_status()
+          session_id = initialize.headers["mcp-session-id"]
+          assert session_id, "missing MCP session id"
+          assert '"protocolVersion":"2024-11-05"' in initialize.text
+
+          initialized = client.post(
+              "/mcp",
+              headers={"mcp-session-id": session_id},
+              json={
+                  "jsonrpc": "2.0",
+                  "method": "notifications/initialized",
+                  "params": {},
+              },
+          )
+          assert initialized.status_code == 202, initialized.text
+
+          tools = client.post(
+              "/mcp",
+              headers={"mcp-session-id": session_id},
+              json={
+                  "jsonrpc": "2.0",
+                  "id": 2,
+                  "method": "tools/list",
+                  "params": {},
+              },
+          )
+          tools.raise_for_status()
+          assert '"tools":[' in tools.text, tools.text
+          print(json.dumps({"session_id": session_id, "tools_list_ok": True}))
+          PY
+
+      - name: Verify latest MCP client compatibility
+        run: |
+          uv venv /tmp/mcp-latest
+          uv pip install --python /tmp/mcp-latest/bin/python mcp
+          /tmp/mcp-latest/bin/python - <<'PY'
+          import anyio
+          from mcp import ClientSession
+          from mcp.client.streamable_http import streamable_http_client
+
+          async def main():
+              async with streamable_http_client("http://127.0.0.1:3333/mcp") as (read_stream, write_stream, _):
+                  async with ClientSession(read_stream, write_stream) as session:
+                      result = await session.initialize()
+                      tools = await session.list_tools()
+                      assert result.protocolVersion
+                      assert tools.tools, "expected at least one MCP tool"
+                      print(f"protocol={result.protocolVersion} tools={len(tools.tools)}")
+
+          anyio.run(main)
+          PY
+
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/trendradar-mcp.log

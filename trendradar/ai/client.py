@@ -8,6 +8,7 @@ AI 客户端模块
 
 import os
 from typing import Any, Dict, List
+from urllib.parse import urlparse
 
 from litellm import completion
 
@@ -38,6 +39,60 @@ class AIClient:
         self.timeout = config.get("TIMEOUT", 120)
         self.num_retries = config.get("NUM_RETRIES", 2)
         self.fallback_models = config.get("FALLBACK_MODELS", [])
+
+    def _get_provider(self) -> str:
+        """从 model 字段提取 provider 名称。"""
+        if not self.model or "/" not in self.model:
+            return ""
+        return self.model.split("/", 1)[0].strip().lower()
+
+    @staticmethod
+    def _is_loopback_host(hostname: str) -> bool:
+        return hostname.lower() in {"127.0.0.1", "localhost", "::1"}
+
+    @staticmethod
+    def _is_running_in_docker() -> bool:
+        """检测当前是否运行在 Docker 容器中。"""
+        return os.path.exists("/.dockerenv") or os.environ.get("container", "").lower() == "docker"
+
+    def _validate_api_base(self) -> tuple[bool, str]:
+        """
+        校验 api_base 是否适合作为客户端访问地址。
+
+        Returns:
+            tuple: (是否有效, 错误信息)
+        """
+        if not self.api_base:
+            return True, ""
+
+        try:
+            parsed = urlparse(self.api_base)
+        except Exception:
+            return False, f"AI API Base 格式错误: {self.api_base}"
+
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            return False, (
+                f"AI API Base 格式错误: {self.api_base}，"
+                "请使用 http://host:port 或 https://host/v1 这样的完整地址"
+            )
+
+        hostname = parsed.hostname.lower()
+
+        if hostname == "0.0.0.0":
+            return False, (
+                "AI API Base 不能填写 0.0.0.0。"
+                "0.0.0.0 是服务端监听地址，不是客户端可连接地址；"
+                "请改成实际可访问的主机名或 IP（如 127.0.0.1、host.docker.internal、局域网 IP）。"
+            )
+
+        if self._is_running_in_docker() and self._is_loopback_host(hostname):
+            return False, (
+                "当前运行在 Docker 容器内，AI API Base 不能使用 localhost/127.0.0.1。"
+                "容器内的回环地址只指向容器自身；如果要连接宿主机上的 Ollama 或其他本地模型，"
+                "请改用 host.docker.internal、同 docker-compose 网络内的服务名，或宿主机局域网 IP。"
+            )
+
+        return True, ""
 
     def chat(
         self,
@@ -111,7 +166,14 @@ class AIClient:
         if not self.model:
             return False, "未配置 AI 模型（model）"
 
-        if not self.api_key:
+        provider = self._get_provider()
+        needs_api_key = provider not in {"ollama"}
+
+        api_base_valid, api_base_error = self._validate_api_base()
+        if not api_base_valid:
+            return False, api_base_error
+
+        if not self.api_key and needs_api_key:
             return False, "未配置 AI API Key，请在 config.yaml 或环境变量 AI_API_KEY 中设置"
 
         # 验证模型格式（应该包含 provider/model）

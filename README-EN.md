@@ -3388,7 +3388,7 @@ The simplest way is via environment variables (Recommended for GitHub Secrets or
 | Variable Name | Value | Description |
 |--------------|-------|-------------|
 | `AI_ANALYSIS_ENABLED` | `true` | Enable switch |
-| `AI_API_KEY` | `sk-xxxxxx` | Your API Key |
+| `AI_API_KEY` | `sk-xxxxxx` (optional for Ollama) | Your API Key |
 | `AI_MODEL` | `deepseek/deepseek-chat` | Model identifier (format: `provider/model`) |
 
 **Supported AI Providers** (Based on LiteLLM, supports 100+ providers):
@@ -3398,6 +3398,7 @@ The simplest way is via environment variables (Recommended for GitHub Secrets or
 | **DeepSeek** (Recommended) | `deepseek/deepseek-chat` | Excellent cost-performance ratio for high-frequency analysis |
 | **OpenAI** | `openai/gpt-4o`<br>`openai/gpt-4o-mini` | GPT-4o series |
 | **Google Gemini** | `gemini/gemini-1.5-flash`<br>`gemini/gemini-1.5-pro` | Gemini series |
+| **Local Ollama** | `ollama/llama3` | Local models, usually no `AI_API_KEY` required |
 | **Custom API** | Any format | Use with `AI_API_BASE` |
 
 > 💡 **New Feature**: Now based on [LiteLLM](https://github.com/BerriAI/litellm) unified interface, supporting 100+ AI providers with simpler configuration and better error handling.
@@ -3411,6 +3412,12 @@ The simplest way is via environment variables (Recommended for GitHub Secrets or
 | `AI_MAX_TOKENS` | `5000` | Maximum tokens to generate |
 | `AI_TIMEOUT` | `120` | Request timeout (seconds) |
 | `AI_NUM_RETRIES` | `2` | Number of retries on failure |
+
+> 💡 **Ollama / local model tips**:
+> - Local Ollama usually does not need `AI_API_KEY`
+> - For local runs, `http://127.0.0.1:11434` is fine
+> - **Inside Docker, do not set `AI_API_BASE` to `0.0.0.0`, `127.0.0.1`, or `localhost`**
+> - From a container, use `host.docker.internal`, a service name on the same `docker-compose` network, or the host LAN IP instead
 
 #### Advanced: AI Translation
 

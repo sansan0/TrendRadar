@@ -3392,7 +3392,7 @@ app:
 | 变量名 | 填什么 | 说明 |
 |-------|-------|------|
 | `AI_ANALYSIS_ENABLED` | `true` | 开启开关 |
-| `AI_API_KEY` | `sk-xxxxxx` | 你的 API Key |
+| `AI_API_KEY` | `sk-xxxxxx`（Ollama 可留空） | 你的 API Key |
 | `AI_MODEL` | `deepseek/deepseek-chat` | 模型标识（格式：`provider/model`） |
 
 **支持的 AI 提供商**（基于 LiteLLM，支持 100+ 提供商）：
@@ -3402,6 +3402,7 @@ app:
 | **DeepSeek** (推荐) | `deepseek/deepseek-chat` | 性价比极高，适合高频分析 |
 | **OpenAI** | `openai/gpt-4o`<br>`openai/gpt-4o-mini` | GPT-4o 系列 |
 | **Google Gemini** | `gemini/gemini-1.5-flash`<br>`gemini/gemini-1.5-pro` | Gemini 系列 |
+| **本地 Ollama** | `ollama/llama3` | 本地模型，通常不需要 `AI_API_KEY` |
 | **自定义 API** | 任意格式 | 配合 `AI_API_BASE` 使用 |
 
 > 💡 **新特性**：现已基于 [LiteLLM](https://github.com/BerriAI/litellm) 统一接口，支持 100+ AI 提供商，配置更简单、错误处理更完善。
@@ -3415,6 +3416,12 @@ app:
 | `AI_MAX_TOKENS` | `5000` | 最大生成 token 数 |
 | `AI_TIMEOUT` | `120` | 请求超时时间（秒） |
 | `AI_NUM_RETRIES` | `2` | 失败重试次数 |
+
+> 💡 **Ollama / 本地模型提示**：
+> - 本地 Ollama 一般不需要配置 `AI_API_KEY`
+> - 本地运行时可用 `http://127.0.0.1:11434`
+> - **Docker 容器内不要把 `AI_API_BASE` 配成 `0.0.0.0`、`127.0.0.1` 或 `localhost`**
+> - 容器里请改用 `host.docker.internal`、同 `docker-compose` 网络内的服务名，或宿主机局域网 IP
 
 #### 进阶玩法：AI 翻译
 

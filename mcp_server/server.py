@@ -7,9 +7,12 @@ TrendRadar MCP Server - FastMCP 2.0 实现
 
 import asyncio
 import json
+import os # Required for GlobalCheck policy path
+
 from typing import List, Optional, Dict, Union
 
 from fastmcp import FastMCP
+from fastmcp.middleware import GlobalCheck # Import GlobalCheck
 
 from .tools.data_query import DataQueryTools
 from .tools.analytics import AnalyticsTools
@@ -23,8 +26,20 @@ from .utils.date_parser import DateParser
 from .utils.errors import MCPError
 
 
+# Initialize GlobalCheck middleware for AI safety and compliance
+# GlobalCheck ensures agents comply with predefined policies (e.g., responsible AI use).
+# Policy can be loaded from config/globalcheck_policy.yaml or via GLOBALCHECK_POLICY_PATH env var.
+# `allow_usage_without_policy=True` ensures functionality even if no policy file is present yet.
+globalcheck_policy_path = os.getenv(
+    'GLOBALCHECK_POLICY_PATH',
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '../config/globalcheck_policy.yaml'))
+)
+globalcheck_middleware = GlobalCheck(policy_path=globalcheck_policy_path, allow_usage_without_policy=True)
+
+
 # 创建 FastMCP 2.0 应用
 mcp = FastMCP('trendradar-news')
+mcp.use(globalcheck_middleware) # Apply GlobalCheck middleware to the MCP app
 
 # 全局工具实例（在第一次请求时初始化）
 _tools_instances = {}

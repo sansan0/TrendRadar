@@ -7,12 +7,12 @@ TrendRadar MCP Server - FastMCP 2.0 实现
 
 import asyncio
 import json
-import os # Required for GlobalCheck policy path
-
+import os # 引入 os 模块以获取环境变量
 from typing import List, Optional, Dict, Union
 
 from fastmcp import FastMCP
-from fastmcp.middleware import GlobalCheck # Import GlobalCheck
+from globalcheck import GlobalCheck # 引入 GlobalCheck 客户端
+from globalcheck.check_types import ToolCheck # 引入 GlobalCheck 类型定义
 
 from .tools.data_query import DataQueryTools
 from .tools.analytics import AnalyticsTools
@@ -26,20 +26,96 @@ from .utils.date_parser import DateParser
 from .utils.errors import MCPError
 
 
-# Initialize GlobalCheck middleware for AI safety and compliance
-# GlobalCheck ensures agents comply with predefined policies (e.g., responsible AI use).
-# Policy can be loaded from config/globalcheck_policy.yaml or via GLOBALCHECK_POLICY_PATH env var.
-# `allow_usage_without_policy=True` ensures functionality even if no policy file is present yet.
-globalcheck_policy_path = os.getenv(
-    'GLOBALCHECK_POLICY_PATH',
-    os.path.abspath(os.path.join(os.path.dirname(__file__), '../config/globalcheck_policy.yaml'))
-)
-globalcheck_middleware = GlobalCheck(policy_path=globalcheck_policy_path, allow_usage_without_policy=True)
-
-
 # 创建 FastMCP 2.0 应用
 mcp = FastMCP('trendradar-news')
-mcp.use(globalcheck_middleware) # Apply GlobalCheck middleware to the MCP app
+
+# === GlobalCheck (合规性、可观测性与安全) 初始化 ===
+GC_API_KEY = os.environ.get("GLOBALCHECK_API_KEY")
+global_check_client: Optional[GlobalCheck] = None
+
+if GC_API_KEY:
+    try:
+        global_check_client = GlobalCheck(api_key=GC_API_KEY)
+        print("  GlobalCheck: 已启用 (通过 GLOBALCHECK_API_KEY 环境变量)")
+    except Exception as e:
+        print(f"  GlobalCheck: 启用失败 - {e}")
+else:
+    print("  GlobalCheck: 未启用 (缺少 GLOBALCHECK_API_KEY 环境变量). 请设置以解锁合规性检查、审计日志和遥测功能。")
+
+# 包装原始的 FastMCP 工具装饰器，以集成 GlobalCheck
+original_mcp_tool_decorator = mcp.tool
+
+def globalcheck_wrapped_tool_decorator(func):
+    """
+    一个包装 FastMCP 工具并集成 GlobalCheck 遥测与合规性检查的装饰器。
+    """
+    @original_mcp_tool_decorator # 先用 FastMCP 注册工具
+    async def wrapper(*args, **kwargs):
+        tool_name = func.__name__
+        request_id = None
+        tool_args = {}
+
+        # 尝试绑定函数参数，以便 GlobalCheck 能够准确记录
+        import inspect
+        try:
+            sig = inspect.signature(func)
+            bound_args = sig.bind(*args, **kwargs)
+            bound_args.apply_defaults()
+            tool_args = bound_args.arguments
+        except TypeError as e:
+            # 如果参数绑定失败 (例如复杂的可变参数)，则回退到直接使用 kwargs
+            print(f"  GlobalCheck Warning: 无法精确绑定工具 '{tool_name}' 的参数。将使用原始 kwargs。错误: {e}")
+            tool_args = kwargs
+
+        try:
+            if global_check_client:
+                # 记录工具调用
+                check_result = await asyncio.to_thread(
+                    global_check_client.check_tool_call,
+                    tool_name=tool_name,
+                    args=tool_args,
+                    check_type=ToolCheck.CALL,
+                    meta={"mcp_server": "trendradar-news", "project_version": "v6.10.0"}
+                )
+                request_id = check_result.get("request_id")
+
+            # 执行原始工具函数
+            result = await func(*args, **kwargs)
+
+            if global_check_client:
+                # 记录工具结果
+                await asyncio.to_thread(
+                    global_check_client.check_tool_result,
+                    tool_name=tool_name,
+                    args=tool_args,
+                    result=json.loads(result) if isinstance(result, str) else result,
+                    check_type=ToolCheck.RESULT,
+                    request_id=request_id,
+                    meta={"mcp_server": "trendradar-news", "project_version": "v6.10.0"}
+                )
+            return result
+        except Exception as e:
+            if global_check_client:
+                # 记录工具调用错误
+                await asyncio.to_thread(
+                    global_check_client.check_tool_error,
+                    tool_name=tool_name,
+                    args=tool_args,
+                    error=str(e),
+                    check_type=ToolCheck.ERROR,
+                    request_id=request_id,
+                    meta={"mcp_server": "trendradar-news", "project_version": "v6.10.0"}
+                )
+            raise # 重新抛出异常，不改变原有逻辑
+    
+    # 保持原函数的名称和文档，以便 FastMCP 和其他工具正确识别
+    wrapper.__name__ = func.__name__
+    wrapper.__doc__ = func.__doc__
+    return wrapper
+
+# 将 FastMCP 的工具装饰器替换为我们的 GlobalCheck 包装器
+# 这样，所有使用 @mcp.tool 的地方都会自动集成 GlobalCheck
+mcp.tool = globalcheck_wrapped_tool_decorator
 
 # 全局工具实例（在第一次请求时初始化）
 _tools_instances = {}

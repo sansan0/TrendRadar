@@ -3879,7 +3879,7 @@ Any client supporting Model Context Protocol can connect to TrendRadar:
 - https://github.com/sansan0/bilibili-comment-analyzer
 
 
-[![Star History Chart](https://api.star-history.com/svg?repos=sansan0/TrendRadar&type=Date)](https://www.star-history.com/#sansan0/TrendRadar&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=sansan0/TrendRadar&type=Date)](https://star-history.dera.page/#sansan0/TrendRadar&Date)
 
 <br>
 

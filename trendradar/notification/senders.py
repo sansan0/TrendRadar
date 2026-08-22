@@ -29,7 +29,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from .batch import add_batch_headers, get_max_batch_header_size
+from .batch import add_batch_headers, get_max_batch_header_size, split_ai_content_into_batches
 from .formatters import convert_markdown_to_mrkdwn, strip_markdown
 
 
@@ -155,7 +155,7 @@ def send_to_feishu(
         mode=mode,
         rss_items=rss_items,
         rss_new_items=rss_new_items,
-        ai_content=ai_content,
+        ai_content=None,
         standalone_data=standalone_data,
         ai_stats=ai_stats,
         report_type=report_type,
@@ -163,6 +163,10 @@ def send_to_feishu(
 
     # 统一添加批次头部（已预留空间，不会超限）
     batches = add_batch_headers(batches, "feishu", batch_size)
+
+    # AI 分析作为独立消息发送（不拼进热点消息，也不参与批次头部编号）
+    if ai_content:
+        batches = batches + split_ai_content_into_batches(ai_content, batch_size)
 
     print(f"{log_prefix}消息分为 {len(batches)} 批次发送 [{report_type}]")
 
@@ -287,7 +291,7 @@ def send_to_dingtalk(
         mode=mode,
         rss_items=rss_items,
         rss_new_items=rss_new_items,
-        ai_content=ai_content,
+        ai_content=None,
         standalone_data=standalone_data,
         ai_stats=ai_stats,
         report_type=report_type,
@@ -295,6 +299,10 @@ def send_to_dingtalk(
 
     # 统一添加批次头部（已预留空间，不会超限）
     batches = add_batch_headers(batches, "dingtalk", batch_size)
+
+    # AI 分析作为独立消息发送（不拼进热点消息，也不参与批次头部编号）
+    if ai_content:
+        batches = batches + split_ai_content_into_batches(ai_content, batch_size)
 
     print(f"{log_prefix}消息分为 {len(batches)} 批次发送 [{report_type}]")
 
@@ -412,7 +420,7 @@ def send_to_wework(
         report_data, "wework", update_info, max_bytes=batch_size - header_reserve, mode=mode,
         rss_items=rss_items,
         rss_new_items=rss_new_items,
-        ai_content=ai_content,
+        ai_content=None,
         standalone_data=standalone_data,
         ai_stats=ai_stats,
         report_type=report_type,
@@ -420,6 +428,10 @@ def send_to_wework(
 
     # 统一添加批次头部（已预留空间，不会超限）
     batches = add_batch_headers(batches, header_format_type, batch_size)
+
+    # AI 分析作为独立消息发送（不拼进热点消息，也不参与批次头部编号）
+    if ai_content:
+        batches = batches + split_ai_content_into_batches(ai_content, batch_size)
 
     print(f"{log_prefix}消息分为 {len(batches)} 批次发送 [{report_type}]")
 
@@ -530,7 +542,7 @@ def send_to_telegram(
         report_data, "telegram", update_info, max_bytes=batch_size - header_reserve, mode=mode,
         rss_items=rss_items,
         rss_new_items=rss_new_items,
-        ai_content=ai_content,
+        ai_content=None,
         standalone_data=standalone_data,
         ai_stats=ai_stats,
         report_type=report_type,
@@ -538,6 +550,10 @@ def send_to_telegram(
 
     # 统一添加批次头部（已预留空间，不会超限）
     batches = add_batch_headers(batches, "telegram", batch_size)
+
+    # AI 分析作为独立消息发送（不拼进热点消息，也不参与批次头部编号）
+    if ai_content:
+        batches = batches + split_ai_content_into_batches(ai_content, batch_size)
 
     print(f"{log_prefix}消息分为 {len(batches)} 批次发送 [{report_type}]")
 
@@ -827,7 +843,7 @@ def send_to_ntfy(
         report_data, "ntfy", update_info, max_bytes=batch_size - header_reserve, mode=mode,
         rss_items=rss_items,
         rss_new_items=rss_new_items,
-        ai_content=ai_content,
+        ai_content=None,
         standalone_data=standalone_data,
         ai_stats=ai_stats,
         report_type=report_type,
@@ -835,6 +851,10 @@ def send_to_ntfy(
 
     # 统一添加批次头部（已预留空间，不会超限）
     batches = add_batch_headers(batches, "ntfy", batch_size)
+
+    # AI 分析作为独立消息发送（不拼进热点消息，也不参与批次头部编号）
+    if ai_content:
+        batches = batches + split_ai_content_into_batches(ai_content, batch_size)
 
     total_batches = len(batches)
     print(f"{log_prefix}消息分为 {total_batches} 批次发送 [{report_type}]")
@@ -1002,7 +1022,7 @@ def send_to_bark(
         report_data, "bark", update_info, max_bytes=batch_size - header_reserve, mode=mode,
         rss_items=rss_items,
         rss_new_items=rss_new_items,
-        ai_content=ai_content,
+        ai_content=None,
         standalone_data=standalone_data,
         ai_stats=ai_stats,
         report_type=report_type,
@@ -1010,6 +1030,10 @@ def send_to_bark(
 
     # 统一添加批次头部（已预留空间，不会超限）
     batches = add_batch_headers(batches, "bark", batch_size)
+
+    # AI 分析作为独立消息发送（不拼进热点消息，也不参与批次头部编号）
+    if ai_content:
+        batches = batches + split_ai_content_into_batches(ai_content, batch_size)
 
     total_batches = len(batches)
     print(f"{log_prefix}消息分为 {total_batches} 批次发送 [{report_type}]")
@@ -1153,7 +1177,7 @@ def send_to_slack(
         report_data, "slack", update_info, max_bytes=batch_size - header_reserve, mode=mode,
         rss_items=rss_items,
         rss_new_items=rss_new_items,
-        ai_content=ai_content,
+        ai_content=None,
         standalone_data=standalone_data,
         ai_stats=ai_stats,
         report_type=report_type,
@@ -1161,6 +1185,10 @@ def send_to_slack(
 
     # 统一添加批次头部（已预留空间，不会超限）
     batches = add_batch_headers(batches, "slack", batch_size)
+
+    # AI 分析作为独立消息发送（不拼进热点消息，也不参与批次头部编号）
+    if ai_content:
+        batches = batches + split_ai_content_into_batches(ai_content, batch_size)
 
     print(f"{log_prefix}消息分为 {len(batches)} 批次发送 [{report_type}]")
 
@@ -1266,7 +1294,7 @@ def send_to_generic_webhook(
         report_data, "wework", update_info, max_bytes=batch_size - template_overhead, mode=mode,
         rss_items=rss_items,
         rss_new_items=rss_new_items,
-        ai_content=ai_content,
+        ai_content=None,
         standalone_data=standalone_data,
         ai_stats=ai_stats,
         report_type=report_type,
@@ -1274,6 +1302,10 @@ def send_to_generic_webhook(
 
     # 统一添加批次头部
     batches = add_batch_headers(batches, "wework", batch_size)
+
+    # AI 分析作为独立消息发送（不拼进热点消息，也不参与批次头部编号）
+    if ai_content:
+        batches = batches + split_ai_content_into_batches(ai_content, batch_size)
 
     print(f"{log_prefix}消息分为 {len(batches)} 批次发送 [{report_type}]")
 

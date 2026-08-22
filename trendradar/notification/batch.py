@@ -219,3 +219,37 @@ def add_batch_headers(
         result.append(header + content)
 
     return result
+
+
+def split_ai_content_into_batches(ai_content: str, max_bytes: int) -> List[str]:
+    """将 AI 分析内容按行边界拆分为独立批次
+
+    AI 分析作为独立消息发送，不参与热点批次头部的编号。
+    按行边界拆分，避免在内容中间截断，确保每条消息不超过 max_bytes。
+
+    Args:
+        ai_content: 已渲染的 AI 分析内容（markdown/HTML/纯文本）
+        max_bytes: 单条消息的最大字节数
+
+    Returns:
+        拆分后的批次列表（可能为空列表）
+    """
+    if not ai_content:
+        return []
+
+    lines = ai_content.split("\n")
+    batches = []
+    current = ""
+
+    for line in lines:
+        candidate = current + line + "\n"
+        if len(candidate.encode("utf-8")) > max_bytes and current.strip():
+            batches.append(current)
+            current = line + "\n"
+        else:
+            current = candidate
+
+    if current.strip():
+        batches.append(current)
+
+    return batches

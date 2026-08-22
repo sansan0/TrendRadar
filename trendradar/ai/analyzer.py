@@ -17,13 +17,9 @@ from trendradar.ai.prompt_loader import load_prompt_template
 @dataclass
 class AIAnalysisResult:
     """AI 分析结果"""
-    # 新版 5 核心板块
-    core_trends: str = ""                # 核心热点与舆情态势
-    sentiment_controversy: str = ""      # 舆论风向与争议
-    signals: str = ""                    # 异动与弱信号
-    rss_insights: str = ""               # RSS 深度洞察
-    outlook_strategy: str = ""           # 研判与策略建议
-    standalone_summaries: Dict[str, str] = field(default_factory=dict)  # 独立展示区概括 {源ID: 概括}
+    # 内容汇总结构（按事件/主题聚合，信息完整度优先）
+    overview: str = ""                   # 本期热点总体概述
+    topics: List[Dict] = field(default_factory=list)  # 事件列表 [{title, summary, platforms, key_points}]
 
     # 基础元数据
     raw_response: str = ""               # 原始响应
@@ -90,7 +86,6 @@ class AIAnalyzer:
         # 从分析配置获取功能参数
         self.max_news = analysis_config.get("MAX_NEWS_FOR_ANALYSIS", 50)
         self.include_rss = analysis_config.get("INCLUDE_RSS", True)
-        self.include_rank_timeline = analysis_config.get("INCLUDE_RANK_TIMELINE", False)
         self.include_standalone = analysis_config.get("INCLUDE_STANDALONE", False)
         self.language = analysis_config.get("LANGUAGE", "Chinese")
 
@@ -218,14 +213,6 @@ class AIAnalyzer:
                 else:
                     print("[AI] JSON 修复失败，使用原始文本兜底")
 
-            # 如果配置未启用 RSS 分析，强制清空 AI 返回的 RSS 洞察
-            if not self.include_rss:
-                result.rss_insights = ""
-
-            # 如果配置未启用 standalone 分析，强制清空
-            if not self.include_standalone:
-                result.standalone_summaries = {}
-
             # 填充统计数据
             result.total_news = total_news
             result.hotlist_count = prepared.hotlist_total
@@ -283,36 +270,26 @@ class AIAnalyzer:
                         # 来源
                         source = t.get("source_name", t.get("source", ""))
 
-                        # 构建行
+                        # 构建行：保留标题 + 来源 + 出现次数。
+                        # 出现次数作为「综合热度」排序的参考信号，不输出排名/时间/轨迹等分析性信息。
                         if source:
                             line = f"- [{source}] {title}"
                         else:
                             line = f"- {title}"
 
-                        # 始终显示简化格式：排名范围 + 时间范围 + 出现次数
-                        ranks = t.get("ranks", [])
-                        if ranks:
-                            min_rank = min(ranks)
-                            max_rank = max(ranks)
-                            rank_str = f"{min_rank}" if min_rank == max_rank else f"{min_rank}-{max_rank}"
-                        else:
-                            rank_str = "-"
-
-                        first_time = t.get("first_time", "")
-                        last_time = t.get("last_time", "")
-                        time_str = self._format_time_range(first_time, last_time)
-
                         appear_count = t.get("count", 1)
-
-                        line += f" | 排名:{rank_str} | 时间:{time_str} | 出现:{appear_count}次"
-
-                        # 开启完整时间线时，额外添加轨迹
-                        if self.include_rank_timeline:
-                            rank_timeline = t.get("rank_timeline", [])
-                            timeline_str = self._format_rank_timeline(rank_timeline)
-                            line += f" | 轨迹:{timeline_str}"
+                        if appear_count and appear_count > 1:
+                            line += f" | 出现:{appear_count}次"
 
                         news_lines.append(line)
+
+                        # 追加摘要/正文描述（来自 extra.hover，部分平台如知乎/百度提供）
+                        summary = t.get("summary", "")
+                        if summary:
+                            # 截断过长摘要，控制 token 消耗
+                            if len(summary) > 800:
+                                summary = summary[:800] + "..."
+                            news_lines.append(f"  摘要：{summary}")
 
                         news_count += 1
                         if news_count >= self.max_news:
@@ -422,51 +399,6 @@ class AIAnalyzer:
             print(f"[AI] 重试修复 JSON 异常: {type(e).__name__}: {e}")
             return None
 
-    def _format_time_range(self, first_time: str, last_time: str) -> str:
-        """格式化时间范围（简化显示，只保留时分）"""
-        def extract_time(time_str: str) -> str:
-            if not time_str:
-                return "-"
-            # 尝试提取 HH:MM 部分
-            if " " in time_str:
-                parts = time_str.split(" ")
-                if len(parts) >= 2:
-                    time_part = parts[1]
-                    if ":" in time_part:
-                        return time_part[:5]  # HH:MM
-            elif ":" in time_str:
-                return time_str[:5]
-            # 处理 HH-MM 格式
-            result = time_str[:5] if len(time_str) >= 5 else time_str
-            if len(result) == 5 and result[2] == '-':
-                result = result.replace('-', ':')
-            return result
-
-        first = extract_time(first_time)
-        last = extract_time(last_time)
-
-        if first == last or last == "-":
-            return first
-        return f"{first}~{last}"
-
-    def _format_rank_timeline(self, rank_timeline: List[Dict]) -> str:
-        """格式化排名时间线"""
-        if not rank_timeline:
-            return "-"
-
-        parts = []
-        for item in rank_timeline:
-            time_str = item.get("time", "")
-            if len(time_str) == 5 and time_str[2] == '-':
-                time_str = time_str.replace('-', ':')
-            rank = item.get("rank")
-            if rank is None:
-                parts.append(f"0({time_str})")
-            else:
-                parts.append(f"{rank}({time_str})")
-
-        return "→".join(parts)
-
     def _prepare_standalone_content(self, standalone_data: Dict) -> tuple:
         """
         将独立展示区数据转为文本，注入 AI 分析 prompt
@@ -493,36 +425,7 @@ class AIAnalyzer:
                 if not title:
                     continue
 
-                line = f"- {title}"
-
-                # 排名信息
-                ranks = item.get("ranks", [])
-                if ranks:
-                    min_rank = min(ranks)
-                    max_rank = max(ranks)
-                    rank_str = f"{min_rank}" if min_rank == max_rank else f"{min_rank}-{max_rank}"
-                    line += f" | 排名:{rank_str}"
-
-                # 时间范围
-                first_time = item.get("first_time", "")
-                last_time = item.get("last_time", "")
-                if first_time:
-                    time_str = self._format_time_range(first_time, last_time)
-                    line += f" | 时间:{time_str}"
-
-                # 出现次数
-                count = item.get("count", 1)
-                if count > 1:
-                    line += f" | 出现:{count}次"
-
-                # 排名轨迹（如果启用）
-                if self.include_rank_timeline:
-                    rank_timeline = item.get("rank_timeline", [])
-                    if rank_timeline:
-                        timeline_str = self._format_rank_timeline(rank_timeline)
-                        line += f" | 轨迹:{timeline_str}"
-
-                lines.append(line)
+                lines.append(f"- {title}")
             lines.append("")
 
         # RSS 源
@@ -582,7 +485,7 @@ class AIAnalyzer:
         json_str = json_str.strip()
         if not json_str:
             result.error = "提取的 JSON 内容为空"
-            result.core_trends = response[:500] + "..." if len(response) > 500 else response
+            result.overview = response[:500] + "..." if len(response) > 500 else response
             result.success = True
             return result
 
@@ -616,29 +519,59 @@ class AIAnalyzer:
             else:
                 result.error = "JSON 解析失败"
             # 兜底：使用已提取的 json_str（不含 markdown 标记），避免推送中出现 ```json
-            result.core_trends = json_str[:500] + "..." if len(json_str) > 500 else json_str
+            result.overview = json_str[:500] + "..." if len(json_str) > 500 else json_str
             result.success = True
             return result
 
         # 解析成功，提取字段
         try:
-            result.core_trends = data.get("core_trends", "")
-            result.sentiment_controversy = data.get("sentiment_controversy", "")
-            result.signals = data.get("signals", "")
-            result.rss_insights = data.get("rss_insights", "")
-            result.outlook_strategy = data.get("outlook_strategy", "")
+            result.overview = str(data.get("overview", "") or "").strip()
 
-            # 解析独立展示区概括
-            summaries = data.get("standalone_summaries", {})
-            if isinstance(summaries, dict):
-                result.standalone_summaries = {
-                    str(k): str(v) for k, v in summaries.items()
-                }
+            topics = data.get("topics", [])
+            if isinstance(topics, list):
+                result.topics = self._normalize_topics(topics)
 
             result.success = True
         except (KeyError, TypeError, AttributeError) as e:
             result.error = f"字段提取错误: {type(e).__name__}: {e}"
-            result.core_trends = json_str[:500] + "..." if len(json_str) > 500 else json_str
+            result.overview = json_str[:500] + "..." if len(json_str) > 500 else json_str
             result.success = True
 
         return result
+
+    def _normalize_topics(self, topics: List[Any]) -> List[Dict]:
+        """规范化 topics 列表，确保字段类型安全，过滤无效条目
+
+        Args:
+            topics: AI 返回的原始 topics 列表
+
+        Returns:
+            规范化后的事件列表 [{title, summary, platforms, key_points}]
+        """
+        normalized = []
+        for t in topics:
+            if not isinstance(t, dict):
+                continue
+
+            title = str(t.get("title", "") or "").strip()
+            summary = str(t.get("summary", "") or "").strip()
+            if not title and not summary:
+                continue
+
+            platforms = t.get("platforms", [])
+            if not isinstance(platforms, list):
+                platforms = []
+            platforms = [str(p).strip() for p in platforms if str(p).strip()]
+
+            key_points = t.get("key_points", [])
+            if not isinstance(key_points, list):
+                key_points = []
+            key_points = [str(k).strip() for k in key_points if str(k).strip()]
+
+            normalized.append({
+                "title": title,
+                "summary": summary,
+                "platforms": platforms,
+                "key_points": key_points,
+            })
+        return normalized

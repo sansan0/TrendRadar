@@ -211,13 +211,23 @@ class DataFetcher:
                         url = item.get("url", "")
                         mobile_url = item.get("mobileUrl", "")
 
+                        # 抓取摘要/描述（extra.hover，部分平台如知乎/百度提供正文描述）
+                        extra = item.get("extra")
+                        hover = ""
+                        if isinstance(extra, dict):
+                            hover = (extra.get("hover") or "").strip()
+
                         if title in results[id_value]:
                             results[id_value][title]["ranks"].append(index)
+                            # 已有记录若缺少 hover 则补充
+                            if hover and not results[id_value][title].get("hover"):
+                                results[id_value][title]["hover"] = hover
                         else:
                             results[id_value][title] = {
                                 "ranks": [index],
                                 "url": url,
                                 "mobileUrl": mobile_url,
+                                "hover": hover,
                             }
                 except json.JSONDecodeError:
                     print(f"解析 {id_value} 响应失败")

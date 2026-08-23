@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS news_items (
     rank INTEGER NOT NULL,
     url TEXT DEFAULT '',
     mobile_url TEXT DEFAULT '',
+    summary TEXT DEFAULT '',            -- 摘要/正文描述（来自 extra.hover）
     first_crawl_time TEXT NOT NULL,      -- 首次抓取时间
     last_crawl_time TEXT NOT NULL,       -- 最后抓取时间
     crawl_count INTEGER DEFAULT 1,       -- 抓取次数

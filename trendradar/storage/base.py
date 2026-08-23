@@ -27,6 +27,7 @@ class NewsItem:
     first_time: str = ""                # 首次出现时间
     last_time: str = ""                 # 最后出现时间
     count: int = 1                      # 出现次数
+    summary: str = ""                   # 摘要/正文描述（来自 extra.hover，部分平台提供）
     rank_timeline: List[Dict[str, Any]] = field(default_factory=list)  # 完整排名时间线
                                         # 格式: [{"time": "09:30", "rank": 1}, {"time": "10:00", "rank": 2}, ...]
                                         # None 表示脱榜: [{"time": "11:00", "rank": None}]
@@ -45,6 +46,7 @@ class NewsItem:
             "first_time": self.first_time,
             "last_time": self.last_time,
             "count": self.count,
+            "summary": self.summary,
             "rank_timeline": self.rank_timeline,
         }
 
@@ -63,6 +65,7 @@ class NewsItem:
             first_time=data.get("first_time", ""),
             last_time=data.get("last_time", ""),
             count=data.get("count", 1),
+            summary=data.get("summary", ""),
             rank_timeline=data.get("rank_timeline", []),
         )
 
@@ -557,6 +560,7 @@ def convert_crawl_results_to_news_data(
             ranks = data.get("ranks", [])
             url = data.get("url", "")
             mobile_url = data.get("mobileUrl", "")
+            summary = data.get("hover", "") or data.get("summary", "")
 
             rank = ranks[0] if ranks else 99
 
@@ -572,6 +576,7 @@ def convert_crawl_results_to_news_data(
                 first_time=crawl_time,
                 last_time=crawl_time,
                 count=1,
+                summary=summary,
             )
             news_list.append(news_item)
 

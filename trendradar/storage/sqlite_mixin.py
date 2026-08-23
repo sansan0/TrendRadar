@@ -95,11 +95,19 @@ class SQLiteStorageMixin:
             if ai_filter_schema.exists():
                 with open(ai_filter_schema, "r", encoding="utf-8") as f:
                     conn.executescript(f.read())
+            self._migrate_news_schema(conn)
 
         if db_type == "rss":
             self._migrate_rss_schema(conn)
 
         conn.commit()
+
+    def _migrate_news_schema(self, conn: sqlite3.Connection) -> None:
+        """迁移 news_items 表结构（为已有数据库添加 summary 列）"""
+        cursor = conn.execute("PRAGMA table_info(news_items)")
+        columns = {row[1] for row in cursor.fetchall()}
+        if "summary" not in columns:
+            conn.execute("ALTER TABLE news_items ADD COLUMN summary TEXT DEFAULT ''")
 
     def _migrate_rss_schema(self, conn: sqlite3.Connection) -> None:
         """迁移 rss_items 表结构（为已有数据库添加 guid 列）"""
@@ -198,23 +206,24 @@ class SQLiteStorageMixin:
                                         title = ?,
                                         rank = ?,
                                         mobile_url = ?,
+                                        summary = ?,
                                         last_crawl_time = ?,
                                         crawl_count = crawl_count + 1,
                                         updated_at = ?
                                     WHERE id = ?
                                 """, (update_title, item.rank, item.mobile_url,
-                                      data.crawl_time, now_str, existing_id))
+                                      item.summary, data.crawl_time, now_str, existing_id))
                                 updated_count += 1
                             else:
                                 # 不存在，插入新记录（存储标准化后的 URL）
                                 cursor.execute("""
                                     INSERT INTO news_items
-                                    (title, platform_id, rank, url, mobile_url,
+                                    (title, platform_id, rank, url, mobile_url, summary,
                                      first_crawl_time, last_crawl_time, crawl_count,
                                      created_at, updated_at)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
                                 """, (item.title, source_id, item.rank, normalized_url,
-                                      item.mobile_url, data.crawl_time, data.crawl_time,
+                                      item.mobile_url, item.summary, data.crawl_time, data.crawl_time,
                                       now_str, now_str))
                                 new_id = cursor.lastrowid
                                 # 记录初始排名
@@ -228,12 +237,12 @@ class SQLiteStorageMixin:
                             # URL 为空的情况，直接插入（不做去重）
                             cursor.execute("""
                                 INSERT INTO news_items
-                                (title, platform_id, rank, url, mobile_url,
+                                (title, platform_id, rank, url, mobile_url, summary,
                                  first_crawl_time, last_crawl_time, crawl_count,
                                  created_at, updated_at)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
                             """, (item.title, source_id, item.rank, "",
-                                  item.mobile_url, data.crawl_time, data.crawl_time,
+                                  item.mobile_url, item.summary, data.crawl_time, data.crawl_time,
                                   now_str, now_str))
                             new_id = cursor.lastrowid
                             # 记录初始排名
@@ -357,7 +366,7 @@ class SQLiteStorageMixin:
             # 获取所有新闻数据（包含 id 用于查询排名历史）
             cursor.execute("""
                 SELECT n.id, n.title, n.platform_id, p.name as platform_name,
-                       n.rank, n.url, n.mobile_url,
+                       n.rank, n.url, n.mobile_url, n.summary,
                        n.first_crawl_time, n.last_crawl_time, n.crawl_count
                 FROM news_items n
                 LEFT JOIN platforms p ON n.platform_id = p.id
@@ -438,11 +447,12 @@ class SQLiteStorageMixin:
                     rank=row[4],
                     url=row[5] or "",
                     mobile_url=row[6] or "",
-                    crawl_time=row[8],  # last_crawl_time
+                    summary=row[7] or "",
+                    crawl_time=row[9],  # last_crawl_time
                     ranks=ranks,
-                    first_time=row[7],  # first_crawl_time
-                    last_time=row[8],   # last_crawl_time
-                    count=row[9],       # crawl_count
+                    first_time=row[8],  # first_crawl_time
+                    last_time=row[9],   # last_crawl_time
+                    count=row[10],      # crawl_count
                     rank_timeline=rank_timeline,
                 ))
 
@@ -509,7 +519,7 @@ class SQLiteStorageMixin:
             # 获取该时间的新闻数据（包含 id 用于查询排名历史）
             cursor.execute("""
                 SELECT n.id, n.title, n.platform_id, p.name as platform_name,
-                       n.rank, n.url, n.mobile_url,
+                       n.rank, n.url, n.mobile_url, n.summary,
                        n.first_crawl_time, n.last_crawl_time, n.crawl_count
                 FROM news_items n
                 LEFT JOIN platforms p ON n.platform_id = p.id
@@ -587,11 +597,12 @@ class SQLiteStorageMixin:
                     rank=row[4],
                     url=row[5] or "",
                     mobile_url=row[6] or "",
-                    crawl_time=row[8],  # last_crawl_time
+                    summary=row[7] or "",
+                    crawl_time=row[9],  # last_crawl_time
                     ranks=ranks,
-                    first_time=row[7],  # first_crawl_time
-                    last_time=row[8],   # last_crawl_time
-                    count=row[9],       # crawl_count
+                    first_time=row[8],  # first_crawl_time
+                    last_time=row[9],   # last_crawl_time
+                    count=row[10],      # crawl_count
                     rank_timeline=rank_timeline,
                 ))
 

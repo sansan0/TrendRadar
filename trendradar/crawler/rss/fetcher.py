@@ -167,7 +167,8 @@ class RSSFetcher:
         crawl_time = now.strftime("%H:%M")
         crawl_date = now.strftime("%Y-%m-%d")
 
-        print(f"[RSS] 开始抓取 {len(self.feeds)} 个 RSS 源...")
+        total = len(self.feeds)
+        print(f"[RSS] 开始抓取 {total} 个 RSS 源...")
 
         for i, feed in enumerate(self.feeds):
             # 请求间隔（带随机波动）
@@ -176,6 +177,7 @@ class RSSFetcher:
                 jitter = random.uniform(-0.2, 0.2) * interval
                 time.sleep(interval + jitter)
 
+            print(f"[RSS] 正在获取 {feed.name}（{i + 1}/{total}）...", flush=True)
             items, error = self.fetch_feed(feed)
 
             id_to_name[feed.id] = feed.name

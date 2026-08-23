@@ -270,6 +270,7 @@ def _load_ai_config(config_data: Dict) -> Dict:
         # LiteLLM 高级选项
         "NUM_RETRIES": ai_config.get("num_retries", 2),
         "FALLBACK_MODELS": ai_config.get("fallback_models", []),
+        "REASONING_EFFORT": str(ai_config.get("reasoning_effort") or "").strip().lower(),
         "EXTRA_PARAMS": ai_config.get("extra_params", {}),
     }
 
@@ -602,5 +603,12 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 
     # 打印通知渠道配置来源
     _print_notification_sources(config)
+
+    from trendradar.webui_settings import apply_overlay
+
+    output_dir = (
+        config.get("STORAGE", {}).get("LOCAL", {}).get("DATA_DIR") or "output"
+    )
+    apply_overlay(config, output_dir=output_dir)
 
     return config

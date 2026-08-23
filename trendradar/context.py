@@ -237,7 +237,17 @@ class AppContext:
     def load_frequency_words(
         self, frequency_file: Optional[str] = None
     ) -> Tuple[List[Dict], List[str], List[str]]:
-        """加载频率词配置"""
+        """加载频率词配置（Web UI overlay 中的主题词优先于文件）"""
+        from trendradar.webui_settings import load_overlay
+        from trendradar.core.frequency import parse_frequency_words_content
+
+        output_dir = (
+            self.config.get("STORAGE", {}).get("LOCAL", {}).get("DATA_DIR") or "output"
+        )
+        overlay = load_overlay(output_dir)
+        content = overlay.get("frequency_words")
+        if isinstance(content, str) and content.strip():
+            return parse_frequency_words_content(content)
         return load_frequency_words(frequency_file)
 
     def matches_word_groups(

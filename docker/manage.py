@@ -454,7 +454,10 @@ def _is_expected_webserver_process(pid: int) -> bool:
     cmdline = _read_proc_cmdline(pid)
     if not cmdline:
         return False
-    return "http.server" in cmdline and str(WEBSERVER_PORT) in cmdline
+    return (
+        str(WEBSERVER_PORT) in cmdline
+        and ("http.server" in cmdline or "trendradar.web_control" in cmdline)
+    )
 
 
 def _terminate_webserver_process(pid: int, require_expected: bool = True) -> bool:
@@ -531,7 +534,7 @@ def _cleanup_stale_pid():
 def start_webserver():
     """启动 Web 服务器托管 output 目录"""
     print(f"🌐 启动 Web 服务器 (端口: {WEBSERVER_PORT})...")
-    print(f"  🔒 安全提示：仅提供静态文件访问，限制在 {WEBSERVER_DIR} 目录")
+    print(f"  🔒 报告目录: {WEBSERVER_DIR}；控制面板可手动抓取 / 分析")
 
     # 检查是否已经运行
     if Path(WEBSERVER_PID_FILE).exists():
@@ -564,12 +567,21 @@ def start_webserver():
         # 启动 HTTP 服务器
         # 使用 --bind 绑定到 0.0.0.0 使容器内部可访问
         # 工作目录限制在 WEBSERVER_DIR，防止访问其他目录
+        here = Path(__file__).resolve().parent
+        project_root = str(here if (here / "trendradar").is_dir() else here.parent)
         process = subprocess.Popen(
-            [sys.executable, '-m', 'http.server', str(WEBSERVER_PORT), '--bind', '0.0.0.0'],
-            cwd=WEBSERVER_DIR,
+            [
+                sys.executable,
+                "-m",
+                "trendradar.web_control",
+                str(WEBSERVER_PORT),
+                WEBSERVER_DIR,
+                project_root,
+            ],
+            cwd=project_root,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            start_new_session=True
+            start_new_session=True,
         )
 
         # 等待一下确保服务器启动
@@ -581,7 +593,8 @@ def start_webserver():
             with open(WEBSERVER_PID_FILE, 'w') as f:
                 f.write(str(process.pid))
             print(f"  ✅ Web 服务器已启动 (PID: {process.pid})")
-            print(f"  📁 服务目录: {WEBSERVER_DIR} (只读，仅静态文件)")
+            print(f"  📁 服务目录: {WEBSERVER_DIR}")
+            print(f"  🎛️ 控制面板: 报告页顶部可手动抓取 / AI 分析 / 切换预设")
             print(f"  🌐 访问地址: http://localhost:{WEBSERVER_PORT}")
             print(f"  📄 首页: http://localhost:{WEBSERVER_PORT}/index.html")
             print("  💡 停止服务: python manage.py stop_webserver")

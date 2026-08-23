@@ -31,15 +31,15 @@ case "${RUN_MODE:-cron}" in
         exit 1
     fi
 
+    # 先启动 Web 服务器，避免 IMMEDIATE_RUN 抓取阻塞面板访问
+    echo "🌐 启动 Web 服务器..."
+    python manage.py start_webserver
+
     # 立即执行一次（如果配置了）
     if [ "${IMMEDIATE_RUN:-false}" = "true" ]; then
         echo "▶️ 立即执行一次"
         python -m trendradar
     fi
-
-    # 启动 Web 服务器
-    echo "🌐 启动 Web 服务器..."
-    python manage.py start_webserver
 
     echo "⏰ 启动supercronic: $CRON_EXPR"
     echo "🎯 supercronic 将作为 PID 1 运行"

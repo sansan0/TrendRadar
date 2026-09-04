@@ -1,0 +1,178 @@
+# ============================================
+# TrendRadar Helm Chart 配置
+# ============================================
+# 完整配置说明: https://github.com/sansan0/TrendRadar
+#
+# 快速开始:
+#   helm install trendradar deploy/helm/trendradar \
+#     --set notifications.telegram.botToken=YOUR_TOKEN \
+#     --set notifications.telegram.chatId=YOUR_CHAT_ID
+
+# --- 镜像配置 ---
+image:
+  repository: wantcat/trendradar
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imageMcp:
+  repository: wantcat/trendradar-mcp
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# --- 副本数 (建议保持 1，避免 cron 重复执行) ---
+replicaCount: 1
+
+# --- 运行模式 ---
+runMode: cron              # cron | once
+cronSchedule: "*/30 * * * *"
+immediateRun: true         # 启动时立即执行一次
+timezone: "Asia/Shanghai"
+
+# --- 调度系统 ---
+schedule:
+  enabled: ""                # true | false，留空使用 config.yaml 中的值
+  preset: ""                 # morning_evening | always_on | office_hours | night_owl | custom
+reportMode: ""               # daily | current | incremental，留空使用 config.yaml 中的值
+
+# --- Web Server ---
+webserver:
+  port: 8080
+  service:
+    type: ClusterIP
+    port: 80
+    # nodePort: 30080      # 设为数字以启用 NodePort (type 需设为 NodePort)
+
+# --- MCP Server ---
+mcp:
+  enabled: false
+  port: 3333
+  host: "0.0.0.0"         # 容器内监听地址
+  service:
+    type: ClusterIP
+    port: 80
+    # nodePort: 30333      # 设为数字以启用 NodePort
+
+# --- 持久化存储 ---
+# 两种模式: hostPath (单节点 k3s 极简) / pvc (多节点/生产)
+persistence:
+  config:
+    enabled: true
+    type: pvc         # hostPath | pvc
+    hostPath:
+      path: /opt/trendradar/config
+    pvc:
+      size: 10Gi
+      storageClassName: ""  # 留空使用集群默认 StorageClass
+      accessMode: ReadWriteOnce
+  output:
+    enabled: true
+    type: pvc         # hostPath | pvc
+    hostPath:
+      path: /opt/trendradar/output
+    pvc:
+      size: 1Gi
+      storageClassName: ""
+      accessMode: ReadWriteOnce
+
+# --- 通知渠道 (多账号用 ; 分隔) ---
+notifications:
+  feishu:
+    webhookUrl: ""
+  telegram:
+    botToken: ""
+    chatId: ""
+  dingtalk:
+    webhookUrl: ""
+  wework:
+    webhookUrl: ""
+    msgType: ""
+  email:
+    from: ""
+    password: ""
+    to: ""
+    smtpServer: ""
+    smtpPort: ""
+  ntfy:
+    serverUrl: "https://ntfy.sh"
+    topic: ""
+    token: ""
+  bark:
+    url: ""
+  slack:
+    webhookUrl: ""
+  genericWebhook:
+    url: ""
+    template: ""
+
+# --- AI 配置 ---
+ai:
+  analysisEnabled: ""
+  apiKey: ""
+  model: ""
+  apiBase: ""
+
+# --- 远程存储 (S3 兼容协议，支持 R2/OSS/COS/S3) ---
+s3:
+  endpointUrl: ""
+  bucketName: ""
+  accessKeyId: ""
+  secretAccessKey: ""
+  region: ""
+
+# --- Ingress ---
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # className: nginx
+  # annotations:
+  #   cert-manager.io/cluster-issuer: letsencrypt
+  hosts: []
+  #  - host: trendradar.example.com
+  #    paths:
+  #      - path: /
+  #        pathType: Prefix
+  tls: []
+  #  - secretName: trendradar-tls
+  #    hosts:
+  #      - trendradar.example.com
+
+# --- 资源限制 ---
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+mcpResources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# --- Pod 安全上下文 ---
+podSecurityContext: {}
+#  fsGroup: 1000
+
+securityContext: {}
+#  readOnlyRootFilesystem: true
+#  runAsNonRoot: true
+#  runAsUser: 1000
+
+# --- 节点调度 ---
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# --- 额外环境变量 (用于覆盖 config.yaml 中任意配置) ---
+extraEnv: []
+#  - name: SOME_VAR
+#    value: "some_value"
+
+# --- 额外 Volume / VolumeMount (高级用途) ---
+extraVolumes: []
+extraVolumeMounts: []

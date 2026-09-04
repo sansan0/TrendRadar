@@ -1,0 +1,112 @@
+{{- if .Values.mcp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "trendradar.mcp.fullname" . }}
+  labels:
+    {{- include "trendradar.mcp.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "trendradar.mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "trendradar.mcp.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: mcp
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.imageMcp.repository }}:{{ .Values.imageMcp.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.imageMcp.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "trendradar.fullname" . }}
+            - secretRef:
+                name: {{ include "trendradar.fullname" . }}
+          env:
+            - name: MCP_PORT
+              value: {{ .Values.mcp.port | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: mcp
+              containerPort: {{ .Values.mcp.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: mcp
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: mcp
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            - name: output
+              mountPath: /app/output
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.mcpResources | nindent 12 }}
+      volumes:
+        - name: config
+          {{- if and .Values.persistence.config.enabled (eq .Values.persistence.config.type "pvc") }}
+          persistentVolumeClaim:
+            claimName: {{ include "trendradar.fullname" . }}-config
+          {{- else if .Values.persistence.config.enabled }}
+          hostPath:
+            path: {{ .Values.persistence.config.hostPath.path }}
+            type: DirectoryOrCreate
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: output
+          {{- if and .Values.persistence.output.enabled (eq .Values.persistence.output.type "pvc") }}
+          persistentVolumeClaim:
+            claimName: {{ include "trendradar.fullname" . }}-output
+          {{- else if .Values.persistence.output.enabled }}
+          hostPath:
+            path: {{ .Values.persistence.output.hostPath.path }}
+            type: DirectoryOrCreate
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

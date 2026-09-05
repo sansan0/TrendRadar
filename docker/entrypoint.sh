@@ -12,6 +12,24 @@ case "${RUN_MODE:-cron}" in
     echo "🔄 单次执行"
     exec python -m trendradar
     ;;
+"daemon")
+    echo "🔄 守护进程模式（内置调度器，可恢复睡眠错过任务）"
+    if [ "${IMMEDIATE_RUN:-false}" = "true" ]; then
+        python /app/docker/scheduler_daemon.py "${CRON_SCHEDULE:-*/30 * * * *}" --immediate &
+    else
+        python /app/docker/scheduler_daemon.py "${CRON_SCHEDULE:-*/30 * * * *}" &
+    fi
+    DAEMON_PID=$!
+    echo "📅 调度守护进程 PID: $DAEMON_PID"
+
+    # 启动 Web 服务器
+    echo "🌐 启动 Web 服务器..."
+    python manage.py start_webserver
+
+    # 等待守护进程
+    trap "kill $DAEMON_PID 2>/dev/null" EXIT INT TERM
+    wait $DAEMON_PID
+    ;;
 "cron")
     # 校验 CRON_SCHEDULE 格式（仅允许 cron 表达式合法字符）
     CRON_EXPR="${CRON_SCHEDULE:-*/30 * * * *}"

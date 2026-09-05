@@ -43,6 +43,16 @@ class DataService:
         self.parser = ParserService(project_root)
         self.cache = get_cache()
 
+    def _make_json_serializable(self, obj):
+        """将对象中的 re.Pattern 转换为字符串，使其可 JSON 序列化"""
+        if isinstance(obj, re.Pattern):
+            return obj.pattern
+        elif isinstance(obj, dict):
+            return {k: self._make_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._make_json_serializable(item) for item in obj]
+        return obj
+
     def get_latest_news(
         self,
         platforms: Optional[List[str]] = None,
@@ -475,6 +485,9 @@ class DataService:
         # 解析配置文件
         config_data = self.parser.parse_yaml_config()
         word_groups = self.parser.parse_frequency_words()
+        
+        # 将 word_groups 中的正则表达式对象转换为字符串，使其可 JSON 序列化
+        word_groups = self._make_json_serializable(word_groups)
 
         # 根据section返回对应配置
         advanced = config_data.get("advanced", {})

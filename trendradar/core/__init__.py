@@ -10,7 +10,11 @@ from trendradar.core.config import (
     get_account_at_index,
 )
 from trendradar.core.loader import load_config
-from trendradar.core.frequency import load_frequency_words, matches_word_groups
+from trendradar.core.frequency import (
+    load_frequency_words,
+    matches_word_groups,
+    parse_frequency_words_content,
+)
 from trendradar.core.scheduler import Scheduler, ResolvedSchedule
 from trendradar.core.data import (
     read_all_today_titles_from_storage,
@@ -33,6 +37,7 @@ __all__ = [
     "load_config",
     "load_frequency_words",
     "matches_word_groups",
+    "parse_frequency_words_content",
     # 数据处理
     "read_all_today_titles_from_storage",
     "read_all_today_titles",

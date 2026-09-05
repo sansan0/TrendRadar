@@ -136,6 +136,23 @@ def load_frequency_words(
     with open(frequency_path, "r", encoding="utf-8") as f:
         content = f.read()
 
+    return parse_frequency_words_content(content)
+
+
+def parse_frequency_words_content(
+    content: str,
+) -> Tuple[List[Dict], List[str], List[str]]:
+    """
+    解析频率词配置文本（与文件格式一致）
+
+    供需要直接解析文本内容的调用方使用（如 Web UI 的 overlay 覆盖配置）。
+
+    Args:
+        content: 频率词配置文本
+
+    Returns:
+        (词组列表, 词组内过滤词, 全局过滤词)
+    """
     word_groups = [group.strip() for group in content.split("\n\n") if group.strip()]
 
     processed_groups = []

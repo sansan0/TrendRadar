@@ -29,6 +29,8 @@ class AIClient:
                 - TIMEOUT: 请求超时时间（秒）
                 - NUM_RETRIES: 重试次数（可选）
                 - FALLBACK_MODELS: 备用模型列表（可选）
+                - REASONING_EFFORT: 推理强度（可选，minimal/low/medium/high，仅推理型模型支持）
+                - EXTRA_PARAMS: 额外请求参数（可选，优先级低于显式参数与调用 kwargs）
         """
         self.model = config.get("MODEL", "deepseek/deepseek-chat")
         self.api_key = config.get("API_KEY") or os.environ.get("AI_API_KEY", "")
@@ -38,6 +40,8 @@ class AIClient:
         self.timeout = config.get("TIMEOUT", 120)
         self.num_retries = config.get("NUM_RETRIES", 2)
         self.fallback_models = config.get("FALLBACK_MODELS", [])
+        self.reasoning_effort = str(config.get("REASONING_EFFORT") or "").strip().lower()
+        self.extra_params = dict(config.get("EXTRA_PARAMS") or {})
 
     def chat(
         self,
@@ -82,6 +86,26 @@ class AIClient:
         # 添加 fallback 模型（如果配置了）
         if self.fallback_models:
             params["fallbacks"] = self.fallback_models
+
+        # 添加推理强度（仅推理型模型支持，未设置时不发送；可被调用参数覆盖）
+        reasoning_effort = str(
+            kwargs.get("reasoning_effort") or self.reasoning_effort or ""
+        ).strip()
+        if reasoning_effort:
+            if self.model.startswith("openai/"):
+                # openai/ 前缀多为自定义兼容端点，litellm 会按模型名做参数白名单校验，
+                # 自定义模型名不在白名单会抛 UnsupportedParamsError；
+                # 走 extra_body 原样透传（真正的 OpenAI 推理模型同样接受）
+                extra_body = dict(params.get("extra_body") or {})
+                extra_body["reasoning_effort"] = reasoning_effort
+                params["extra_body"] = extra_body
+            else:
+                # 其他提供商走顶层参数，由 litellm 完成参数映射（如 anthropic 思考预算）
+                params["reasoning_effort"] = reasoning_effort
+
+        # 合并 extra_params（显式参数优先）
+        for key, value in self.extra_params.items():
+            params.setdefault(key, value)
 
         # 合并其他额外参数
         for key, value in kwargs.items():

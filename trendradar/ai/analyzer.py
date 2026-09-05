@@ -140,7 +140,9 @@ class AIAnalyzer:
 
         timeout = self.ai_config.get("TIMEOUT", 120)
         max_tokens = self.ai_config.get("MAX_TOKENS", 5000)
-        print(f"[AI] 参数: timeout={timeout}, max_tokens={max_tokens}")
+        reasoning_effort = str(self.ai_config.get("REASONING_EFFORT") or "").strip()
+        effort_display = f", reasoning_effort={reasoning_effort}" if reasoning_effort else ""
+        print(f"[AI] 参数: timeout={timeout}, max_tokens={max_tokens}{effort_display}")
 
         if not self.client.api_key:
             return AIAnalysisResult(

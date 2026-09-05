@@ -172,6 +172,7 @@ class DataFetcher:
         failed_ids = []
         domain_rules = domain_rules or {}
 
+        total = len(ids_list)
         for i, id_info in enumerate(ids_list):
             if isinstance(id_info, tuple):
                 id_value, name = id_info
@@ -180,6 +181,7 @@ class DataFetcher:
                 name = id_value
 
             id_to_name[id_value] = name
+            print(f"正在获取 {name}（{i + 1}/{total}）...", flush=True)
             response, _, _ = self.fetch_data(id_info)
 
             if response:

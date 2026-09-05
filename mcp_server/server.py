@@ -1132,7 +1132,12 @@ def run_server(
     # 初始化工具实例
     _get_tools(project_root)
 
-    # 打印启动信息
+    # 打印启动信息（stdio 模式下 stdout 是 JSON-RPC 通道，banner 必须走 stderr）
+    import sys
+    _banner_stdout = sys.stdout
+    if transport == 'stdio':
+        sys.stdout = sys.stderr
+    
     print()
     print("=" * 60)
     print("  TrendRadar MCP Server - FastMCP 2.0")
@@ -1199,6 +1204,8 @@ def run_server(
     print("    26. send_notification         - 向通知渠道发送消息（自动适配格式）")
     print("=" * 60)
     print()
+    
+    sys.stdout = _banner_stdout
 
     # 根据传输模式运行服务器
     if transport == 'stdio':

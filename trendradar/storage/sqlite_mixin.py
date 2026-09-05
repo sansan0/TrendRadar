@@ -80,6 +80,9 @@ class SQLiteStorageMixin:
             conn: 数据库连接
             db_type: 数据库类型 ("news" 或 "rss")
         """
+        if db_type == "rss":
+            self._ensure_legacy_rss_guid_column(conn)
+
         schema_path = self._get_schema_path(db_type)
 
         if schema_path.exists():
@@ -101,6 +104,13 @@ class SQLiteStorageMixin:
 
         conn.commit()
 
+    def _ensure_legacy_rss_guid_column(self, conn: sqlite3.Connection) -> None:
+        """在执行新版 RSS schema 前，先为 legacy 表补齐 guid 列，避免索引脚本报错。"""
+        cursor = conn.execute("PRAGMA table_info(rss_items)")
+        columns = {row[1] for row in cursor.fetchall()}
+        if columns and "guid" not in columns:
+            conn.execute("ALTER TABLE rss_items ADD COLUMN guid TEXT DEFAULT ''")
+
     def _migrate_rss_schema(self, conn: sqlite3.Connection) -> None:
         """迁移 rss_items 表结构（为已有数据库添加 guid 列）"""
         cursor = conn.execute("PRAGMA table_info(rss_items)")
@@ -111,6 +121,16 @@ class SQLiteStorageMixin:
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_rss_guid_feed
                 ON rss_items(guid, feed_id) WHERE guid != ''
             """)
+
+        conn.execute(
+            """
+            UPDATE rss_items
+            SET guid = url
+            WHERE (guid IS NULL OR guid = '')
+              AND url IS NOT NULL
+              AND url != ''
+            """
+        )
 
     # ========================================
     # 新闻数据存储

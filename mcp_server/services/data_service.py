@@ -7,7 +7,7 @@
 import re
 from collections import Counter
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .cache_service import get_cache
 from .parser_service import ParserService
@@ -16,6 +16,21 @@ from ..utils.errors import DataNotFoundError
 
 class DataService:
     """数据访问服务类"""
+
+    @staticmethod
+    def _make_json_safe(value: Any):
+        """将配置对象转换为 JSON-safe 结构。"""
+        if isinstance(value, re.Pattern):
+            return {
+                "type": "regex",
+                "pattern": value.pattern,
+                "flags": value.flags,
+            }
+        if isinstance(value, dict):
+            return {k: DataService._make_json_safe(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [DataService._make_json_safe(v) for v in value]
+        return value
 
     # 中文停用词列表（用于 auto_extract 模式）
     STOPWORDS = {
@@ -553,7 +568,7 @@ class DataService:
         else:
             result = {}
 
-        return result
+        return self._make_json_safe(result)
 
     def get_available_date_range(self, db_type: str = "news") -> Tuple[Optional[datetime], Optional[datetime]]:
         """
@@ -595,13 +610,22 @@ class DataService:
 
         # 读取版本信息
         version_file = self.parser.project_root / "version"
-        version = "unknown"
-        if version_file.exists():
+        version = ""
+        try:
+            from trendradar import __version__ as package_version
+            version = (package_version or "").strip()
+        except (ImportError, AttributeError):
+            version = ""
+
+        if not version and version_file.exists():
             try:
                 with open(version_file, "r") as f:
                     version = f.read().strip()
             except (OSError, ValueError):
                 pass
+
+        if not version:
+            version = "unknown"
 
         return {
             "system": {

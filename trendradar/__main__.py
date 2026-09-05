@@ -123,6 +123,35 @@ class NewsAnalyzer:
         """判断是否应该打开浏览器"""
         return not self.is_github_actions and not self.is_docker_container
 
+    @staticmethod
+    def _is_wsl() -> bool:
+        """检测是否运行在 WSL 中"""
+        try:
+            with open("/proc/version", "r") as f:
+                return "microsoft" in f.read().lower()
+        except Exception:
+            return False
+
+    @staticmethod
+    def _open_in_windows_browser(html_file: str) -> None:
+        """在 WSL 中用 Windows 默认浏览器打开文件"""
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["wslpath", "-w", html_file],
+                capture_output=True, text=True
+            )
+            win_path = result.stdout.strip()
+            if win_path:
+                subprocess.Popen(
+                    ["powershell.exe", "-Command", f'Start-Process "{win_path}"'],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+            else:
+                print(f"路径转换失败，手动打开: {html_file}")
+        except Exception as e:
+            print(f"打开浏览器失败: {e}，手动打开: {html_file}")
+
     def _setup_proxy(self) -> None:
         """设置代理配置"""
         if not self.is_github_actions and self.ctx.config["USE_PROXY"]:
@@ -1600,7 +1629,10 @@ class NewsAnalyzer:
         if self._should_open_browser() and html_file:
             file_url = "file://" + str(Path(html_file).resolve())
             print(f"正在打开HTML报告: {file_url}")
-            webbrowser.open(file_url)
+            if self._is_wsl():
+                self._open_in_windows_browser(html_file)
+            else:
+                webbrowser.open(file_url)
         elif self.is_docker_container and html_file:
             print(f"HTML报告已生成（Docker环境）: {html_file}")
 

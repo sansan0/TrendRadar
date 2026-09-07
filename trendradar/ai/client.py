@@ -29,6 +29,7 @@ class AIClient:
                 - TIMEOUT: 请求超时时间（秒）
                 - NUM_RETRIES: 重试次数（可选）
                 - FALLBACK_MODELS: 备用模型列表（可选）
+                - EXTRA_PARAMS: 额外请求参数（可选，优先级低于专用配置）
         """
         self.model = config.get("MODEL", "deepseek/deepseek-chat")
         self.api_key = config.get("API_KEY") or os.environ.get("AI_API_KEY", "")
@@ -38,6 +39,7 @@ class AIClient:
         self.timeout = config.get("TIMEOUT", 120)
         self.num_retries = config.get("NUM_RETRIES", 2)
         self.fallback_models = config.get("FALLBACK_MODELS", [])
+        self.extra_params = dict(config.get("EXTRA_PARAMS") or {})
 
     def chat(
         self,
@@ -82,6 +84,12 @@ class AIClient:
         # 添加 fallback 模型（如果配置了）
         if self.fallback_models:
             params["fallbacks"] = self.fallback_models
+
+        # Merge provider-specific parameters from config without overriding the
+        # dedicated options above.
+        for key, value in self.extra_params.items():
+            if key not in params:
+                params[key] = value
 
         # 合并其他额外参数
         for key, value in kwargs.items():

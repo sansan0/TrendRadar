@@ -226,6 +226,14 @@ class StorageManager:
         """获取最新抓取数据"""
         return self.get_backend().get_latest_crawl_data(date)
 
+    def get_last_push_time(self, date: Optional[str] = None) -> Optional[str]:
+        """获取当天最近一次成功推送的时间（HH-MM）"""
+        return self.get_backend().get_last_push_time(date)
+
+    def record_push_time(self, date: Optional[str] = None) -> bool:
+        """记录一次成功推送的时间"""
+        return self.get_backend().record_push_time(date)
+
     def detect_new_titles(self, current_data: NewsData) -> dict:
         """检测新增标题"""
         return self.get_backend().detect_new_titles(current_data)

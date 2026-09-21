@@ -346,6 +346,18 @@ class StorageBackend(ABC):
         """
         pass
 
+    def get_last_push_time(self, date: Optional[str] = None) -> Optional[str]:
+        """
+        获取当天最近一次成功推送的时间（HH-MM），当天尚未推送过返回 None
+        """
+        return self._get_last_push_time_impl(date)
+
+    def record_push_time(self, date: Optional[str] = None) -> bool:
+        """
+        记录一次成功推送的时间（用于增量推送覆盖上次推送以来的窗口）
+        """
+        return self._record_push_time_impl(date)
+
     @abstractmethod
     def detect_new_titles(self, current_data: NewsData) -> Dict[str, Dict]:
         """

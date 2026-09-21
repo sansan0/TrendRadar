@@ -811,6 +811,60 @@ class SQLiteStorageMixin:
             print(f"[存储] 记录时间段执行失败: {e}")
             return False
 
+    def _get_last_push_time_impl(self, date: Optional[str] = None) -> Optional[str]:
+        """
+        获取当天最近一次成功推送的时间
+
+        Args:
+            date: 日期字符串 YYYY-MM-DD，默认为今天
+
+        Returns:
+            最近一次推送时间字符串（HH-MM，与 crawl_time 格式一致），当天尚未推送过则返回 None
+        """
+        try:
+            conn = self._get_connection(date)
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS push_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pushed_at TEXT NOT NULL
+                )
+            """)
+            cursor.execute("SELECT MAX(pushed_at) FROM push_history")
+            row = cursor.fetchone()
+            return row[0] if row and row[0] else None
+        except Exception as e:
+            print(f"[存储] 读取最近推送时间失败: {e}")
+            return None
+
+    def _record_push_time_impl(self, date: Optional[str] = None) -> bool:
+        """
+        记录一次成功推送的时间（用于增量推送覆盖上次推送以来的窗口）
+
+        Args:
+            date: 日期字符串 YYYY-MM-DD，默认为今天
+
+        Returns:
+            是否记录成功
+        """
+        try:
+            conn = self._get_connection(date)
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS push_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pushed_at TEXT NOT NULL
+                )
+            """)
+            # 与 crawl_time 保持同一格式（HH-MM），保证与 first_time 可直接字符串比较
+            now_str = self._get_configured_time().strftime("%H-%M")
+            cursor.execute("INSERT INTO push_history (pushed_at) VALUES (?)", (now_str,))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"[存储] 记录推送时间失败: {e}")
+            return False
+
     # ========================================
     # RSS 数据存储
     # ========================================

@@ -195,6 +195,43 @@ def detect_latest_new_titles_from_storage(
         return {}
 
 
+def read_titles_since_time(
+    storage_manager,
+    since_time: str,
+    current_platform_ids: Optional[List[str]] = None,
+) -> Tuple[Dict, Dict, Dict]:
+    """
+    读取当天首次出现时间晚于 since_time 的标题（增量推送窗口覆盖用）
+
+    Args:
+        storage_manager: 存储管理器实例
+        since_time: 时间边界字符串（HH-MM，与 crawl_time/first_time 同格式），
+                    空字符串时返回当天全部数据
+        current_platform_ids: 当前监控的平台 ID 列表（用于过滤）
+
+    Returns:
+        Tuple[Dict, Dict, Dict]: (all_results, id_to_name, title_info)，
+        结构与 read_all_today_titles_from_storage 一致，但只含窗口内标题
+    """
+    all_results, id_to_name, title_info = read_all_today_titles_from_storage(
+        storage_manager, current_platform_ids
+    )
+
+    if not since_time or not all_results:
+        return all_results, id_to_name, title_info
+
+    window_results = {}
+    window_title_info = {}
+    for source_id, titles in title_info.items():
+        for title, info in titles.items():
+            first_time = info.get("first_time") or ""
+            if first_time > since_time:
+                window_results.setdefault(source_id, {})[title] = all_results[source_id][title]
+                window_title_info.setdefault(source_id, {})[title] = info
+
+    return window_results, id_to_name, window_title_info
+
+
 def detect_latest_new_titles(
     storage_manager,
     current_platform_ids: Optional[List[str]] = None,

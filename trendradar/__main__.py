@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Tuple
 from trendradar.context import AppContext
 from trendradar import __version__
 from trendradar.core import load_config
+from trendradar.core.data import read_titles_since_time
 from trendradar.core.analyzer import convert_keyword_stats_to_platform_stats
 from trendradar.crawler import DataFetcher
 from trendradar.storage import convert_crawl_results_to_news_data
@@ -893,6 +894,8 @@ class NewsAnalyzer:
 
             # 记录推送成功
             if any(results.values()):
+                # 记录本次推送时间，作为下次增量推送的窗口起点（#1198）
+                self.storage_manager.record_push_time()
                 if schedule.once_push and schedule.period_key:
                     scheduler = self.ctx.create_scheduler()
                     date_str = self.ctx.format_date()
@@ -1551,6 +1554,22 @@ class NewsAnalyzer:
                 )
         else:
             # incremental 模式：只使用当前抓取的数据
+            # 若有推送记录，本次推送覆盖「上次推送 → 现在」的整个窗口；
+            # 当天尚未推送过则覆盖全天（首推同样不应只含最新一批，#1198）
+            if schedule.push:
+                last_push_time = self.storage_manager.get_last_push_time()
+                window_results, window_id_to_name, _ = read_titles_since_time(
+                    self.storage_manager, last_push_time or "", current_platform_ids
+                )
+                if window_results:
+                    boundary_desc = last_push_time if last_push_time else "当天第一条"
+                    print(
+                        f"[增量] 覆盖自 {boundary_desc} 以来的窗口："
+                        f"{sum(len(t) for t in window_results.values())} 条新增"
+                    )
+                    results = window_results
+                    id_to_name = window_id_to_name
+                    new_titles = window_results
             title_info = self._prepare_current_title_info(results, time_info)
             standalone_data = self._prepare_standalone_data(
                 results, id_to_name, title_info, raw_rss_items

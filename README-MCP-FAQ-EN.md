@@ -866,6 +866,10 @@ Users often use natural language like "this week", "last 7 days" to express date
 
 ## 💡 Usage Tips
 
+### 0. MCP startup slow? (cold start can take 20+ seconds)
+
+Set `LITELLM_LOCAL_MODEL_COST_MAP=True` in the environment that launches the MCP server to skip litellm's online model price fetch at cold start — especially noticeable when GitHub is unreachable, saving about 25 seconds.
+
 ### 1. How to make AI display all data instead of auto-summarizing?
 
 **Background**: Sometimes AI automatically summarizes data, only showing partial content, even if the tool returned complete 50 items of data.

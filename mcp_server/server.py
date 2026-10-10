@@ -120,6 +120,7 @@ async def resolve_date_range(
     expression: str
 ) -> str:
     """
+    [Call first] Resolve natural-language date expressions into standard date ranges
     【推荐优先调用】将自然语言日期表达式解析为标准日期范围
 
     **为什么需要这个工具？**
@@ -193,6 +194,7 @@ async def get_latest_news(
     include_url: bool = False
 ) -> str:
     """
+    Get the latest batch of crawled news to quickly see current hot topics
     获取最新一批爬取的新闻数据，快速了解当前热点
 
     Args:
@@ -223,6 +225,7 @@ async def get_trending_topics(
     extract_mode: str = 'keywords'
 ) -> str:
     """
+    Get trending-topic statistics
     获取热点话题统计
 
     Args:
@@ -259,6 +262,7 @@ async def get_latest_rss(
     include_summary: bool = False
 ) -> str:
     """
+    Get the latest RSS subscription data (multi-day queries supported)
     获取最新的 RSS 订阅数据（支持多日查询）
 
     RSS 数据与热榜新闻分开存储，按时间流展示，适合获取特定来源的最新内容。
@@ -293,6 +297,7 @@ async def search_rss(
     include_summary: bool = False
 ) -> str:
     """
+    Search RSS data
     搜索 RSS 数据
 
     在 RSS 订阅数据中搜索包含指定关键词的文章。
@@ -327,6 +332,7 @@ async def search_rss(
 @mcp.tool
 async def get_rss_feeds_status() -> str:
     """
+    Get RSS feed status information
     获取 RSS 源状态信息
 
     查看当前配置的 RSS 源及其数据统计信息。
@@ -355,6 +361,7 @@ async def get_news_by_date(
     include_url: bool = False
 ) -> str:
     """
+    Get news for a specified date, for historical analysis and comparison
     获取指定日期的新闻数据，用于历史数据分析和对比
 
     Args:
@@ -396,6 +403,7 @@ async def analyze_topic_trend(
     confidence_threshold: float = 0.7
 ) -> str:
     """
+    Unified topic trend analysis - combines multiple trend-analysis modes
     统一话题趋势分析工具 - 整合多种趋势分析模式
 
     建议：使用自然语言日期时，先调用 resolve_date_range 获取精确日期范围。
@@ -445,6 +453,7 @@ async def analyze_data_insights(
     top_n: int = 20
 ) -> str:
     """
+    Unified data insight analysis - combines multiple analysis modes
     统一数据洞察分析工具 - 整合多种数据分析模式
 
     Args:
@@ -490,6 +499,7 @@ async def analyze_sentiment(
     include_url: bool = False
 ) -> str:
     """
+    Analyze news sentiment tendency and heat trend
     分析新闻的情感倾向和热度趋势
 
     建议：使用自然语言日期时，先调用 resolve_date_range 获取精确日期范围。
@@ -530,6 +540,7 @@ async def find_related_news(
     include_url: bool = False
 ) -> str:
     """
+    Find news related to a given headline (today and historical data)
     查找与指定新闻标题相关的其他新闻（支持当天和历史数据）
 
     Args:
@@ -567,6 +578,7 @@ async def generate_summary_report(
     date_range: Optional[Union[Dict[str, str], str]] = None
 ) -> str:
     """
+    Daily/weekly digest generator - auto-builds a hot-topic summary report
     每日/每周摘要生成器 - 自动生成热点摘要报告
 
     Args:
@@ -597,6 +609,7 @@ async def aggregate_news(
     include_url: bool = False
 ) -> str:
     """
+    Cross-platform news aggregation - deduplicates and merges similar stories
     跨平台新闻聚合 - 对相似新闻进行去重合并
 
     将不同平台报道的同一事件合并为一条聚合新闻，显示跨平台覆盖情况和综合热度。
@@ -637,6 +650,7 @@ async def compare_periods(
     top_n: int = 10
 ) -> str:
     """
+    Period comparison - compare news data across two time ranges
     时期对比分析 - 比较两个时间段的新闻数据
 
     对比不同时期的热点话题、平台活跃度、新闻数量等维度。
@@ -703,6 +717,7 @@ async def search_news(
     rss_limit: int = 20
 ) -> str:
     """
+    Unified search across hotlists and RSS, multiple search modes
     统一搜索接口，支持多种搜索模式，可同时搜索热榜和RSS
 
     建议：使用自然语言日期时，先调用 resolve_date_range 获取精确日期范围。
@@ -754,6 +769,7 @@ async def get_current_config(
     section: str = "all"
 ) -> str:
     """
+    Get the current system configuration
     获取当前系统配置
 
     Args:
@@ -775,6 +791,7 @@ async def get_current_config(
 @mcp.tool
 async def get_system_status() -> str:
     """
+    Get system runtime status and health-check information
     获取系统运行状态和健康检查信息
 
     返回系统版本、数据统计、缓存状态等信息
@@ -792,6 +809,7 @@ async def check_version(
     proxy_url: Optional[str] = None
 ) -> str:
     """
+    Check version updates (both TrendRadar and MCP Server)
     检查版本更新（同时检查 TrendRadar 和 MCP Server）
 
     比较本地版本与 GitHub 远程版本，判断是否需要更新。
@@ -818,6 +836,7 @@ async def trigger_crawl(
     include_url: bool = False
 ) -> str:
     """
+    Manually trigger one crawl run (optional persistence)
     手动触发一次爬取任务（可选持久化）
 
     Args:
@@ -847,6 +866,7 @@ async def sync_from_remote(
     days: int = 7
 ) -> str:
     """
+    Pull data from remote storage to local
     从远程存储拉取数据到本地
 
     用于 MCP Server 等场景：爬虫存到远程云存储（如 Cloudflare R2），
@@ -886,6 +906,7 @@ async def sync_from_remote(
 @mcp.tool
 async def get_storage_status() -> str:
     """
+    Get storage configuration and status
     获取存储配置和状态
 
     查看当前存储后端配置、本地和远程存储的状态信息。
@@ -903,6 +924,7 @@ async def list_available_dates(
     source: str = "both"
 ) -> str:
     """
+    List available date ranges (local/remote)
     列出本地/远程可用的日期范围
 
     查看本地和远程存储中有哪些日期的数据可用。
@@ -933,6 +955,7 @@ async def read_article(
     timeout: int = 30
 ) -> str:
     """
+    Read a URL article and return LLM-friendly Markdown
     读取指定 URL 的文章内容，返回 LLM 友好的 Markdown 格式
 
     通过 Jina AI Reader 将网页转换为干净的 Markdown，自动去除广告、导航栏等噪音内容。
@@ -973,6 +996,7 @@ async def read_articles_batch(
     timeout: int = 30
 ) -> str:
     """
+    Read multiple articles in batch (max 5, 5s interval)
     批量读取多篇文章内容（最多 5 篇，间隔 5 秒）
 
     逐篇请求文章内容，每篇之间自动间隔 5 秒以遵守速率限制。
@@ -1012,6 +1036,7 @@ async def read_articles_batch(
 @mcp.tool
 async def get_channel_format_guide(channel: Optional[str] = None) -> str:
     """
+    Get the formatting policy guide for notification channels
     获取通知渠道的格式化策略指南
 
     返回各渠道支持的 Markdown 特性、格式限制和最佳格式化提示词。
@@ -1052,6 +1077,7 @@ async def get_channel_format_guide(channel: Optional[str] = None) -> str:
 @mcp.tool
 async def get_notification_channels() -> str:
     """
+    Get all configured notification channels and their status
     获取所有已配置的通知渠道及其状态
 
     检测 config.yaml 和 .env 环境变量中的通知渠道配置。
@@ -1075,6 +1101,7 @@ async def send_notification(
     channels: Optional[List[str]] = None,
 ) -> str:
     """
+    Send a message to configured notification channels
     向已配置的通知渠道发送消息
 
     接受 markdown 格式内容，内部自动适配各渠道的格式要求和限制：

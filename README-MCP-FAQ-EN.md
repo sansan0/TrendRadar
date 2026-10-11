@@ -22,6 +22,7 @@
 | | `search_rss` | Search keywords in RSS data |
 | | `get_rss_feeds_status` | View RSS feed config and data status |
 | **Search** | `search_news` | Unified search (keyword/fuzzy/entity, RSS optional) |
+| | `search_web` | Search external sources on demand for news context |
 | | `find_related_news` | Find news similar to a given title |
 | **Analysis** | `analyze_topic_trend` | Topic trend analysis (hotness/lifecycle/viral/predict) |
 | | `analyze_data_insights` | Data insights (platform compare/activity/co-occurrence) |
@@ -256,6 +257,32 @@ After testing one query, please immediately check the [SiliconFlow Billing](http
 ---
 
 ## Search and Retrieval
+
+### How can I find external sources for a news story?
+
+After connecting your client to TrendRadar MCP, ask:
+
+> Find local news about the EU AI Act, then use `search_web` to find official EU explanations. Include source links and excerpts.
+
+`search_web` uses the anonymous free [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp)
+endpoint. Search runs in Fast mode, with no account, API key or additional configuration.
+Supply an `objective`, at least one `search_queries` entry, and a random UUID
+`session_id` generated at the start of the conversation. Reuse that identifier for
+all subsequent calls in the same conversation, for example:
+
+```json
+{
+  "objective": "Find the official EU AI Act implementation timeline",
+  "search_queries": ["EU AI Act implementation timeline"],
+  "session_id": "e23ea9c2-78ce-4d02-8b7b-107d8b01cceb"
+}
+```
+
+`data.results` contains source URLs, titles and excerpts. The search objective and
+queries are sent to Parallel. The free endpoint has rate limits; failures return
+`success=false` and `error`, without automatic retries. Local news still uses
+`search_news`, and web results are not saved to the news database. For full articles,
+pass a result URL to the existing `read_article` tool (which uses Jina Reader).
 
 ### Q4: How to search for news containing specific keywords?
 

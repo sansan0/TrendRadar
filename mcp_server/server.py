@@ -14,6 +14,7 @@ from fastmcp import FastMCP
 from .tools.data_query import DataQueryTools
 from .tools.analytics import AnalyticsTools
 from .tools.search_tools import SearchTools
+from .tools.web_search import search_web as _search_web
 from .tools.config_mgmt import ConfigManagementTools
 from .tools.system import SystemManagementTools
 from .tools.storage_sync import StorageSyncTools
@@ -744,6 +745,32 @@ async def search_news(
         include_rss=include_rss,
         rss_limit=rss_limit
     )
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+async def search_web(
+    objective: str,
+    search_queries: List[str],
+    session_id: str
+) -> str:
+    """
+    按需搜索外部网页，为本地新闻分析补充来源、背景和事实核查。
+
+    通过 Parallel Search MCP 的匿名免费接口搜索，使用 Fast 模式，无需账号或 API Key。
+    搜索目标和搜索词会发送到 Parallel。免费接口有速率限制。
+    本地热榜和 RSS 检索仍使用 search_news；本工具不会保存网页到新闻数据库。
+
+    Args:
+        objective: 本次搜索的具体目标
+        search_queries: 至少一个搜索词，建议提供 2–3 个相关的短查询
+        session_id: 对话开始时生成一个随机 UUID，在同一对话的每次调用中复用
+
+    Returns:
+        JSON 格式的 success/data，data.results 包含来源 URL、标题和正文摘录。
+        失败时返回 success=false 和 error，不自动重试。
+    """
+    result = await _search_web(objective, search_queries, session_id)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 

@@ -22,6 +22,7 @@
 | | `search_rss` | 在 RSS 数据中搜索关键词 |
 | | `get_rss_feeds_status` | 查看 RSS 源配置和数据状态 |
 | **搜索** | `search_news` | 统一搜索（关键词/模糊/实体，可含RSS） |
+| | `search_web` | 按需搜索外部网页，补充来源和背景 |
 | | `find_related_news` | 查找与指定标题相似的新闻 |
 | **分析** | `analyze_topic_trend` | 话题趋势分析（热度/生命周期/爆火/预测） |
 | | `analyze_data_insights` | 数据洞察（平台对比/活跃度/关键词共现） |
@@ -256,6 +257,30 @@
 ---
 
 ## 搜索检索
+
+### 如何为新闻补充外部来源？
+
+连接 TrendRadar MCP 服务后，可以说：
+
+> 先查找本地关于欧盟 AI 法案的新闻，再用 `search_web` 搜索欧盟官方说明，列出来源链接和摘录。
+
+`search_web` 使用 [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp)
+的匿名免费接口，搜索使用 Fast 模式，无需账号、API Key 或新增配置。提供搜索目标
+`objective`、至少一个 `search_queries`，以及对话开始时生成的随机 UUID `session_id`；
+在同一对话的后续调用中复用这个标识，例如：
+
+```json
+{
+  "objective": "查找欧盟 AI 法案的官方实施时间表",
+  "search_queries": ["EU AI Act implementation timeline"],
+  "session_id": "e23ea9c2-78ce-4d02-8b7b-107d8b01cceb"
+}
+```
+
+返回的 `data.results` 包含来源 URL、标题和正文摘录。搜索目标和搜索词会发送到
+Parallel；免费接口有速率限制，失败时返回 `success=false` 和 `error`，不自动重试。
+本地新闻仍通过 `search_news` 检索，网页结果不会写入新闻数据库。需要阅读全文时，
+可将结果 URL 交给现有的 `read_article`（使用 Jina Reader）。
 
 ### Q4: 如何搜索包含特定关键词的新闻？
 

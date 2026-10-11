@@ -84,19 +84,42 @@ class RSSFetcher:
 
         return session
 
-    def fetch_feed(self, feed: RSSFeedConfig) -> Tuple[List[RSSItem], Optional[str]]:
+    def fetch_feed(
+        self,
+        feed: RSSFeedConfig,
+        max_retries: int = 2,
+        min_retry_wait: int = 3,
+        max_retry_wait: int = 5,
+    ) -> Tuple[List[RSSItem], Optional[str]]:
         """
         抓取单个 RSS 源
 
         Args:
             feed: RSS 源配置
+            max_retries: 首次请求后的最大重试次数（0=不重试，不能为负数）
+            min_retry_wait: 最小重试等待时间（秒）
+            max_retry_wait: 最大重试等待时间（秒）
 
         Returns:
             (条目列表, 错误信息) 元组
         """
+        if max_retries < 0:
+            raise ValueError("max_retries 不能为负数")
+
         try:
-            response = self.session.get(feed.url, timeout=self.timeout)
-            response.raise_for_status()
+            for attempt in range(max_retries + 1):
+                try:
+                    response = self.session.get(feed.url, timeout=self.timeout)
+                    response.raise_for_status()
+                    break
+                except Exception as e:
+                    if attempt == max_retries:
+                        raise
+                    base_wait = random.uniform(min_retry_wait, max_retry_wait)
+                    additional_wait = attempt * random.uniform(1, 2)
+                    wait_time = base_wait + additional_wait
+                    print(f"[RSS] {feed.name}: 请求失败: {e}. {wait_time:.2f}秒后重试...")
+                    time.sleep(wait_time)
 
             parsed_items = self.parser.parse(response.text, feed.url)
 

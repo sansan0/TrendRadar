@@ -260,9 +260,8 @@ After testing one query, please immediately check the [SiliconFlow Billing](http
 
 ### How can I find external sources for a news story?
 
-After connecting your client to TrendRadar MCP, ask:
-
-> Find local news about the EU AI Act, then use `search_web` to find official EU explanations. Include source links and excerpts.
+After connecting your client to TrendRadar MCP, call `search_web` to find external
+sources and background for local news.
 
 `search_web` uses the anonymous free [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp)
 endpoint. Search runs in Fast mode, with no account, API key or additional configuration.

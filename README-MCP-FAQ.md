@@ -260,9 +260,7 @@
 
 ### 如何为新闻补充外部来源？
 
-连接 TrendRadar MCP 服务后，可以说：
-
-> 先查找本地关于欧盟 AI 法案的新闻，再用 `search_web` 搜索欧盟官方说明，列出来源链接和摘录。
+连接 TrendRadar MCP 服务后，在客户端调用 `search_web`，可为本地新闻查找外部来源和背景。
 
 `search_web` 使用 [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp)
 的匿名免费接口，搜索使用 Fast 模式，无需账号、API Key 或新增配置。提供搜索目标

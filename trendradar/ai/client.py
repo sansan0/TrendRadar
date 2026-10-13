@@ -29,6 +29,8 @@ class AIClient:
                 - TIMEOUT: 请求超时时间（秒）
                 - NUM_RETRIES: 重试次数（可选）
                 - FALLBACK_MODELS: 备用模型列表（可选）
+                - EXTRA_PARAMS: 透传给 LiteLLM 的额外参数（可选），如
+                  extra_headers、top_p、presence_penalty、stop 等
         """
         self.model = config.get("MODEL", "deepseek/deepseek-chat")
         self.api_key = config.get("API_KEY") or os.environ.get("AI_API_KEY", "")
@@ -38,6 +40,14 @@ class AIClient:
         self.timeout = config.get("TIMEOUT", 120)
         self.num_retries = config.get("NUM_RETRIES", 2)
         self.fallback_models = config.get("FALLBACK_MODELS", [])
+        # config.yaml 中 ai.extra_params 的透传参数（如自定义请求头）
+        self.extra_params = config.get("EXTRA_PARAMS") or {}
+        if not isinstance(self.extra_params, dict):
+            print(
+                f"[AI] 配置错误: ai.extra_params 应为字典，"
+                f"当前为 {type(self.extra_params).__name__}，已忽略"
+            )
+            self.extra_params = {}
 
     def chat(
         self,
@@ -83,8 +93,10 @@ class AIClient:
         if self.fallback_models:
             params["fallbacks"] = self.fallback_models
 
-        # 合并其他额外参数
-        for key, value in kwargs.items():
+        # 合并配置文件中的 extra_params（如自定义请求头 extra_headers），
+        # 再用调用方 kwargs 覆盖；两者均不覆盖上方已确定的核心参数，
+        # 因此未配置 extra_params 时行为与原先完全一致
+        for key, value in {**self.extra_params, **kwargs}.items():
             if key not in params:
                 params[key] = value
 

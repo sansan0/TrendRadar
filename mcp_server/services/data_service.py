@@ -485,7 +485,7 @@ class DataService:
         # 解析配置文件
         config_data = self.parser.parse_yaml_config()
         word_groups = self.parser.parse_frequency_words()
-        
+
         # 将 word_groups 中的正则表达式对象转换为字符串，使其可 JSON 序列化
         word_groups = self._make_json_serializable(word_groups)
 

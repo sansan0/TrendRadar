@@ -1608,15 +1608,9 @@ class NewsAnalyzer:
 
     def run(self) -> None:
         """执行分析流程"""
-        batch_started = False
         try:
             if not self._initialize_and_check_config():
                 return
-
-            # 批量模式：整个流程结束后统一上传数据库（远程后端每个 DB 只上传一次）
-            # Batch mode: upload once at the end. A mid-run exception still reaches finally.
-            self.storage_manager.begin_batch()
-            batch_started = True
 
             mode_strategy = self._get_mode_strategy()
 
@@ -1635,16 +1629,9 @@ class NewsAnalyzer:
 
         except Exception as e:
             print(f"分析流程执行出错: {e}")
-            print(f"Analysis run failed: {e}")
             if self.ctx.config.get("DEBUG", False):
                 raise
         finally:
-            if batch_started:
-                try:
-                    self.storage_manager.end_batch()
-                except Exception as e:
-                    print(f"同步数据库到存储后端失败: {e}")
-                    print(f"Failed to sync databases to the storage backend: {e}")
             # 清理资源（包括过期数据清理和数据库连接关闭）
             self.ctx.cleanup()
 

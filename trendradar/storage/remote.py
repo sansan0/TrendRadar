@@ -7,7 +7,6 @@
 数据流程：下载当天 SQLite → 合并新数据 → 上传回远程
 """
 
-import logging
 import pytz
 import re
 import shutil
@@ -37,12 +36,6 @@ from trendradar.utils.time import (
     format_date_folder,
     format_time_filename,
 )
-
-logger = logging.getLogger(__name__)
-
-# S3 兼容存储对「对象不存在」可能返回的错误码变体
-# Error codes S3-compatible stores may return when an object is missing
-_NOT_FOUND_CODES = frozenset({"404", "NoSuchKey", "Not Found", "NotFound"})
 
 
 class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
@@ -126,9 +119,8 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
         self._downloaded_files: List[Path] = []
         self._db_connections: Dict[str, sqlite3.Connection] = {}
 
-        # 批量模式：延迟上传，避免频繁上传同一文件（支持嵌套，最外层 end_batch 触发上传）
-        # Batch mode defers uploads. Nested begin/end is supported; the outermost end_batch uploads.
-        self._batch_depth = 0
+        # 批量模式：延迟上传，避免频繁上传同一文件
+        self._batch_mode = False
         self._batch_dirty: set = set()  # 待上传的 (date, db_type) 集合
 
         print(f"[远程存储] 初始化完成，存储桶: {bucket_name}，签名版本: {signature_version}")
@@ -195,32 +187,25 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
             r2_key: 远程对象键
 
         Returns:
-            是否存在。仅在服务端明确返回「不存在」时为 False。
-            True when the object exists. False only when the server says it is missing.
+            是否存在；仅在服务端明确返回不存在时为 False
 
         Raises:
-            ClientError / Exception: 权限、限流、网络等非 404 错误直接抛出，
-            避免调用方误判为「不存在」而覆盖远程数据。
-            Permission, throttle, and network errors are raised so callers do not
-            overwrite remote data after mistaking them for "not found".
+            权限、限流和网络等异常继续抛出，避免误判后创建空库
         """
         try:
             self.s3_client.head_object(Bucket=self.bucket_name, Key=r2_key)
             return True
         except ClientError as e:
-            error = e.response.get("Error", {})
-            error_code = str(error.get("Code", ""))
+            error_code = str(e.response.get("Error", {}).get("Code", ""))
             http_status = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-            if error_code in _NOT_FOUND_CODES or http_status == 404:
+            # S3 兼容存储可能返回 404, NoSuchKey, 或其他变体
+            if error_code in ("404", "NoSuchKey", "Not Found", "NotFound") or http_status == 404:
                 return False
-            print(f"[远程存储] 检查对象存在性失败 (错误码: {error_code}, {r2_key}): {e}")
-            print(f"[Remote storage] head_object failed (code: {error_code}, {r2_key}): {e}")
-            logger.error("head_object failed for %s (code=%s)", r2_key, error_code, exc_info=True)
+            # 检查失败不能当作对象不存在，否则可能覆盖远程历史数据。
+            print(f"[远程存储] 检查对象存在性失败 ({r2_key}): {e}")
             raise
         except Exception as e:
             print(f"[远程存储] 检查对象存在性异常 ({r2_key}): {e}")
-            print(f"[Remote storage] head_object raised ({r2_key}): {e}")
-            logger.error("head_object raised for %s", r2_key, exc_info=True)
             raise
 
     def _download_sqlite(self, date: Optional[str] = None, db_type: str = "news") -> Optional[Path]:
@@ -261,7 +246,7 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
             # S3 兼容存储可能返回不同的错误码
-            if error_code in _NOT_FOUND_CODES:
+            if error_code in ("404", "NoSuchKey", "Not Found"):
                 print(f"[远程存储] 文件不存在，将创建新数据库: {r2_key}")
                 return None
             else:
@@ -271,35 +256,17 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
             print(f"[远程存储] 下载异常: {e}")
             raise
 
-    @property
-    def _batch_mode(self) -> bool:
-        return self._batch_depth > 0
-
     def begin_batch(self):
-        """开启批量模式：延迟上传，避免频繁上传同一文件（可嵌套）。
-        Start batch mode and defer uploads. Calls may nest; only the outermost end uploads.
-        """
-        self._batch_depth += 1
+        """开启批量模式：延迟上传，避免频繁上传同一文件"""
+        self._batch_mode = True
+        self._batch_dirty.clear()
 
     def end_batch(self):
-        """结束批量模式：最外层结束时统一上传所有脏数据库。
-        End batch mode. The outermost call uploads every dirty database.
-        """
-        if self._batch_depth == 0:
-            return
-        self._batch_depth -= 1
-        if self._batch_depth == 0:
-            self._flush_batch()
-
-    def _flush_batch(self) -> bool:
-        """上传所有待上传的脏数据库。Upload every database marked dirty during the batch."""
-        dirty = list(self._batch_dirty)
+        """结束批量模式：统一上传所有脏数据库"""
+        self._batch_mode = False
+        for date, db_type in self._batch_dirty:
+            self._upload_sqlite(date, db_type)
         self._batch_dirty.clear()
-        ok = True
-        for date, db_type in dirty:
-            if not self._upload_sqlite(date, db_type):
-                ok = False
-        return ok
 
     def _upload_sqlite(self, date: Optional[str] = None, db_type: str = "news") -> bool:
         """
@@ -344,12 +311,14 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
                 ContentType='application/x-sqlite3',
             )
             print(f"[远程存储] 已上传: {local_path} -> {r2_key}")
-            # put_object 成功即返回。不再用 head_object 复核：
-            # 权限/限流错误以前会被当成「不存在」，从而把一次成功上传判失败，
-            # 或在下载前误判缺失并覆盖远程数据。
-            # A successful put_object is enough. A follow-up head_object is not used,
-            # because permission/throttle errors must not be read as "missing".
-            return True
+
+            # 验证上传成功
+            if self._check_object_exists(r2_key):
+                print(f"[远程存储] 上传验证成功: {r2_key}")
+                return True
+            else:
+                print(f"[远程存储] 上传验证失败: 文件未在远程存储中找到")
+                return False
 
         except Exception as e:
             print(f"[远程存储] 上传失败: {e}")
@@ -683,12 +652,6 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
         # 检查 Python 是否正在关闭
         if sys.meta_path is None:
             return
-
-        # 兜底：批量模式未正常结束时，先上传待同步的数据库，避免数据丢失
-        # If batch mode was left open, upload dirty databases before discarding them.
-        if getattr(self, "_batch_dirty", None):
-            self._batch_depth = 0
-            self._flush_batch()
 
         # 关闭数据库连接
         db_connections = getattr(self, "_db_connections", {})

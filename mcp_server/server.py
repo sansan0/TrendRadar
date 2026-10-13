@@ -1137,7 +1137,7 @@ def run_server(
     _banner_stdout = sys.stdout
     if transport == 'stdio':
         sys.stdout = sys.stderr
-    
+
     print()
     print("=" * 60)
     print("  TrendRadar MCP Server - FastMCP 2.0")
@@ -1204,7 +1204,7 @@ def run_server(
     print("    26. send_notification         - 向通知渠道发送消息（自动适配格式）")
     print("=" * 60)
     print()
-    
+
     sys.stdout = _banner_stdout
 
     # 根据传输模式运行服务器

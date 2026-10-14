@@ -407,6 +407,8 @@ def _load_webhook_config(config_data: Dict) -> Dict:
     bark = channels.get("bark", {})
     slack = channels.get("slack", {})
     generic = channels.get("generic_webhook", {})
+    cloudflare = channels.get("cloudflare_pages", {})
+    cloudflare_worker = channels.get("cloudflare_worker", {})
 
     return {
         # 飞书
@@ -436,7 +438,17 @@ def _load_webhook_config(config_data: Dict) -> Dict:
         # 通用 Webhook
         "GENERIC_WEBHOOK_URL": _get_env_str("GENERIC_WEBHOOK_URL") or generic.get("webhook_url", ""),
         "GENERIC_WEBHOOK_TEMPLATE": _get_env_str("GENERIC_WEBHOOK_TEMPLATE") or generic.get("payload_template", ""),
+        # Cloudflare Pages
+        "CLOUDFLARE_ACCOUNT_ID": _get_env_str("CLOUDFLARE_ACCOUNT_ID") or cloudflare.get("account_id", ""),
+        "CLOUDFLARE_API_TOKEN": _get_env_str("CLOUDFLARE_API_TOKEN") or cloudflare.get("api_token", ""),
+        "CLOUDFLARE_PROJECT_NAME": _get_env_str("CLOUDFLARE_PROJECT_NAME") or cloudflare.get("project_name", ""),
+        "CLOUDFLARE_BRANCH": _get_env_str("CLOUDFLARE_BRANCH") or cloudflare.get("branch", ""),
+        # Cloudflare Worker
+        "CLOUDFLARE_WORKER_ACCOUNT_ID": _get_env_str("CLOUDFLARE_WORKER_ACCOUNT_ID") or cloudflare_worker.get("account_id", ""),
+        "CLOUDFLARE_WORKER_API_TOKEN": _get_env_str("CLOUDFLARE_WORKER_API_TOKEN") or cloudflare_worker.get("api_token", ""),
+        "CLOUDFLARE_WORKER_NAME": _get_env_str("CLOUDFLARE_WORKER_NAME") or cloudflare_worker.get("worker_name", "") or cloudflare_worker.get("script_name", ""),
     }
+
 
 
 def _print_notification_sources(config: Dict) -> None:
@@ -513,6 +525,41 @@ def _print_notification_sources(config: Dict) -> None:
         count = min(len(accounts), max_accounts)
         source = "环境变量" if os.environ.get("GENERIC_WEBHOOK_URL") else "配置文件"
         notification_sources.append(f"通用Webhook({source}, {count}个账号)")
+
+    if config.get("CLOUDFLARE_API_TOKEN") and config.get("CLOUDFLARE_ACCOUNT_ID") and config.get("CLOUDFLARE_PROJECT_NAME"):
+        tokens = parse_multi_account_config(config["CLOUDFLARE_API_TOKEN"])
+        account_ids = parse_multi_account_config(config["CLOUDFLARE_ACCOUNT_ID"])
+        project_names = parse_multi_account_config(config["CLOUDFLARE_PROJECT_NAME"])
+        valid, count = validate_paired_configs(
+            {"api_token": tokens, "account_id": account_ids, "project_name": project_names},
+            "Cloudflare Pages",
+            required_keys=["api_token", "account_id", "project_name"],
+        )
+        if valid and count > 0:
+            count = min(count, max_accounts)
+            source = "环境变量" if os.environ.get("CLOUDFLARE_API_TOKEN") else "配置文件"
+            notification_sources.append(f"Cloudflare Pages({source}, {count}个项目)")
+
+    worker_token_cfg = config.get("CLOUDFLARE_WORKER_API_TOKEN") or config.get("CLOUDFLARE_API_TOKEN", "")
+    worker_acc_cfg = config.get("CLOUDFLARE_WORKER_ACCOUNT_ID") or config.get("CLOUDFLARE_ACCOUNT_ID", "")
+    worker_name_cfg = config.get("CLOUDFLARE_WORKER_NAME", "")
+    if worker_token_cfg and worker_acc_cfg and worker_name_cfg:
+        tokens = parse_multi_account_config(worker_token_cfg)
+        account_ids = parse_multi_account_config(worker_acc_cfg)
+        worker_names = parse_multi_account_config(worker_name_cfg)
+        if len(tokens) == 1 and len(worker_names) > 1:
+            tokens = tokens * len(worker_names)
+        if len(account_ids) == 1 and len(worker_names) > 1:
+            account_ids = account_ids * len(worker_names)
+        valid, count = validate_paired_configs(
+            {"api_token": tokens, "account_id": account_ids, "script_name": worker_names},
+            "Cloudflare Worker",
+            required_keys=["api_token", "account_id", "script_name"],
+        )
+        if valid and count > 0:
+            count = min(count, max_accounts)
+            source = "环境变量" if os.environ.get("CLOUDFLARE_WORKER_NAME") else "配置文件"
+            notification_sources.append(f"Cloudflare Worker({source}, {count}个服务)")
 
     if notification_sources:
         print(f"通知渠道配置来源: {', '.join(notification_sources)}")

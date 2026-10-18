@@ -7725,6 +7725,8 @@ notification:
       to: ""                          # 收件人邮箱，多个用逗号分隔
       smtp_server: ""                 # SMTP 服务器（可选，留空自动识别）
       smtp_port: ""                   # SMTP 端口（可选，留空自动识别）
+      smtp_username: ""               # SMTP 登录用户名（可选，留空使用发件人邮箱）
+      reply_to: ""                    # 回复地址（可选，留空不设置 Reply-To）
 
     ntfy:
       server_url: "https://ntfy.sh"   # ntfy 服务器地址（可改为自托管）
@@ -8282,6 +8284,8 @@ notification:
       to: ""                          # Recipient email(s); separate multiple addresses with commas
       smtp_server: ""                 # SMTP server (optional; auto-detected if empty)
       smtp_port: ""                   # SMTP port (optional; auto-detected if empty)
+      smtp_username: ""               # SMTP login username (optional; defaults to sender email)
+      reply_to: ""                    # Reply-To address (optional)
 
     ntfy:
       server_url: "https://ntfy.sh"   # ntfy server address (can be self-hosted)

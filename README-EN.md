@@ -1513,7 +1513,13 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 - **Name**: `EMAIL_SMTP_PORT` (Optional, please copy and paste this name)
 - **Secret (Value)**: SMTP port (leave empty for auto-detection)
 
-**Note**: Email push requires at least **3 required** Secrets (EMAIL_FROM, EMAIL_PASSWORD, EMAIL_TO), the last two are optional
+- **Name**: `EMAIL_SMTP_USERNAME` (Optional, please copy and paste this name)
+- **Secret (Value)**: SMTP login username (defaults to `EMAIL_FROM`; use this when authentication and sender identities differ)
+
+- **Name**: `EMAIL_REPLY_TO` (Optional, please copy and paste this name)
+- **Secret (Value)**: Address used when recipients reply (leave empty to omit Reply-To)
+
+**Note**: Email push requires at least **3 required** Secrets (EMAIL_FROM, EMAIL_PASSWORD, EMAIL_TO); all other email Secrets are optional
 
 <br>
 
@@ -1571,6 +1577,8 @@ Transform from "algorithm recommendation captivity" to "actively getting the inf
 If auto-detect fails, manually configure SMTP:
 - `EMAIL_SMTP_SERVER`: Like smtp.gmail.com
 - `EMAIL_SMTP_PORT`: Like 587 (TLS) or 465 (SSL)
+- `EMAIL_SMTP_USERNAME`: SMTP login username; defaults to `EMAIL_FROM`
+- `EMAIL_REPLY_TO`: Optional independent reply address
 <br>
 
 **Multiple Recipients (note: English comma separator)**:

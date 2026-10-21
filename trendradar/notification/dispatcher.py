@@ -828,6 +828,8 @@ class NotificationDispatcher:
             html_file_path=html_file_path,
             custom_smtp_server=self.config.get("EMAIL_SMTP_SERVER", ""),
             custom_smtp_port=self.config.get("EMAIL_SMTP_PORT", ""),
+            smtp_username=self.config.get("EMAIL_SMTP_USERNAME", ""),
+            reply_to=self.config.get("EMAIL_REPLY_TO", ""),
             get_time_func=self.get_time_func,
         )
 

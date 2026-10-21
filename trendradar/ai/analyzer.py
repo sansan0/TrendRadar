@@ -14,6 +14,29 @@ from trendradar.ai.client import AIClient
 from trendradar.ai.prompt_loader import load_prompt_template
 
 
+def _coerce_analysis_text(value: Any) -> str:
+    """Normalize model output fields before report formatters consume them.
+
+    The prompt asks for plain text strings, but some OpenAI-compatible
+    providers occasionally return a JSON array for a section. Treating that
+    array as text here keeps the result contract stable and avoids letting a
+    provider response shape break HTML or email rendering.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            if isinstance(item, str):
+                parts.append(item)
+            else:
+                parts.append(json.dumps(item, ensure_ascii=False))
+        return "\n".join(parts)
+    if isinstance(value, str):
+        return value
+    return str(value)
+
+
 @dataclass
 class AIAnalysisResult:
     """AI 分析结果"""
@@ -622,11 +645,11 @@ class AIAnalyzer:
 
         # 解析成功，提取字段
         try:
-            result.core_trends = data.get("core_trends", "")
-            result.sentiment_controversy = data.get("sentiment_controversy", "")
-            result.signals = data.get("signals", "")
-            result.rss_insights = data.get("rss_insights", "")
-            result.outlook_strategy = data.get("outlook_strategy", "")
+            result.core_trends = _coerce_analysis_text(data.get("core_trends", ""))
+            result.sentiment_controversy = _coerce_analysis_text(data.get("sentiment_controversy", ""))
+            result.signals = _coerce_analysis_text(data.get("signals", ""))
+            result.rss_insights = _coerce_analysis_text(data.get("rss_insights", ""))
+            result.outlook_strategy = _coerce_analysis_text(data.get("outlook_strategy", ""))
 
             # 解析独立展示区概括
             summaries = data.get("standalone_summaries", {})

@@ -14,6 +14,23 @@ from trendradar.ai.client import AIClient
 from trendradar.ai.prompt_loader import load_prompt_template
 
 
+def _coerce_analysis_text(value: Any) -> str:
+    """将模型返回的分析字段归一化为文本，供报告和推送渲染。"""
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            if isinstance(item, str):
+                parts.append(item)
+            else:
+                parts.append(json.dumps(item, ensure_ascii=False))
+        return "\n".join(parts)
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False)
+
+
 @dataclass
 class AIAnalysisResult:
     """AI 分析结果"""
@@ -622,11 +639,11 @@ class AIAnalyzer:
 
         # 解析成功，提取字段
         try:
-            result.core_trends = data.get("core_trends", "")
-            result.sentiment_controversy = data.get("sentiment_controversy", "")
-            result.signals = data.get("signals", "")
-            result.rss_insights = data.get("rss_insights", "")
-            result.outlook_strategy = data.get("outlook_strategy", "")
+            result.core_trends = _coerce_analysis_text(data.get("core_trends", ""))
+            result.sentiment_controversy = _coerce_analysis_text(data.get("sentiment_controversy", ""))
+            result.signals = _coerce_analysis_text(data.get("signals", ""))
+            result.rss_insights = _coerce_analysis_text(data.get("rss_insights", ""))
+            result.outlook_strategy = _coerce_analysis_text(data.get("outlook_strategy", ""))
 
             # 解析独立展示区概括
             summaries = data.get("standalone_summaries", {})

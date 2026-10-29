@@ -1141,6 +1141,9 @@ class NewsAnalyzer:
             if all_data:
                 raw_rss_items = self._convert_rss_items_to_list(all_data.items, all_data.id_to_name)
 
+        # 统计本模式的新鲜度过滤后条目数，不依赖展示开关或关键词匹配结果
+        self._rss_total_count = len(raw_rss_items or [])
+
         # 如果 RSS 展示未启用，跳过关键词分析，只返回原始条目用于独立展示区
         if not rss_display_enabled:
             return None, None, raw_rss_items, rss_new_urls
@@ -1162,7 +1165,7 @@ class NewsAnalyzer:
                 print("[RSS] 增量模式：没有新增 RSS 条目")
                 return None, None, raw_rss_items, rss_new_urls
 
-            rss_stats, total = count_rss_frequency(
+            rss_stats, _ = count_rss_frequency(
                 rss_items=new_items_list,
                 word_groups=word_groups,
                 filter_words=filter_words,
@@ -1186,7 +1189,7 @@ class NewsAnalyzer:
                 print("[RSS] 当前榜单模式：没有 RSS 数据")
                 return None, None, None, rss_new_urls
 
-            rss_stats, total = count_rss_frequency(
+            rss_stats, _ = count_rss_frequency(
                 rss_items=raw_rss_items,
                 word_groups=word_groups,
                 filter_words=filter_words,
@@ -1225,7 +1228,7 @@ class NewsAnalyzer:
                 print("[RSS] 当日汇总模式：没有 RSS 数据")
                 return None, None, None, rss_new_urls
 
-            rss_stats, total = count_rss_frequency(
+            rss_stats, _ = count_rss_frequency(
                 rss_items=raw_rss_items,
                 word_groups=word_groups,
                 filter_words=filter_words,
@@ -1257,7 +1260,6 @@ class NewsAnalyzer:
                     quiet=True,
                 )
 
-        self._rss_total_count = total
         return rss_stats, rss_new_stats, raw_rss_items, rss_new_urls
 
     def _convert_rss_items_to_list(self, items_dict: Dict, id_to_name: Dict) -> List[Dict]:

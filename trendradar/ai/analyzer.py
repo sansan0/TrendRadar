@@ -15,13 +15,7 @@ from trendradar.ai.prompt_loader import load_prompt_template
 
 
 def _coerce_analysis_text(value: Any) -> str:
-    """Normalize model output fields before report formatters consume them.
-
-    The prompt asks for plain text strings, but some OpenAI-compatible
-    providers occasionally return a JSON array for a section. Treating that
-    array as text here keeps the result contract stable and avoids letting a
-    provider response shape break HTML or email rendering.
-    """
+    """将模型返回的分析字段归一化为文本，供报告和推送渲染。"""
     if value is None:
         return ""
     if isinstance(value, list):
@@ -34,7 +28,7 @@ def _coerce_analysis_text(value: Any) -> str:
         return "\n".join(parts)
     if isinstance(value, str):
         return value
-    return str(value)
+    return json.dumps(value, ensure_ascii=False)
 
 
 @dataclass

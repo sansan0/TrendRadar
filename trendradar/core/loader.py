@@ -425,6 +425,8 @@ def _load_webhook_config(config_data: Dict) -> Dict:
         "EMAIL_TO": _get_env_str("EMAIL_TO") or email.get("to", ""),
         "EMAIL_SMTP_SERVER": _get_env_str("EMAIL_SMTP_SERVER") or email.get("smtp_server", ""),
         "EMAIL_SMTP_PORT": _get_env_str("EMAIL_SMTP_PORT") or email.get("smtp_port", ""),
+        "EMAIL_SMTP_USERNAME": _get_env_str("EMAIL_SMTP_USERNAME") or email.get("smtp_username", ""),
+        "EMAIL_REPLY_TO": _get_env_str("EMAIL_REPLY_TO") or email.get("reply_to", ""),
         # ntfy
         "NTFY_SERVER_URL": _get_env_str("NTFY_SERVER_URL") or ntfy.get("server_url") or "https://ntfy.sh",
         "NTFY_TOPIC": _get_env_str("NTFY_TOPIC") or ntfy.get("topic", ""),

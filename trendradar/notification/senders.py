@@ -594,6 +594,8 @@ def send_to_email(
     custom_smtp_server: Optional[str] = None,
     custom_smtp_port: Optional[int] = None,
     *,
+    smtp_username: Optional[str] = None,
+    reply_to: Optional[str] = None,
     get_time_func: Callable = None,
 ) -> bool:
     """
@@ -607,6 +609,8 @@ def send_to_email(
         html_file_path: HTML 报告文件路径
         custom_smtp_server: 自定义 SMTP 服务器（可选）
         custom_smtp_port: 自定义 SMTP 端口（可选）
+        smtp_username: SMTP 登录用户名（可选，默认使用发件人邮箱）
+        reply_to: 回复地址（可选）
         get_time_func: 获取当前时间的函数
 
     Returns:
@@ -655,6 +659,8 @@ def send_to_email(
         # 严格按照 RFC 标准设置 From header
         sender_name = "TrendRadar"
         msg["From"] = formataddr((sender_name, from_email))
+        if reply_to:
+            msg["Reply-To"] = reply_to
 
         # 设置收件人
         recipients = [addr.strip() for addr in to_email.split(",")]
@@ -707,7 +713,7 @@ TrendRadar 热点分析报告
                 server.ehlo()
 
             # 登录
-            server.login(from_email, password)
+            server.login(smtp_username or from_email, password)
 
             # 发送邮件
             server.send_message(msg)

@@ -1567,7 +1567,13 @@ GitHub Pages 在国内访问较慢，[Cloudflare Pages](https://pages.cloudflare
    - **Name（名称）**：`EMAIL_SMTP_PORT`（可选配置，请复制粘贴此名称）
    - **Secret（值）**：SMTP端口（可留空，系统会自动识别）
 
-   **说明**：邮件推送需要配置至少**3个必需** Secret（EMAIL_FROM、EMAIL_PASSWORD、EMAIL_TO），后两个为可选配置
+   - **Name（名称）**：`EMAIL_SMTP_USERNAME`（可选配置，请复制粘贴此名称）
+   - **Secret（值）**：SMTP 登录用户名（留空时使用 `EMAIL_FROM`；适用于登录用户名与发件地址不同的 SMTP 服务）
+
+   - **Name（名称）**：`EMAIL_REPLY_TO`（可选配置，请复制粘贴此名称）
+   - **Secret（值）**：收件人回复时使用的邮箱地址（留空时不设置 Reply-To）
+
+   **说明**：邮件推送需要配置至少**3个必需** Secret（EMAIL_FROM、EMAIL_PASSWORD、EMAIL_TO），其余邮件 Secret 均为可选配置
 
    <br>
 
@@ -1625,6 +1631,8 @@ GitHub Pages 在国内访问较慢，[Cloudflare Pages](https://pages.cloudflare
    如果自动识别失败，可手动配置 SMTP：
    - `EMAIL_SMTP_SERVER`：如 smtp.gmail.com
    - `EMAIL_SMTP_PORT`：如 587（TLS）或 465（SSL）
+   - `EMAIL_SMTP_USERNAME`：SMTP 登录用户名；留空时继续使用 `EMAIL_FROM`
+   - `EMAIL_REPLY_TO`：可选的独立回复地址
    <br>
 
    **如果有多个收件人(注意是英文逗号分隔)**：

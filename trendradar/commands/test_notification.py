@@ -80,8 +80,19 @@ def run_test_notification(config: Dict) -> bool:
                 config.get("BARK_URL"),
                 config.get("SLACK_WEBHOOK_URL"),
                 config.get("GENERIC_WEBHOOK_URL"),
+                (
+                    config.get("CLOUDFLARE_API_TOKEN")
+                    and config.get("CLOUDFLARE_ACCOUNT_ID")
+                    and config.get("CLOUDFLARE_PROJECT_NAME")
+                ),
+                (
+                    (config.get("CLOUDFLARE_WORKER_API_TOKEN") or config.get("CLOUDFLARE_API_TOKEN"))
+                    and (config.get("CLOUDFLARE_WORKER_ACCOUNT_ID") or config.get("CLOUDFLARE_ACCOUNT_ID"))
+                    and config.get("CLOUDFLARE_WORKER_NAME")
+                ),
             ]
         )
+
         if not has_notification:
             print("未检测到可用通知渠道，请先在 config.yaml 或环境变量中配置。")
             return False

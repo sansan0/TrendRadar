@@ -173,6 +173,16 @@ class NewsAnalyzer:
                 cfg["BARK_URL"],
                 cfg["SLACK_WEBHOOK_URL"],
                 cfg["GENERIC_WEBHOOK_URL"],
+                (
+                    cfg.get("CLOUDFLARE_API_TOKEN")
+                    and cfg.get("CLOUDFLARE_ACCOUNT_ID")
+                    and cfg.get("CLOUDFLARE_PROJECT_NAME")
+                ),
+                (
+                    (cfg.get("CLOUDFLARE_WORKER_API_TOKEN") or cfg.get("CLOUDFLARE_API_TOKEN"))
+                    and (cfg.get("CLOUDFLARE_WORKER_ACCOUNT_ID") or cfg.get("CLOUDFLARE_ACCOUNT_ID"))
+                    and cfg.get("CLOUDFLARE_WORKER_NAME")
+                ),
             ]
         )
 

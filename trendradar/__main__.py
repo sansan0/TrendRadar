@@ -1162,7 +1162,9 @@ class NewsAnalyzer:
                 print("[RSS] 增量模式：没有新增 RSS 条目")
                 return None, None, raw_rss_items, rss_new_urls
 
-            rss_stats, total = count_rss_frequency(
+            # 统计总数在关键词匹配前确定，避免匹配为空提前返回时分母停留为 0
+            self._rss_total_count = len(new_items_list)
+            rss_stats, _ = count_rss_frequency(
                 rss_items=new_items_list,
                 word_groups=word_groups,
                 filter_words=filter_words,
@@ -1186,7 +1188,8 @@ class NewsAnalyzer:
                 print("[RSS] 当前榜单模式：没有 RSS 数据")
                 return None, None, None, rss_new_urls
 
-            rss_stats, total = count_rss_frequency(
+            self._rss_total_count = len(raw_rss_items)
+            rss_stats, _ = count_rss_frequency(
                 rss_items=raw_rss_items,
                 word_groups=word_groups,
                 filter_words=filter_words,
@@ -1225,7 +1228,8 @@ class NewsAnalyzer:
                 print("[RSS] 当日汇总模式：没有 RSS 数据")
                 return None, None, None, rss_new_urls
 
-            rss_stats, total = count_rss_frequency(
+            self._rss_total_count = len(raw_rss_items)
+            rss_stats, _ = count_rss_frequency(
                 rss_items=raw_rss_items,
                 word_groups=word_groups,
                 filter_words=filter_words,
@@ -1257,7 +1261,6 @@ class NewsAnalyzer:
                     quiet=True,
                 )
 
-        self._rss_total_count = total
         return rss_stats, rss_new_stats, raw_rss_items, rss_new_urls
 
     def _convert_rss_items_to_list(self, items_dict: Dict, id_to_name: Dict) -> List[Dict]:

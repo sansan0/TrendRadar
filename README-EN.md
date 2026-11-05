@@ -8,7 +8,7 @@ Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only
 
 <a href="https://trendradar.sandev.cc/en/" title="TrendRadar Official Website"><strong>🌐 Official Website</strong></a> · <a href="https://trendradar.sandev.cc/en/docs/quick-start/" title="TrendRadar Docs"><strong>📖 Documentation</strong></a> · <a href="https://trendradar.sandev.cc/en/docs/self-hosted-sources/" title="Self-hosted news sources with AI"><strong>AI Self-Hosted Sources</strong></a>
 
-<a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/14726?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-14726" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/14726/monthly" alt="sansan0%2FTrendRadar | Trendshift" width="250" height="55"/></a>
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
@@ -156,6 +156,12 @@ After communication, the author indicated no concerns about server pressure, but
 
 <br>
 
+> **[DeepSider API](https://www.deepsiderapi.com/?utm_source=trendradar)** provides unified access to leading AI models, including GPT, Claude, Gemini, and DeepSeek, through a single API key. It uses official channels from major providers, with no account pools or reverse-engineered APIs. Pay-as-you-go billing and real-time usage monitoring make it easy to add AI to your automated workflows.
+
+<a href="https://www.deepsiderapi.com/?utm_source=trendradar"><img src="_image/banner-deepsider.webp" alt="DeepSider API: one API key connects leading AI models worldwide; official channels from major providers, with no account pools or reverse-engineered APIs" width="100%"></a>
+
+<br>
+
 > **[Swiftproxy](https://www.swiftproxy.net/?ref=sansan0)** provides high-quality rotating and static residential proxies with flexible IP rotation and sticky sessions, offering reliable network access for projects involving trend tracking, web scraping, and automated data collection.
 >
 > Use code **`PROXY90`** to get **10% off**.
@@ -205,8 +211,8 @@ This contributes to the sustainable maintenance of the project and the growth of
 <a href="https://ocr.sandev.cc/en/"><img src="_image/sanframe-icon.webp" alt="SanFrame" width="72" height="72"></a>
 </td>
 <td align="left">
-<strong>Multi-device content and clipboard management</strong><br>
-Organize text, images, files, and clipboard content, and transfer them over your local network between Windows, macOS, and the Android companion app. The desktop app offers on-demand sync, offline OCR, screenshot annotation, and PDF tools; no account required, local-first.
+<strong>A workspace for your clipboard and collected content</strong><br>
+Keep text, screenshots, and file references on your computer, then find them with tags, groups, and search. Built-in offline OCR, screenshot annotation, and PDF tools help you reuse your material; optionally connect an MCP-compatible AI app to organize it. Windows and macOS desktops support on-demand LAN sync and exchange text, images, and files with the Android companion app. Free to use, with no account required.
 <br><br>
 <a href="https://ocr.sandev.cc/en/"><strong>Explore SanFrame →</strong></a>
 </td>

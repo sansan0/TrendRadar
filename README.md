@@ -8,7 +8,7 @@
 
 <a href="https://trendradar.sandev.cc/zh/" title="TrendRadar 官方网站"><strong>🌐 官方网站</strong></a> · <a href="https://trendradar.sandev.cc/zh/docs/quick-start/" title="TrendRadar 官网文档"><strong>📖 官网文档</strong></a> · <a href="https://trendradar.sandev.cc/zh/docs/self-hosted-sources/" title="AI 自建热榜数据源"><strong>AI 自建热榜数据源</strong></a>
 
-<a href="https://trendshift.io/repositories/14726" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14726" alt="sansan0%2FTrendRadar | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/14726?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-14726" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/14726/monthly" alt="sansan0%2FTrendRadar | Trendshift" width="250" height="55"/></a>
 
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
@@ -204,6 +204,12 @@
 
 <br>
 
+> **[DeepSider API](https://www.deepsiderapi.com/?utm_source=trendradar)** 提供统一的 AI API 接入服务，一个 API Key 即可调用 GPT、Claude、Gemini、DeepSeek 等主流模型。非号池，非逆向，大厂官方渠道。支持按量计费与实时用量监控，方便为你的自动化工作流接入 AI。
+
+<a href="https://www.deepsiderapi.com/?utm_source=trendradar"><img src="_image/banner-deepsider.webp" alt="DeepSider API：一个 API Key，连接全球主流 AI 模型；非号池，非逆向，大厂官方渠道" width="100%"></a>
+
+<br>
+
 > **[Swiftproxy](https://www.swiftproxy.net/?ref=sansan0)** 专注于提供高质量动态与静态住宅代理，支持灵活的 IP 轮换与粘性会话。适用于热点追踪、网页抓取与自动化数据采集，为你的项目提供更稳定可靠的网络访问支持。
 >
 > 使用优惠码 **`PROXY90`**，即可享受 **九折优惠**。
@@ -253,8 +259,8 @@
 <a href="https://ocr.sandev.cc/zh/"><img src="_image/sanframe-icon.webp" alt="SanFrame" width="72" height="72"></a>
 </td>
 <td align="left">
-<strong>多设备资料与剪贴板管理</strong><br>
-集中管理文字、图片、文件与剪贴板，支持 Windows / macOS 与 Android 传输端局域网互传。桌面端支持按需同步、离线 OCR、截图标注和 PDF 处理，无需账号，本地优先。
+<strong>剪贴板与资料管理工作台</strong><br>
+把文字、截图和文件引用收在本机，用标签、组合与搜索快速找回。内置离线 OCR、截图标注和 PDF 处理，可另接支持 MCP 的 AI 软件辅助整理。Windows / macOS 桌面端可在局域网内按需同步，并与 Android 传输端互传文字、图片和文件。软件免费，无需账号。
 <br><br>
 <a href="https://ocr.sandev.cc/zh/"><strong>了解 SanFrame →</strong></a>
 </td>

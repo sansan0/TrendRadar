@@ -831,6 +831,11 @@ Users often use natural language like "this week", "last 7 days" to express date
 | **Slack** | mrkdwn | `SLACK_WEBHOOK_URL` |
 | **Generic Webhook** | Markdown | `GENERIC_WEBHOOK_URL` |
 
+**Optional email configuration:**
+
+- `EMAIL_SMTP_USERNAME` / `notification.channels.email.smtp_username`: SMTP login username; defaults to `EMAIL_FROM` when empty
+- `EMAIL_REPLY_TO` / `notification.channels.email.reply_to`: independent reply address; omitted when empty
+
 **Configuration methods:**
 
 - Configure channels in `config.yaml` under `notification.channels`

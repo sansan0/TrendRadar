@@ -252,6 +252,41 @@ def _check_notification_channels(results: List[Tuple[str, str, str]], config: Di
     elif any([config.get("EMAIL_FROM"), config.get("EMAIL_PASSWORD"), config.get("EMAIL_TO")]):
         channel_issues.append("邮件配置不完整（需要 from/password/to 同时配置）")
 
+    cf_tokens = parse_multi_account_config(config.get("CLOUDFLARE_API_TOKEN", ""))
+    cf_accounts = parse_multi_account_config(config.get("CLOUDFLARE_ACCOUNT_ID", ""))
+    cf_projects = parse_multi_account_config(config.get("CLOUDFLARE_PROJECT_NAME", ""))
+    if cf_tokens or cf_accounts or cf_projects:
+        valid, count = validate_paired_configs(
+            {"api_token": cf_tokens, "account_id": cf_accounts, "project_name": cf_projects},
+            "Cloudflare Pages",
+            required_keys=["api_token", "account_id", "project_name"],
+        )
+        if valid and count > 0:
+            channel_details.append(f"Cloudflare Pages({min(count, max_accounts)}个)")
+        else:
+            channel_issues.append("Cloudflare Pages api_token/account_id/project_name 配置不完整或数量不一致")
+
+    cf_w_token = config.get("CLOUDFLARE_WORKER_API_TOKEN") or config.get("CLOUDFLARE_API_TOKEN", "")
+    cf_w_account = config.get("CLOUDFLARE_WORKER_ACCOUNT_ID") or config.get("CLOUDFLARE_ACCOUNT_ID", "")
+    cf_w_name = config.get("CLOUDFLARE_WORKER_NAME", "")
+    if cf_w_token or cf_w_account or cf_w_name:
+        tokens = parse_multi_account_config(cf_w_token)
+        account_ids = parse_multi_account_config(cf_w_account)
+        worker_names = parse_multi_account_config(cf_w_name)
+        if len(tokens) == 1 and len(worker_names) > 1:
+            tokens = tokens * len(worker_names)
+        if len(account_ids) == 1 and len(worker_names) > 1:
+            account_ids = account_ids * len(worker_names)
+        valid, count = validate_paired_configs(
+            {"api_token": tokens, "account_id": account_ids, "script_name": worker_names},
+            "Cloudflare Worker",
+            required_keys=["api_token", "account_id", "script_name"],
+        )
+        if valid and count > 0:
+            channel_details.append(f"Cloudflare Worker({min(count, max_accounts)}个)")
+        else:
+            channel_issues.append("Cloudflare Worker api_token/account_id/worker_name 配置不完整或数量不一致")
+
     if channel_issues and not channel_details:
         _record_result(results, "fail", "通知配置", "；".join(channel_issues))
     elif channel_issues and channel_details:

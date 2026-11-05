@@ -15,6 +15,8 @@
 每个发送函数都支持分批发送，并通过参数化配置实现与 CONFIG 的解耦。
 """
 
+import base64
+import hashlib
 import smtplib
 import time
 import json
@@ -28,6 +30,13 @@ from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlparse
 
 import requests
+
+try:
+    from cloudflare import Cloudflare
+    HAS_CLOUDFLARE = True
+except ImportError:
+    HAS_CLOUDFLARE = False
+    Cloudflare = None
 
 from .batch import add_batch_headers, get_max_batch_header_size
 from .formatters import convert_markdown_to_mrkdwn, strip_markdown
@@ -1325,3 +1334,356 @@ def send_to_generic_webhook(
     print(f"{log_prefix}所有 {len(batches)} 批次发送完成 [{report_type}]")
 
     return True
+
+
+def send_to_cloudflare_pages(
+    account_id: str,
+    api_token: str,
+    project_name: str,
+    html_file_path: Optional[str] = None,
+    branch: Optional[str] = None,
+    commit_message: Optional[str] = None,
+    account_label: str = "",
+) -> bool:
+    """
+    部署/推送 HTML 报告到 Cloudflare Pages
+
+    使用 Cloudflare Python SDK (Direct Upload 流程) 将生成的网页报告上传并部署到指定的 Pages 项目。
+    若项目绑定了自定义域名或使用默认 pages.dev 域名，部署后即可公网访问最新热点分析报告。
+
+    Args:
+        account_id: Cloudflare Account ID
+        api_token: Cloudflare API Token（需具备 Pages Write / Edit 权限）
+        project_name: Cloudflare Pages 项目名
+        html_file_path: HTML 报告文件路径（可选，若未提供自动寻找 output/index.html 或 index.html）
+        branch: 部署分支（可选，默认使用项目生产分支）
+        commit_message: 部署提交说明（可选）
+        account_label: 账号/项目标签（多项目配置时显示）
+
+    Returns:
+        bool: 部署是否成功
+    """
+    log_prefix = f"Cloudflare Pages{account_label}" if account_label else "Cloudflare Pages"
+
+    if not HAS_CLOUDFLARE or Cloudflare is None:
+        print(f"{log_prefix} 未安装 cloudflare 官方 SDK，请运行: uv add cloudflare 或 pip install cloudflare")
+        return False
+
+    if not account_id or not api_token or not project_name:
+        print(f"{log_prefix} 配置不完整：account_id, api_token, project_name 均不能为空")
+        return False
+
+    # 1. 定位待上传的 HTML 文件
+    target_file: Optional[Path] = None
+    if html_file_path:
+        p = Path(html_file_path)
+        if not p.exists():
+            print(f"{log_prefix} 部署失败：指定的 HTML 文件不存在 [{html_file_path}]")
+            return False
+        target_file = p
+    elif Path("output/index.html").exists():
+        target_file = Path("output/index.html")
+    elif Path("index.html").exists():
+        target_file = Path("index.html")
+
+    if not target_file:
+        print(f"{log_prefix} 部署失败：未找到可部署的 HTML 文件 (output/index.html 或 index.html)")
+        return False
+
+    try:
+        file_bytes = target_file.read_bytes()
+    except Exception as e:
+        print(f"{log_prefix} 读取 HTML 文件失败 [{target_file}]: {e}")
+        return False
+
+    if not file_bytes:
+        print(f"{log_prefix} 部署失败：HTML 文件内容为空 [{target_file}]")
+        return False
+
+    print(f"正在部署报告到 {log_prefix} [项目: {project_name}]...")
+
+    # 2. 计算资源 Hash（遵循 Cloudflare Pages / Wrangler Direct Upload 规范）
+    # hash = sha256(base64(content) + extension)[:32]
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    ext = target_file.suffix.lstrip(".").lower() or "html"
+    file_hash = hashlib.sha256((b64 + ext).encode("utf-8")).hexdigest()[:32]
+
+    # 构建 manifest：保证 /index.html 存在，以便访问根路径
+    manifest_map: Dict[str, str] = {
+        "/index.html": file_hash,
+    }
+    if target_file.name != "index.html":
+        manifest_map[f"/{target_file.name}"] = file_hash
+
+    try:
+        client = Cloudflare(api_token=api_token)
+
+        # 3. 获取上传 JWT Token
+        try:
+            token_resp = client.pages.projects.get_upload_token(
+                project_name=project_name,
+                account_id=account_id,
+            )
+            jwt = getattr(token_resp, "jwt", None)
+            if not jwt and isinstance(token_resp, dict):
+                jwt = token_resp.get("jwt")
+        except Exception as token_err:
+            # 若不是 Direct Upload 项目，尝试触发分支部署
+            if branch or "git" in str(token_err).lower():
+                print(f"{log_prefix} 获取上传 Token 提示 ({token_err})，尝试触发分支部署...")
+                deploy_kwargs: Dict[str, Any] = {
+                    "account_id": account_id,
+                    "project_name": project_name,
+                }
+                if branch:
+                    deploy_kwargs["branch"] = branch
+                if commit_message:
+                    deploy_kwargs["commit_message"] = commit_message
+                deployment = client.pages.projects.deployments.create(**deploy_kwargs)
+                deploy_url = getattr(deployment, "url", "")
+                print(f"{log_prefix} 部署已触发 [{project_name}] -> {deploy_url}")
+                return True
+            raise
+
+        if not jwt:
+            print(f"{log_prefix} 部署失败：未获取到有效的 Upload JWT")
+            return False
+
+        auth_headers = {"Authorization": f"Bearer {jwt}"}
+
+        # 4. 检查缺失资源 (check_missing)
+        unique_hashes = list(set(manifest_map.values()))
+        missing_resp = client.pages.assets.check_missing(
+            hashes=unique_hashes,
+            extra_headers=auth_headers,
+        )
+        missing_hashes = set(missing_resp) if missing_resp else set()
+
+        # 5. 上传缺失资源 (upload)
+        if file_hash in missing_hashes:
+            upload_body = [
+                {
+                    "key": file_hash,
+                    "value": b64,
+                    "metadata": {"contentType": "text/html; charset=utf-8"},
+                    "base64": True,
+                }
+            ]
+            client.pages.assets.upload(
+                body=upload_body,
+                extra_headers=auth_headers,
+            )
+            print(f"{log_prefix} 静态资源已上传 ({len(file_bytes)} 字节)")
+        else:
+            print(f"{log_prefix} 静态资源已在边缘命中缓存，跳过重复上传")
+
+        # 6. 确认 Hash 记录 (upsert_hashes)
+        client.pages.assets.upsert_hashes(
+            hashes=unique_hashes,
+            extra_headers=auth_headers,
+        )
+
+        # 7. 创建部署 (deployments.create)
+        create_kwargs: Dict[str, Any] = {
+            "account_id": account_id,
+            "project_name": project_name,
+            "manifest": json.dumps(manifest_map),
+        }
+        if branch:
+            create_kwargs["branch"] = branch
+        if commit_message:
+            create_kwargs["commit_message"] = commit_message
+
+        deployment = client.pages.projects.deployments.create(**create_kwargs)
+
+        deploy_url = getattr(deployment, "url", "")
+        aliases = getattr(deployment, "aliases", []) or []
+        canonical_url = aliases[0] if aliases else (deploy_url or f"https://{project_name}.pages.dev")
+
+        print(f"{log_prefix} 部署成功 [{project_name}] -> {canonical_url}")
+        return True
+
+    except Exception as e:
+        print(f"{log_prefix} 部署失败 [{project_name}]：{e}")
+        return False
+
+
+def send_to_cloudflare_worker(
+    account_id: str,
+    api_token: str,
+    script_name: str,
+    html_file_path: Optional[str] = None,
+    account_label: str = "",
+) -> bool:
+    """
+    通过 Cloudflare Workers (Static Assets) 部署/推送 HTML 报告
+
+    Cloudflare 官方目前推荐使用 Workers 托管静态网站与微服务。
+    本函数基于 Workers Direct Upload API，实现报告网页的差量上传与 Worker 部署：
+    1. 上传会话协商 (scripts.assets.upload.create)
+    2. 差量资源上传 (assets.upload.create)
+    3. Worker 脚本及静态资产绑定发布 (scripts.update)
+    4. 自动激活 workers.dev 域名并输出访问地址
+
+    Args:
+        account_id: Cloudflare 账户 ID (Account ID)
+        api_token: Cloudflare API Token（需包含 Workers 脚本和资产的读写权限）
+        script_name: Cloudflare Worker 脚本/服务名称 (如 trendradar-report)
+        html_file_path: 待部署的 HTML 文件路径（可选，默认查找 output/index.html 或 index.html）
+        account_label: 账号/服务标签（多账号场景下区分打印）
+
+    Returns:
+        bool: 是否部署成功
+    """
+    log_prefix = f"Cloudflare Worker {account_label}".strip()
+
+    if not HAS_CLOUDFLARE:
+        print(f"{log_prefix} 推送失败：未安装 cloudflare SDK，请运行 uv add cloudflare 安装依赖")
+        return False
+
+    if not account_id or not api_token or not script_name:
+        print(f"{log_prefix} 配置不完整：account_id, api_token, script_name 均不能为空")
+        return False
+
+    # 1. 定位待上传的 HTML 报告
+    target_file: Optional[Path] = None
+    if html_file_path:
+        specified = Path(html_file_path)
+        if specified.exists() and specified.is_file():
+            target_file = specified
+        else:
+            print(f"{log_prefix} 部署失败：指定的 HTML 文件不存在 [{html_file_path}]")
+            return False
+    else:
+        candidates = [
+            Path("output") / "index.html",
+            Path("index.html"),
+        ]
+        for c in candidates:
+            if c.exists() and c.is_file():
+                target_file = c
+                break
+
+    if not target_file:
+        print(f"{log_prefix} 部署失败：未找到可部署的 HTML 报告文件 (请先生成报告或指定 html_file_path)")
+        return False
+
+    try:
+        print(f"正在部署报告到 Cloudflare Worker [{script_name}]...")
+
+        file_bytes = target_file.read_bytes()
+        b64 = base64.b64encode(file_bytes).decode("ascii")
+        ext = target_file.suffix.lstrip(".") or "html"
+
+        # 2. 计算 32 字符十六进制文件哈希并生成 manifest
+        file_hash = hashlib.sha256((b64 + ext).encode("utf-8")).hexdigest()[:32]
+        manifest_map = {
+            "/index.html": {
+                "hash": file_hash,
+                "size": len(file_bytes),
+            }
+        }
+
+        client = Cloudflare(api_token=api_token)
+
+        # 3. 启动上传会话 (assets-upload-session)
+        upload_resp = client.workers.scripts.assets.upload.create(
+            script_name,
+            account_id=account_id,
+            manifest=manifest_map,
+        )
+
+        jwt = getattr(upload_resp, "jwt", None)
+        if not jwt and isinstance(upload_resp, dict):
+            jwt = upload_resp.get("jwt")
+
+        buckets = getattr(upload_resp, "buckets", None)
+        if buckets is None and isinstance(upload_resp, dict):
+            buckets = upload_resp.get("buckets", [])
+        buckets = buckets or []
+
+        completion_jwt = jwt
+
+        # 4. 上传缺失静态资源
+        if buckets:
+            auth_headers = {"Authorization": f"Bearer {jwt}"}
+            payload = {file_hash: b64}
+            upload_res = client.workers.assets.upload.create(
+                account_id=account_id,
+                base64=True,
+                body=payload,
+                extra_headers=auth_headers,
+            )
+            resp_jwt = getattr(upload_res, "jwt", None)
+            if not resp_jwt and isinstance(upload_res, dict):
+                resp_jwt = upload_res.get("jwt")
+            if resp_jwt:
+                completion_jwt = resp_jwt
+            print(f"{log_prefix} 静态资源已上传 ({len(file_bytes)} 字节)")
+        else:
+            print(f"{log_prefix} 静态资源已在边缘命中缓存，跳过重复上传")
+
+        if not completion_jwt:
+            print(f"{log_prefix} 部署失败：未能获得有效的 Completion JWT")
+            return False
+
+        # 5. 上传 Worker 脚本并绑定 Assets
+        worker_code = (
+            "export default {\n"
+            "  async fetch(request, env) {\n"
+            "    return env.ASSETS.fetch(request);\n"
+            "  }\n"
+            "};\n"
+        ).encode("utf-8")
+
+        files = [
+            ("worker.js", worker_code, "application/javascript+module"),
+        ]
+
+        metadata = {
+            "main_module": "worker.js",
+            "compatibility_date": "2024-09-23",
+            "assets": {
+                "jwt": completion_jwt,
+            },
+        }
+
+        client.workers.scripts.update(
+            script_name=script_name,
+            account_id=account_id,
+            metadata=metadata,
+            files=files,
+        )
+
+        # 6. 获取 workers.dev 子域名并尝试激活访问
+        subdomain_str = ""
+        try:
+            subdomain_info = client.workers.subdomains.get(account_id=account_id)
+            subdomain_str = getattr(subdomain_info, "subdomain", "") or ""
+            if not subdomain_str and isinstance(subdomain_info, dict):
+                subdomain_str = subdomain_info.get("subdomain", "")
+        except Exception:
+            pass
+
+        try:
+            client.workers.scripts.subdomain.create(
+                script_name=script_name,
+                account_id=account_id,
+                enabled=True,
+            )
+        except Exception:
+            pass
+
+        if subdomain_str:
+            worker_url = f"https://{script_name}.{subdomain_str}.workers.dev"
+        else:
+            worker_url = f"https://{script_name}.workers.dev"
+
+        print(f"{log_prefix} 部署成功 [{script_name}] -> {worker_url}")
+        return True
+
+    except Exception as e:
+        print(f"{log_prefix} 部署失败 [{script_name}]：{e}")
+        return False
+
+

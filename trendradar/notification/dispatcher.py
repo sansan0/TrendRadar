@@ -32,6 +32,8 @@ from .senders import (
     send_to_telegram,
     send_to_wework,
     send_to_generic_webhook,
+    send_to_cloudflare_pages,
+    send_to_cloudflare_worker,
 )
 
 
@@ -360,7 +362,24 @@ class NotificationDispatcher:
         ):
             results["email"] = self._send_email(report_type, html_file_path)
 
+        # Cloudflare Pages（支持网页报告部署与多项目）
+        if (
+            self.config.get("CLOUDFLARE_API_TOKEN")
+            and self.config.get("CLOUDFLARE_ACCOUNT_ID")
+            and self.config.get("CLOUDFLARE_PROJECT_NAME")
+        ):
+            results["cloudflare_pages"] = self._send_cloudflare_pages(report_type, html_file_path)
+
+        # Cloudflare Worker（支持网页报告部署与多服务）
+        if (
+            (self.config.get("CLOUDFLARE_WORKER_API_TOKEN") or self.config.get("CLOUDFLARE_API_TOKEN"))
+            and (self.config.get("CLOUDFLARE_WORKER_ACCOUNT_ID") or self.config.get("CLOUDFLARE_ACCOUNT_ID"))
+            and self.config.get("CLOUDFLARE_WORKER_NAME")
+        ):
+            results["cloudflare_worker"] = self._send_cloudflare_worker(html_file_path)
+
         return results
+
 
     def _send_to_multi_accounts(
         self,
@@ -830,4 +849,106 @@ class NotificationDispatcher:
             custom_smtp_port=self.config.get("EMAIL_SMTP_PORT", ""),
             get_time_func=self.get_time_func,
         )
+
+    def _send_cloudflare_pages(
+        self,
+        report_type: str,
+        html_file_path: Optional[str],
+    ) -> bool:
+        """发送/部署到 Cloudflare Pages（多项目支持）"""
+        api_tokens = parse_multi_account_config(self.config.get("CLOUDFLARE_API_TOKEN", ""))
+        account_ids = parse_multi_account_config(self.config.get("CLOUDFLARE_ACCOUNT_ID", ""))
+        project_names = parse_multi_account_config(self.config.get("CLOUDFLARE_PROJECT_NAME", ""))
+        branches = parse_multi_account_config(self.config.get("CLOUDFLARE_BRANCH", ""))
+
+        if not api_tokens or not account_ids or not project_names:
+            return False
+
+        valid, count = validate_paired_configs(
+            {"api_token": api_tokens, "account_id": account_ids, "project_name": project_names},
+            "Cloudflare Pages",
+            required_keys=["api_token", "account_id", "project_name"],
+        )
+        if not valid or count == 0:
+            return False
+
+        api_tokens = limit_accounts(api_tokens, self.max_accounts, "Cloudflare Pages")
+        account_ids = account_ids[: len(api_tokens)]
+        project_names = project_names[: len(api_tokens)]
+
+        results = []
+        for i in range(len(api_tokens)):
+            token = api_tokens[i]
+            account_id = account_ids[i]
+            project_name = project_names[i]
+            branch = get_account_at_index(branches, i, "") if branches else ""
+            if token and account_id and project_name:
+                account_label = f"项目{i+1}" if len(api_tokens) > 1 else ""
+                commit_msg = f"TrendRadar 报告更新 - {report_type}"
+                result = send_to_cloudflare_pages(
+                    account_id=account_id,
+                    api_token=token,
+                    project_name=project_name,
+                    html_file_path=html_file_path,
+                    branch=branch or None,
+                    commit_message=commit_msg,
+                    account_label=account_label,
+                )
+                results.append(result)
+
+        return any(results) if results else False
+
+    def _send_cloudflare_worker(
+        self,
+        html_file_path: Optional[str],
+    ) -> bool:
+        """发送/部署到 Cloudflare Worker（多服务支持）"""
+        api_token_val = self.config.get("CLOUDFLARE_WORKER_API_TOKEN") or self.config.get("CLOUDFLARE_API_TOKEN", "")
+        account_id_val = self.config.get("CLOUDFLARE_WORKER_ACCOUNT_ID") or self.config.get("CLOUDFLARE_ACCOUNT_ID", "")
+        script_name_val = self.config.get("CLOUDFLARE_WORKER_NAME", "")
+
+        api_tokens = parse_multi_account_config(api_token_val)
+        account_ids = parse_multi_account_config(account_id_val)
+        script_names = parse_multi_account_config(script_name_val)
+
+        if not api_tokens or not account_ids or not script_names:
+            return False
+
+        # 如果 account_id 或 api_token 只有一个，而 script_names 有多个，支持自动按数量对齐
+        if len(api_tokens) == 1 and len(script_names) > 1:
+            api_tokens = api_tokens * len(script_names)
+        if len(account_ids) == 1 and len(script_names) > 1:
+            account_ids = account_ids * len(script_names)
+
+        valid, count = validate_paired_configs(
+            {"api_token": api_tokens, "account_id": account_ids, "script_name": script_names},
+            "Cloudflare Worker",
+            required_keys=["api_token", "account_id", "script_name"],
+        )
+        if not valid or count == 0:
+            return False
+
+        api_tokens = limit_accounts(api_tokens, self.max_accounts, "Cloudflare Worker")
+        account_ids = account_ids[: len(api_tokens)]
+        script_names = script_names[: len(api_tokens)]
+
+        results = []
+        for i in range(len(api_tokens)):
+            token = api_tokens[i]
+            account_id = account_ids[i]
+            script_name = script_names[i]
+            if token and account_id and script_name:
+                account_label = f"服务{i+1}" if len(api_tokens) > 1 else ""
+                result = send_to_cloudflare_worker(
+                    account_id=account_id,
+                    api_token=token,
+                    script_name=script_name,
+                    html_file_path=html_file_path,
+                    account_label=account_label,
+                )
+                results.append(result)
+
+        return any(results) if results else False
+
+
 

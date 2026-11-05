@@ -43,6 +43,9 @@ from trendradar.notification.senders import (
     send_to_ntfy,
     send_to_bark,
     send_to_slack,
+    send_to_generic_webhook,
+    send_to_cloudflare_pages,
+    send_to_cloudflare_worker,
     SMTP_CONFIGS,
 )
 from trendradar.notification.dispatcher import NotificationDispatcher
@@ -71,6 +74,9 @@ __all__ = [
     "send_to_ntfy",
     "send_to_bark",
     "send_to_slack",
+    "send_to_generic_webhook",
+    "send_to_cloudflare_pages",
+    "send_to_cloudflare_worker",
     "SMTP_CONFIGS",
     # 通知调度器
     "NotificationDispatcher",

@@ -6,6 +6,7 @@
 
 import os
 import re
+from bisect import bisect_right
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Union
@@ -2209,6 +2210,8 @@ class AnalyticsTools:
         aggregated = []
         used_indices = set()
         PRE_FILTER_RATIO = 0.5  # 粗筛阈值系数
+        jaccard_min = threshold * PRE_FILTER_RATIO
+        candidate_index = self._build_char_prefix_index(sorted_items, jaccard_min)
 
         for i, item in enumerate(sorted_items):
             if i in used_indices:
@@ -2243,7 +2246,12 @@ class AnalyticsTools:
             used_indices.add(i)
 
             # 查找相似新闻
-            for j in range(i + 1, len(sorted_items)):
+            if candidate_index is None:
+                candidates = range(i + 1, len(sorted_items))
+            else:
+                candidates = self._prefix_candidates(candidate_index, i)
+
+            for j in candidates:
                 if j in used_indices:
                     continue
 
@@ -2308,6 +2316,49 @@ class AnalyticsTools:
             aggregated.append(group)
 
         return aggregated
+
+    @staticmethod
+    def _build_char_prefix_index(sorted_items: List[Dict], jaccard_min: float) -> Optional[Dict]:
+        """
+        为 Jaccard 粗筛建立前缀索引（prefix filtering），避免逐一比较所有新闻对
+
+        字符按出现的新闻数从少到多排序。两个标题的字符集合 Jaccard >= jaccard_min 时，
+        二者至少共享 jaccard_min * 集合大小 个字符，所以各自去掉最常见的
+        int(jaccard_min * 集合大小) - 1 个字符后的前缀必有交集。只比较前缀有交集的新闻，
+        能通过粗筛的新闻对一个不漏，聚合结果与逐一比较相同。
+
+        Returns:
+            prefixes: 每条新闻的前缀字符；postings: 字符 -> 前缀含该字符的新闻下标（升序）。
+            jaccard_min <= 0 时任何新闻对都可能通过粗筛，返回 None，退回逐一比较。
+        """
+        if jaccard_min <= 0:
+            return None
+
+        doc_freq = Counter()
+        for item in sorted_items:
+            doc_freq.update(item["char_set"])
+
+        prefixes = []
+        postings = defaultdict(list)
+        for idx, item in enumerate(sorted_items):
+            chars = sorted(item["char_set"], key=lambda ch: (doc_freq[ch], ch))
+            size = len(chars)
+            prefix = chars[:min(size, size - int(jaccard_min * size) + 1)]
+            prefixes.append(prefix)
+            for ch in prefix:
+                postings[ch].append(idx)
+
+        return {"prefixes": prefixes, "postings": postings}
+
+    @staticmethod
+    def _prefix_candidates(candidate_index: Dict, i: int) -> List[int]:
+        """返回下标大于 i 且与第 i 条新闻前缀有共同字符的新闻下标（升序）"""
+        postings = candidate_index["postings"]
+        candidates = set()
+        for ch in candidate_index["prefixes"][i]:
+            indices = postings[ch]
+            candidates.update(indices[bisect_right(indices, i):])
+        return sorted(candidates)
 
     # ==================== 时期对比分析工具 ====================
 

@@ -150,7 +150,10 @@ class AIAnalyzer:
         model_display = model.replace("/", "/\u200b") if model else "unknown"
 
         print(f"[AI] 模型: {model_display}")
-        print(f"[AI] Key : {masked_key}")
+        if self.client.uses_workload_identity and not api_key:
+            print("[AI] Key : workload identity federation")
+        else:
+            print(f"[AI] Key : {masked_key}")
 
         if api_base:
             print(f"[AI] 接口: 存在自定义 API 端点")
@@ -159,7 +162,7 @@ class AIAnalyzer:
         max_tokens = self.ai_config.get("MAX_TOKENS", 5000)
         print(f"[AI] 参数: timeout={timeout}, max_tokens={max_tokens}")
 
-        if not self.client.api_key:
+        if not self.client.has_credentials:
             return AIAnalysisResult(
                 success=False,
                 error="未配置 AI API Key，请在 config.yaml 或环境变量 AI_API_KEY 中设置"

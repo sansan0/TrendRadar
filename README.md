@@ -2834,6 +2834,7 @@ TrendRadar 提供两个独立的 Docker 镜像，可根据需求选择部署：
    | `FEISHU_WEBHOOK_URL` | `notification.channels.feishu.webhook_url` | `https://...` | 飞书 Webhook（多账号用 `;` 分隔） |
    | `AI_ANALYSIS_ENABLED` | `ai_analysis.enabled` | `true` / `false` | 是否启用 AI 分析（v5.0.0 新增） |
    | `AI_API_KEY` | `ai.api_key` | `sk-xxx...` | AI API Key（ai_analysis 和 ai_translation 共享） |
+   | `ANTHROPIC_FEDERATION_RULE_ID` 等 | - | - | Claude（`anthropic/` 模型）用 [workload identity federation](https://platform.claude.com/docs/en/manage-claude/workload-identity-federation) 认证时代替 `AI_API_KEY`，由 LiteLLM 读取 |
    | `AI_PROVIDER` | `ai.provider` | `deepseek` / `openai` / `gemini` | AI 提供商 |
    | `S3_*` | `storage.remote.*` | - | 远程存储配置（5 个参数） |
 

@@ -7806,6 +7806,8 @@ ai:
   model: "deepseek/deepseek-v4-flash"
 
   api_key: ""                       # API Key（建议使用环境变量 AI_API_KEY）
+                                    # Claude（anthropic/ 开头的模型）也可以不填 Key，改用 workload identity federation：
+                                    # 设置 ANTHROPIC_FEDERATION_RULE_ID 等环境变量即可，见 https://platform.claude.com/docs/en/manage-claude/workload-identity-federation
 
   api_base: ""                      # 自定义 API 地址（可选，绝大多数情况留空即可）
                                     #
@@ -8362,6 +8364,8 @@ ai:
   model: "deepseek/deepseek-v4-flash"
 
   api_key: ""                       # API Key (prefer using the AI_API_KEY environment variable)
+                                    # Claude (anthropic/ models) can also run without a key via workload identity federation:
+                                    # set ANTHROPIC_FEDERATION_RULE_ID and related variables, see https://platform.claude.com/docs/en/manage-claude/workload-identity-federation
 
   api_base: ""                      # Custom API URL (optional; leave empty in most cases)
                                     #

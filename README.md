@@ -1063,6 +1063,18 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 <img src="/_image/editor.png" alt="可视化配置编辑器" width="80%">
 
+### **Web 管理台（自托管，可选）**
+
+除了上面的在线配置编辑器，项目还提供一个随服务运行的自托管管理台，适合部署在自己的服务器或 NAS 上：
+
+- 浏览器内修改 `config.yaml`、关键词、提示词和通知配置，保存前自动备份
+- 管理热榜/RSS 数据源、AI、通知、存储与高级参数
+- 手动运行、查看日志与 HTML 报告，内置 5 段 cron 调度
+- 支持域名与 HTTPS 配置，证书异常时自动回退 HTTP
+- 默认不启动，不影响原有命令行、Docker 和 GitHub Actions 用法
+
+安装后运行 `trendradar-admin`（或 `python -m web_admin`），默认监听 `8080`；systemd 与证书部署见 [DEPLOY.md](DEPLOY.md)。
+
 ### **智能推送策略**
 
 **三种推送模式**：
@@ -1197,6 +1209,7 @@ ai_translation:
 - **GitHub Actions**：定时自动爬取 + 远程云存储（需签到续期）
 - **Docker 部署**：支持多架构容器化运行，数据本地存储
 - **本地运行**：Windows/Mac/Linux 直接运行
+- **Web 管理台（可选）**：浏览器内完成配置、调度、运行和报告查看
 
 
 ### **AI 分析推送（v5.0.0 新增）**

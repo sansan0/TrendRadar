@@ -8,6 +8,7 @@ TrendRadar 主程序
 
 import argparse
 import os
+import sys
 import webbrowser
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -121,7 +122,14 @@ class NewsAnalyzer:
 
     def _should_open_browser(self) -> bool:
         """判断是否应该打开浏览器"""
-        return not self.is_github_actions and not self.is_docker_container
+        if self.is_github_actions or self.is_docker_container:
+            return False
+        # 无图形界面的 Linux 服务器（例如 VPS）不尝试启动浏览器
+        if sys.platform.startswith("linux") and not (
+            os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+        ):
+            return False
+        return True
 
     def _setup_proxy(self) -> None:
         """设置代理配置"""
@@ -1603,8 +1611,8 @@ class NewsAnalyzer:
             file_url = "file://" + str(Path(html_file).resolve())
             print(f"正在打开HTML报告: {file_url}")
             webbrowser.open(file_url)
-        elif self.is_docker_container and html_file:
-            print(f"HTML报告已生成（Docker环境）: {html_file}")
+        elif html_file:
+            print(f"HTML报告已生成: {html_file}")
 
         return html_file
 

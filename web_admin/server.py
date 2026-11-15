@@ -33,6 +33,7 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 REPORT_ROOT = store.PROJECT_ROOT / "output" / "html"
 MAX_BODY = 4 * 1024 * 1024
 SESSION_COOKIE = "tr_session"
+TLS_HANDSHAKE_TIMEOUT = 15.0
 
 CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -943,10 +944,28 @@ class AdminHandler(BaseHTTPRequestHandler):
 class AdminServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
+    tls_context: Optional[ssl.SSLContext] = None
 
     def __init__(self, address: Tuple[str, int], app: AdminApp) -> None:
         self.app = app
         super().__init__(address, AdminHandler)
+
+    def finish_request(self, request, client_address) -> None:
+        """在工作线程内完成 TLS 握手，避免慢连接阻塞 accept。
+
+        直接对监听套接字做 wrap_socket 会让 accept() 在等待 ClientHello 时
+        无限期阻塞：只要有一个只建连不发数据的扫描器，后续所有 HTTPS 请求
+        都会堆积在 backlog 里，外部表现为 Cloudflare 522。
+        """
+        context = self.tls_context
+        if context is not None:
+            try:
+                request.settimeout(TLS_HANDSHAKE_TIMEOUT)
+                request = context.wrap_socket(request, server_side=True)
+            except (ssl.SSLError, OSError):
+                return
+            request.settimeout(None)
+        super().finish_request(request, client_address)
 
 
 def create_server(
@@ -957,6 +976,6 @@ def create_server(
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(certfile=cert, keyfile=key)
-        server.socket = context.wrap_socket(server.socket, server_side=True)
+        server.tls_context = context
         app.tls = True
     return server

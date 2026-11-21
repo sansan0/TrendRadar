@@ -19,7 +19,7 @@ from trendradar.report.helpers import (
     format_rank_display,
 )
 from trendradar.report.formatter import format_title_for_platform
-from trendradar.report.html import render_html_content
+from trendradar.report.html import render_html_content, prepare_html_for_email
 from trendradar.report.generator import (
     prepare_report_data,
     generate_html_report,
@@ -34,6 +34,7 @@ __all__ = [
     "format_title_for_platform",
     # HTML 渲染
     "render_html_content",
+    "prepare_html_for_email",
     # 报告生成器
     "prepare_report_data",
     "generate_html_report",

@@ -212,6 +212,112 @@ def _load_rss_config(config_data: Dict) -> Dict:
     }
 
 
+def _load_web_search_config(config_data: Dict, ai_config: Optional[Dict] = None) -> Dict:
+    """加载联网搜索配置"""
+    ws = config_data.get("web_search", {}) or {}
+    advanced = config_data.get("advanced", {}) or {}
+    adv_ws = advanced.get("web_search", {}) or {}
+    adv_crawler = advanced.get("crawler", {}) or {}
+
+    enabled_env = _get_env_bool("WEB_SEARCH_ENABLED")
+    provider_env = _get_env_str("WEB_SEARCH_PROVIDER")
+    api_key_env = _get_env_str("WEB_SEARCH_API_KEY")
+    api_base_env = _get_env_str("WEB_SEARCH_API_BASE")
+    queries_file_env = _get_env_str("SEARCH_QUERIES_PATH")
+
+    provider = (provider_env or ws.get("provider", "deepseek") or "deepseek").strip().lower()
+
+    # 解析 providers 字典，保留用户配置的所有引擎参数
+    raw_providers = ws.get("providers", {}) or {}
+    providers: Dict[str, Dict[str, Any]] = {}
+    for pname, pcfg in raw_providers.items():
+        if isinstance(pcfg, dict):
+            providers[str(pname).lower()] = dict(pcfg)
+
+    # 确保 deepseek 默认结构存在，并支持自动复用 AI Key
+    ds_cfg = dict(providers.get("deepseek", {}))
+    ds_key = ds_cfg.get("api_key", "") or ""
+    if provider == "deepseek" and api_key_env:
+        ds_key = api_key_env
+    elif not ds_key and api_key_env:
+        ds_key = api_key_env
+
+    # 如果未单独配 DeepSeek 搜索 Key，自动尝试复用 AI_API_KEY（当 AI 模型为 deepseek 时）或 DEEPSEEK_API_KEY
+    if not ds_key:
+        env_ds_key = _get_env_str("DEEPSEEK_API_KEY")
+        if env_ds_key:
+            ds_key = env_ds_key
+        elif ai_config:
+            ai_model = str(ai_config.get("MODEL", "") or "").lower()
+            ai_key = str(ai_config.get("API_KEY", "") or "").strip()
+            if ai_key and ("deepseek" in ai_model):
+                ds_key = ai_key
+
+    ds_cfg["api_key"] = ds_key
+    ds_cfg["api_base"] = (
+        (api_base_env if provider == "deepseek" and api_base_env else "")
+        or ds_cfg.get("api_base", "")
+        or "https://api.deepseek.com"
+    )
+    ds_cfg["localization"] = ds_cfg.get("localization", "") or ""
+    providers["deepseek"] = ds_cfg
+
+    # 如果选用的不是 deepseek 且设置了环境变量，覆盖当前 provider 的密钥和地址
+    if provider != "deepseek":
+        p_cfg = dict(providers.get(provider, {}))
+        if api_key_env:
+            p_cfg["api_key"] = api_key_env
+        if api_base_env:
+            p_cfg["api_base"] = api_base_env
+        providers[provider] = p_cfg
+
+    # 数值安全转换
+    def _safe_int(val: Any, default: int, min_val: Optional[int] = None, max_val: Optional[int] = None) -> int:
+        try:
+            res = int(val)
+        except (ValueError, TypeError):
+            res = default
+        if min_val is not None:
+            res = max(min_val, res)
+        if max_val is not None:
+            res = min(max_val, res)
+        return res
+
+    def _safe_float(val: Any, default: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
+        try:
+            res = float(val)
+        except (ValueError, TypeError):
+            res = default
+        return max(min_val, min(max_val, res))
+
+    ws_proxy_url = adv_ws.get("proxy_url", "") or adv_crawler.get("default_proxy", "")
+    query_mode = str(ws.get("query_mode", "direct") or "direct").strip().lower()
+    if query_mode not in ("direct", "smart"):
+        query_mode = "direct"
+
+    return {
+        "ENABLED": enabled_env if enabled_env is not None else bool(ws.get("enabled", False)),
+        "PROVIDER": provider,
+        "QUERIES_FILE": queries_file_env or ws.get("queries_file", "") or "",
+        "QUERY_MODE": query_mode,
+        "FETCH_COUNT": _safe_int(ws.get("fetch_count", 20), 20, min_val=1, max_val=50),
+        "MAX_ITEMS_PER_TOPIC": _safe_int(ws.get("max_items_per_topic", 8), 8, min_val=0),
+        "FRESHNESS_DAYS": _safe_int(ws.get("freshness_days", 7), 7, min_val=0),
+        "DEDUP_DAYS": _safe_int(ws.get("dedup_days", 7), 7, min_val=0),
+        "MIN_SCORE": _safe_float(ws.get("min_score", 0.5), 0.5, 0.0, 1.0),
+        "MIN_AUTHORITY": _safe_int(ws.get("min_authority", -1), -1, min_val=-1, max_val=4),
+        "ALLOW_UNKNOWN_AUTHORITY": bool(ws.get("allow_unknown_authority", True)),
+        "NEED_CONTENT": bool(ws.get("need_content", False)),
+        "NOTIFICATION_SHOW_SNIPPET": bool(ws.get("notification_show_snippet", False)),
+        "PROVIDERS": providers,
+        "REQUEST_INTERVAL": _safe_int(adv_ws.get("request_interval", 1000), 1000, min_val=0),
+        "TIMEOUT": _safe_int(adv_ws.get("timeout", 20), 20, min_val=5),
+        "MAX_RETRIES": _safe_int(adv_ws.get("max_retries", 2), 2, min_val=0),
+        "USE_PROXY": bool(adv_ws.get("use_proxy", False)),
+        "PROXY_URL": ws_proxy_url,
+    }
+
+
 def _load_display_config(config_data: Dict) -> Dict:
     """加载推送内容显示配置"""
     display = config_data.get("display", {})
@@ -219,16 +325,26 @@ def _load_display_config(config_data: Dict) -> Dict:
     standalone = display.get("standalone", {})
 
     # 默认区域顺序
-    default_region_order = ["hotlist", "rss", "new_items", "standalone", "ai_analysis"]
+    default_region_order = ["hotlist", "rss", "web_search", "new_items", "standalone", "ai_analysis"]
     region_order = display.get("region_order", default_region_order)
 
     # 验证 region_order 中的值是否合法
-    valid_regions = {"hotlist", "rss", "new_items", "standalone", "ai_analysis"}
+    valid_regions = {"hotlist", "rss", "web_search", "new_items", "standalone", "ai_analysis"}
     region_order = [r for r in region_order if r in valid_regions]
 
     # 如果过滤后为空，使用默认顺序
     if not region_order:
         region_order = default_region_order
+
+    # 兼容旧配置：如果用户开启了 web_search 但旧 config.yaml 的 region_order 还没写 web_search，自动补入
+    ws_enabled = bool((config_data.get("web_search") or {}).get("enabled", False)) or (_get_env_bool("WEB_SEARCH_ENABLED") is True)
+    if ws_enabled and "web_search" not in region_order and regions.get("web_search", True):
+        if "rss" in region_order:
+            region_order.insert(region_order.index("rss") + 1, "web_search")
+        elif "hotlist" in region_order:
+            region_order.insert(region_order.index("hotlist") + 1, "web_search")
+        else:
+            region_order.insert(0, "web_search")
 
     return {
         # 区域显示顺序
@@ -238,6 +354,7 @@ def _load_display_config(config_data: Dict) -> Dict:
             "HOTLIST": regions.get("hotlist", True),
             "NEW_ITEMS": regions.get("new_items", True),
             "RSS": regions.get("rss", True),
+            "WEB_SEARCH": regions.get("web_search", True),
             "STANDALONE": regions.get("standalone", False),
             "AI_ANALYSIS": regions.get("ai_analysis", True),
         },
@@ -287,6 +404,8 @@ def _load_ai_analysis_config(config_data: Dict) -> Dict:
         "MODE": ai_config.get("mode", "follow_report"),
         "MAX_NEWS_FOR_ANALYSIS": ai_config.get("max_news_for_analysis", 50),
         "INCLUDE_RSS": ai_config.get("include_rss", True),
+        "INCLUDE_WEB_SEARCH": ai_config.get("include_web_search", True),
+        "SEARCH_SUMMARY_MAX_CHARS": ai_config.get("search_summary_max_chars", 300),
         "INCLUDE_RANK_TIMELINE": ai_config.get("include_rank_timeline", False),
         "INCLUDE_STANDALONE": ai_config.get("include_standalone", False),
     }
@@ -304,9 +423,12 @@ def _load_ai_translation_config(config_data: Dict) -> Dict:
         "ENABLED": enabled_env if enabled_env is not None else trans_config.get("enabled", False),
         "LANGUAGE": _get_env_str("AI_TRANSLATION_LANGUAGE") or trans_config.get("language", "English"),
         "PROMPT_FILE": trans_config.get("prompt_file", "ai_translation_prompt.txt"),
+        "BATCH_SIZE": trans_config.get("batch_size", 100),
+        "BATCH_INTERVAL": trans_config.get("batch_interval", 2),
         "SCOPE": {
             "HOTLIST": scope.get("hotlist", True),
             "RSS": scope.get("rss", True),
+            "WEB_SEARCH": scope.get("web_search", False),
             "STANDALONE": scope.get("standalone", True),
         },
     }
@@ -578,6 +700,9 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 
     # AI 模型共享配置
     config["AI"] = _load_ai_config(config_data)
+
+    # 联网搜索配置（放在 AI 之后，方便 DeepSeek 自动复用 AI_API_KEY）
+    config["WEB_SEARCH"] = _load_web_search_config(config_data, ai_config=config["AI"])
 
     # AI 分析配置
     config["AI_ANALYSIS"] = _load_ai_analysis_config(config_data)

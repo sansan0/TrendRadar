@@ -30,6 +30,9 @@ class ResolvedSchedule:
     frequency_file: Optional[str] = None  # 频率词文件路径，None=使用默认
     filter_method: Optional[str] = None   # 筛选策略: "keyword"|"ai"，None=使用全局配置
     interests_file: Optional[str] = None  # AI 筛选兴趣文件，None=使用默认
+    search: Optional[bool] = None         # 是否执行联网搜索：None=跟随 collect，True/False=显式覆盖
+    once_search: bool = False             # 当前时段是否只执行一次联网搜索
+    search_file: Optional[str] = None     # 搜索任务文件，None=使用默认
 
 
 class Scheduler:
@@ -69,10 +72,12 @@ class Scheduler:
         self.enabled = schedule_config.get("enabled", True)
         self.fallback_report_mode = fallback_report_mode
 
-        # 加载并构建最终 timeline
-        self.timeline = self._build_timeline(schedule_config, timeline_data)
+        # 加载并构建最终 timeline（仅启用调度时需要解析 preset 和校验）
         if self.enabled:
+            self.timeline = self._build_timeline(schedule_config, timeline_data)
             self._validate_timeline(self.timeline)
+        else:
+            self.timeline = {"periods": {}}
 
     def _build_timeline(
         self,
@@ -171,12 +176,19 @@ class Scheduler:
             frequency_file=merged.get("frequency_file"),
             filter_method=merged.get("filter_method"),
             interests_file=merged.get("interests_file"),
+            search=merged.get("search"),
+            once_search=merged.get("once", {}).get("search", False),
+            search_file=merged.get("search_file"),
         )
 
         # 打印行为摘要
         actions = []
         if resolved.collect:
             actions.append("采集")
+        if resolved.search is True:
+            actions.append("联网搜索")
+        elif resolved.search is False:
+            actions.append("跳过联网搜索")
         if resolved.analyze:
             actions.append(f"分析(AI:{resolved.ai_mode})")
         if resolved.push:
@@ -184,6 +196,8 @@ class Scheduler:
         print(f"[调度] 行为: {', '.join(actions) if actions else '无'}")
         if resolved.frequency_file:
             print(f"[调度] 频率词文件: {resolved.frequency_file}")
+        if resolved.search_file:
+            print(f"[调度] 联网搜索任务文件: {resolved.search_file}")
 
         return resolved
 

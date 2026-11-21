@@ -150,6 +150,51 @@ rss:
 
 
 # ===============================================================
+# 3.5 数据源 - 联网搜索（按你写的搜索词主动搜全网）
+#
+# 与热榜、RSS 各自独立存储和展示：
+#   - 在 config/search_queries.txt 里写你想搜的主题或问题
+#   - 中间空一行就会开启下一个新的搜索任务
+#   - 搜索结果会直接按你写的主题展示，不会再被 frequency_words.txt 二次过滤
+#   - 默认内置 DeepSeek 搜索引擎，后续也可接入其他搜索服务
+# ===============================================================
+web_search:
+  enabled: false                      # 是否开启联网搜索（true=开启, false=关闭，默认关闭）
+  provider: "deepseek"                # 搜索引擎（默认 deepseek，后续可扩展其他引擎）
+  queries_file: ""                    # 搜索任务文件（留空默认用 config/search_queries.txt）
+                                      # 自定义文件可放到 config/custom/search/ 目录，直接填文件名即可
+
+  query_mode: "direct"                # 怎么处理你写的搜索内容：
+                                      # direct = 直接拿去搜（推荐，不额外消耗 AI 费用）
+                                      # smart  = 写了很长的一段话时，自动让 AI 提炼成精准搜索词再搜（当天会缓存，不重复花钱）
+
+  # --- 条数与质量把关（先多拉一些候选，再筛出最靠谱的几条展示） ---
+  fetch_count: 20                     # 每次向搜索引擎要多少条候选结果（DeepSeek 支持 1~50，多要不加钱）
+  max_items_per_topic: 8              # 每个搜索主题最终最多展示几条（0=不限制，也可以在 txt 里用 @数字 单独设置）
+  freshness_days: 7                   # 只看最近几天发布的内容（如 7=最近 7 天，0=不限制时间）
+  dedup_days: 7                       # 几天内搜过的内容不再重复标为"新增"（避免前几天的旧消息反复推送，0=只看当天）
+
+  min_score: 0.5                      # 最低质量分（0.0~1.0，越高越严格，0=不过滤）
+                                      # 0.5 刚好对应 DeepSeek 官方推荐的优质线（原始分 1.5/3.0）
+                                      # 冷门话题搜不出结果时可调低到 0.35，想更严格可调到 0.6
+
+  min_authority: -1                   # 网站权威度门槛（-1~4，越高越偏向官网/权威媒体，-1=不限制）
+                                      # 关注政策、财经等严肃信息建议设 2 或 3
+  allow_unknown_authority: true       # 遇到没有权威度评分的网站时是否保留（true=保留，避免误杀刚发布的新闻页）
+
+  need_content: false                 # 是否顺带抓取整篇网页正文（默认 false；普通展示和 AI 分析用自带摘要就够了）
+  notification_show_snippet: false    # 发到飞书/钉钉/微信等消息里时，是否附带一小段摘要（网页版报告始终显示摘要）
+
+  # 搜索引擎账号设置（敏感密钥建议放到 .env 或 GitHub Secrets 的 WEB_SEARCH_API_KEY 里）
+  providers:
+    deepseek:
+      api_key: ""                     # DeepSeek 密钥（留空时自动读取 WEB_SEARCH_API_KEY；
+                                      # 如果下方 AI 模型用的也是 DeepSeek，会自动复用 AI_API_KEY，不用重复填写）
+      api_base: "https://api.deepseek.com"
+      localization: ""                # 可选：填一个 IP 地址，用来影响搜索结果的地区偏好
+
+
+# ===============================================================
 # 4. 报告模式
 # ===============================================================
 report:
@@ -229,16 +274,18 @@ display:
     - new_items                           # 1️⃣ 新增热点区域
     - hotlist                             # 2️⃣ 热榜区域（关键词匹配 / AI 智能筛选）
     - rss                                 # 3️⃣ RSS 订阅区域
-    - standalone                          # 4️⃣ 独立展示区
-    - ai_analysis                         # 5️⃣ AI 分析区域
+    - web_search                          # 4️⃣ 联网搜索区域（按提示词主动搜全网）
+    - standalone                          # 5️⃣ 独立展示区
+    - ai_analysis                         # 6️⃣ AI 分析区域
 
   # 推送区域开关（需配合上方 region_order 使用）
   regions:
     hotlist: true                     # 热榜区域：关键词匹配 / AI 智能筛选（true=显示, false=隐藏）
-    new_items: false                  # 新增热点区域：含热榜新增 + RSS 新增（true=显示, false=隐藏）
+    new_items: false                  # 新增热点区域：含热榜新增 + RSS 新增 + 联网搜索新增（true=显示, false=隐藏）
                                       # 注：热点词汇统计中的新增标记🆕不受此配置影响
 
     rss: true                         # RSS 订阅区域（true=显示并分析, false=隐藏并跳过分析）
+    web_search: true                  # 联网搜索区域（true=显示, false=隐藏）
     standalone: false                 # 独立展示区：完整热榜/RSS，不受关键词过滤（true=显示, false=隐藏）
     ai_analysis: true                 # AI 分析区域（true=显示, false=隐藏）
 
@@ -426,6 +473,8 @@ ai_analysis:
                                     # 热榜优先占用配额，RSS 用剩余配额，独立展示区不受此限制
 
   include_rss: false                # 是否包含 RSS 内容进行分析（true=包含, false=不包含）
+  include_web_search: true          # 是否把联网搜索结果（含摘要）一起给 AI 分析（true=包含, false=不包含）
+  search_summary_max_chars: 300     # 每条联网搜索结果最多发给 AI 多少字的摘要（控制 AI 费用）
   include_standalone: true          # 是否纳入独立展示区数据（true=纳入, false=不纳入）
 
   include_rank_timeline: true       # 排名时间线详细程度
@@ -452,6 +501,7 @@ ai_translation:
   scope:
     hotlist: false                  # 翻译热榜标题（true=翻译, false=不翻译）
     rss: true                       # 翻译 RSS 标题（true=翻译, false=不翻译）
+    web_search: false               # 翻译联网搜索标题与摘要（true=翻译, false=不翻译，搜外文资料时可开启）
     standalone: true                # 翻译独立展示区标题（true=翻译, false=不翻译）
 
 
@@ -478,6 +528,14 @@ advanced:
     timeout: 15                       # 请求超时（秒）
     use_proxy: false                  # 是否使用代理（true=启用, false=不使用）
     proxy_url: ""                     # RSS 专属代理（留空则使用 crawler.default_proxy）
+
+  # 联网搜索技术参数
+  web_search:
+    request_interval: 1000            # 两次搜索之间的间隔（毫秒），防止触发频率限制
+    timeout: 20                       # 单次搜索超时时间（秒）
+    max_retries: 2                    # 遇到限流或超时时最多重试几次
+    use_proxy: false                  # 是否走代理（true=使用, false=直连）
+    proxy_url: ""                     # 联网搜索专属代理（留空则使用 crawler.default_proxy）
 
   # 排序权重（用于重新排序不同平台的热搜）
   # 合起来等于 1

@@ -120,6 +120,16 @@ class AppContext:
         return self.rss_config.get("FEEDS", [])
 
     @property
+    def web_search_config(self) -> Dict:
+        """获取联网搜索配置"""
+        return self.config.get("WEB_SEARCH", {})
+
+    @property
+    def web_search_enabled(self) -> bool:
+        """联网搜索是否启用"""
+        return bool(self.web_search_config.get("ENABLED", False))
+
+    @property
     def display_mode(self) -> str:
         """获取显示模式 (keyword | platform)"""
         return self.config.get("DISPLAY_MODE", "keyword")
@@ -132,7 +142,7 @@ class AppContext:
     @property
     def region_order(self) -> List[str]:
         """获取区域显示顺序"""
-        default_order = ["hotlist", "rss", "new_items", "standalone", "ai_analysis"]
+        default_order = ["hotlist", "rss", "web_search", "new_items", "standalone", "ai_analysis"]
         return self.config.get("DISPLAY", {}).get("REGION_ORDER", default_order)
 
     @property
@@ -316,6 +326,8 @@ class AppContext:
         update_info: Optional[Dict] = None,
         rss_items: Optional[List[Dict]] = None,
         rss_new_items: Optional[List[Dict]] = None,
+        search_items: Optional[List[Dict]] = None,
+        search_new_items: Optional[List[Dict]] = None,
         ai_analysis: Optional[Any] = None,
         standalone_data: Optional[Dict] = None,
         frequency_file: Optional[str] = None,
@@ -335,7 +347,16 @@ class AppContext:
             output_dir="output",
             date_folder=self.format_date(),
             time_filename=self.format_time(),
-            render_html_func=lambda *args, **kwargs: self.render_html(*args, rss_items=rss_items, rss_new_items=rss_new_items, ai_analysis=ai_analysis, standalone_data=standalone_data, **kwargs),
+            render_html_func=lambda *args, **kwargs: self.render_html(
+                *args,
+                rss_items=rss_items,
+                rss_new_items=rss_new_items,
+                search_items=search_items,
+                search_new_items=search_new_items,
+                ai_analysis=ai_analysis,
+                standalone_data=standalone_data,
+                **kwargs,
+            ),
             report_metadata=report_metadata,
             translate_report_func=translate_report_func,
         )
@@ -348,6 +369,8 @@ class AppContext:
         update_info: Optional[Dict] = None,
         rss_items: Optional[List[Dict]] = None,
         rss_new_items: Optional[List[Dict]] = None,
+        search_items: Optional[List[Dict]] = None,
+        search_new_items: Optional[List[Dict]] = None,
         ai_analysis: Optional[Any] = None,
         standalone_data: Optional[Dict] = None,
     ) -> str:
@@ -361,6 +384,8 @@ class AppContext:
             get_time_func=self.get_time,
             rss_items=rss_items,
             rss_new_items=rss_new_items,
+            search_items=search_items,
+            search_new_items=search_new_items,
             display_mode=self.display_mode,
             ai_analysis=ai_analysis,
             show_new_section=self.show_new_section,
@@ -411,29 +436,19 @@ class AppContext:
         mode: str = "daily",
         rss_items: Optional[list] = None,
         rss_new_items: Optional[list] = None,
+        search_items: Optional[list] = None,
+        search_new_items: Optional[list] = None,
+        show_search_snippet: Optional[bool] = None,
         ai_content: Optional[str] = None,
         standalone_data: Optional[Dict] = None,
         ai_stats: Optional[Dict] = None,
         report_type: str = "热点分析报告",
     ) -> List[str]:
-        """分批处理消息内容（支持热榜+RSS合并+AI分析+独立展示区）
-
-        Args:
-            report_data: 报告数据
-            format_type: 格式类型
-            update_info: 更新信息
-            max_bytes: 最大字节数
-            mode: 报告模式
-            rss_items: RSS 统计条目列表
-            rss_new_items: RSS 新增条目列表
-            ai_content: AI 分析内容（已渲染的字符串）
-            standalone_data: 独立展示区数据
-            ai_stats: AI 分析统计数据
-            report_type: 报告类型
-
-        Returns:
-            分批后的消息内容列表
-        """
+        """分批处理消息内容（支持热榜+RSS+联网搜索合并+AI分析+独立展示区）"""
+        if show_search_snippet is None:
+            show_search_snippet = bool(
+                self.web_search_config.get("NOTIFICATION_SHOW_SNIPPET", False)
+            )
         return split_content_into_batches(
             report_data=report_data,
             format_type=format_type,
@@ -450,6 +465,9 @@ class AppContext:
             get_time_func=self.get_time,
             rss_items=rss_items,
             rss_new_items=rss_new_items,
+            search_items=search_items,
+            search_new_items=search_new_items,
+            show_search_snippet=show_search_snippet,
             timezone=self.config.get("TIMEZONE", DEFAULT_TIMEZONE),
             display_mode=self.display_mode,
             ai_content=ai_content,

@@ -151,6 +151,47 @@ rss:
 
 
 # ===============================================================
+# 3.5 Data Source - Web Search (search the web by your own topics)
+#
+# Stored and displayed separately from hot lists and RSS:
+#   - Write topics or questions in config/search_queries.txt
+#   - Leave a blank line to start a new search task
+#   - Results are grouped by your search topics (not filtered again by frequency_words.txt)
+#   - Built-in DeepSeek Search by default; extensible to other providers
+# ===============================================================
+web_search:
+  enabled: false                      # Enable web search (true=on, false=off, default off)
+  provider: "deepseek"                # Search engine (default deepseek; extensible)
+  queries_file: ""                    # Search queries file (empty → config/search_queries.txt)
+                                      # Custom files can go in config/custom/search/
+
+  query_mode: "direct"                # How to run your queries:
+                                      # direct = send each line directly as a search query (no extra LLM cost)
+                                      # smart  = auto-distill long natural-language prompts via AI (cached daily)
+
+  # --- Count & quality funnel (fetch broadly, then keep the best items) ---
+  fetch_count: 20                     # Candidate results requested per query (DeepSeek supports 1~50 at the same price)
+  max_items_per_topic: 8              # Max items displayed per topic (0=unlimited; overridable via @N in txt)
+  freshness_days: 7                   # Only keep items published within N days (0=no limit)
+  dedup_days: 7                       # Skip marking items already seen in the past N days as "new" (0=today only)
+
+  min_score: 0.5                      # Min quality score (0.0~1.0, higher is stricter, 0=no filter)
+                                      # 0.5 matches DeepSeek's recommended high-quality bar (1.5 / 3.0)
+  min_authority: -1                   # Min source authority (-1~4, higher favors official sites, -1=no limit)
+  allow_unknown_authority: true       # Keep pages whose authority score is unknown (-1)
+
+  need_content: false                 # Also fetch full page Markdown content (default false; snippets/summaries suffice)
+  notification_show_snippet: false    # Include a short snippet in IM/webhook pushes (HTML report always shows snippets)
+
+  # Search provider credentials (prefer WEB_SEARCH_API_KEY env var / GitHub Secret)
+  providers:
+    deepseek:
+      api_key: ""                     # Empty → reads WEB_SEARCH_API_KEY, or reuses AI_API_KEY if ai.model is DeepSeek
+      api_base: "https://api.deepseek.com"
+      localization: ""                # Optional IP address to localize search results
+
+
+# ===============================================================
 # 4. Report Mode
 # ===============================================================
 report:
@@ -230,16 +271,18 @@ display:
     - new_items                           # 1️⃣ New-items region
     - hotlist                             # 2️⃣ Hot-list region (keyword match / AI smart filter)
     - rss                                 # 3️⃣ RSS region
-    - standalone                          # 4️⃣ Standalone region
-    - ai_analysis                         # 5️⃣ AI analysis region
+    - web_search                          # 4️⃣ Web search region
+    - standalone                          # 5️⃣ Standalone region
+    - ai_analysis                         # 6️⃣ AI analysis region
 
   # Push region toggles (used together with region_order above)
   regions:
     hotlist: true                     # Hot-list region: keyword match / AI smart filter (true=show, false=hide)
-    new_items: false                  # New-items region: hot-list new + RSS new (true=show, false=hide)
+    new_items: false                  # New-items region: hot-list new + RSS new + web search new (true=show, false=hide)
                                       # Note: the 🆕 new-marker in the hotspot-word stats is not affected by this
 
     rss: true                         # RSS region (true=show and analyze, false=hide and skip analysis)
+    web_search: true                  # Web search region (true=show, false=hide)
     standalone: false                 # Standalone region: full hot-list/RSS, not subject to keyword filtering (true=show, false=hide)
     ai_analysis: true                 # AI analysis region (true=show, false=hide)
 
@@ -425,6 +468,8 @@ ai_analysis:
                                     # Hot lists take the quota first; RSS uses the remainder; standalone is not limited
 
   include_rss: false                # Include RSS content in analysis (true=include, false=exclude)
+  include_web_search: true          # Include web search results & summaries in analysis (true=include, false=exclude)
+  search_summary_max_chars: 300     # Max summary characters per web search result sent to AI
   include_standalone: true          # Include standalone-region data (true=include, false=exclude)
 
   include_rank_timeline: true       # Rank-timeline detail level
@@ -451,6 +496,7 @@ ai_translation:
   scope:
     hotlist: false                  # Translate hot-list titles (true=translate, false=skip)
     rss: true                       # Translate RSS titles (true=translate, false=skip)
+    web_search: false               # Translate web search titles & snippets (true=translate, false=skip)
     standalone: true                # Translate standalone-region titles (true=translate, false=skip)
 
 
@@ -477,6 +523,14 @@ advanced:
     timeout: 15                       # Request timeout (seconds)
     use_proxy: false                  # Use proxy (true=on, false=off)
     proxy_url: ""                     # RSS-specific proxy (empty → use crawler.default_proxy)
+
+  # Web search technical settings
+  web_search:
+    request_interval: 1000            # Interval between search requests (ms)
+    timeout: 20                       # Request timeout (seconds)
+    max_retries: 2                    # Max retries on rate limit or timeout
+    use_proxy: false                  # Use proxy (true=on, false=off)
+    proxy_url: ""                     # Web-search-specific proxy (empty → use crawler.default_proxy)
 
   # Sorting weights (used to re-rank hotlist items across platforms)
   # Must sum to 1

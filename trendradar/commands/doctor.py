@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -157,7 +158,10 @@ def _check_with_config(results: List[Tuple[str, str, str]], config: Dict) -> Non
     else:
         _record_result(results, "warn", "AI配置", "未启用 AI 功能，跳过校验")
 
-    # 6) 存储配置检查
+    # 6) 联网搜索配置检查
+    _check_web_search(results, config)
+
+    # 7) 存储配置检查
     try:
         storage_cfg = config.get("STORAGE", {})
         backend = storage_cfg.get("BACKEND", "auto")
@@ -183,10 +187,10 @@ def _check_with_config(results: List[Tuple[str, str, str]], config: Dict) -> Non
     except Exception as e:
         _record_result(results, "fail", "存储配置", f"检查失败: {e}")
 
-    # 7) 通知渠道配置检查
+    # 8) 通知渠道配置检查
     _check_notification_channels(results, config)
 
-    # 8) 输出目录可写检查
+    # 9) 输出目录可写检查
     try:
         output_dir = Path("output")
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -196,6 +200,175 @@ def _check_with_config(results: List[Tuple[str, str, str]], config: Dict) -> Non
         _record_result(results, "pass", "输出目录", f"可写: {output_dir}")
     except Exception as e:
         _record_result(results, "fail", "输出目录", f"不可写: {e}")
+
+
+def _count_search_topics_fallback(content: str) -> int:
+    """当 query_parser 模块不可用时，按 search_queries.txt 段落语法估算主题数"""
+    normalized = content.replace("\r\n", "\n")
+    blocks = [b.strip() for b in re.split(r"\n\s*\n", normalized) if b.strip()]
+
+    current_section = "SEARCH_TOPICS"
+    topic_count = 0
+
+    for block in blocks:
+        lines = [
+            line.strip()
+            for line in block.split("\n")
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        if not lines:
+            continue
+
+        first_upper = lines[0].upper()
+        if first_upper == "[GLOBAL_FILTER]":
+            current_section = "GLOBAL_FILTER"
+            continue
+        if first_upper == "[SEARCH_TOPICS]":
+            current_section = "SEARCH_TOPICS"
+            lines = lines[1:]
+            if not lines:
+                continue
+
+        if current_section == "GLOBAL_FILTER":
+            continue
+
+        # 去掉主题名行（[主题名称]）后检查是否有有效搜索词行
+        idx = 0
+        if lines[0].startswith("[") and lines[0].endswith("]") and len(lines[0]) > 2:
+            idx = 1
+
+        has_query = False
+        for line in lines[idx:]:
+            if line.startswith(("!", "@", "~", "-site:")):
+                continue
+            if line:
+                has_query = True
+                break
+        if has_query:
+            topic_count += 1
+
+    return topic_count
+
+
+def _check_web_search(results: List[Tuple[str, str, str]], config: Dict) -> None:
+    """检查联网搜索配置"""
+    ws_cfg = config.get("WEB_SEARCH", {}) or {}
+    if not ws_cfg.get("ENABLED", False):
+        _record_result(
+            results,
+            "pass",
+            "联网搜索",
+            "未启用联网搜索（如需使用，可在 config.yaml 开启 web_search.enabled）",
+        )
+        return
+
+    provider = str(ws_cfg.get("PROVIDER", "deepseek") or "deepseek").strip().lower()
+    providers = ws_cfg.get("PROVIDERS", {}) or {}
+    provider_cfg = providers.get(provider, {}) or {}
+    api_key = str(provider_cfg.get("api_key", "") or "").strip()
+
+    min_score = ws_cfg.get("MIN_SCORE", 0.5)
+    min_authority = ws_cfg.get("MIN_AUTHORITY", -1)
+    authority_desc = (
+        f"权威度>={min_authority}"
+        if isinstance(min_authority, (int, float)) and min_authority >= 0
+        else "权威度不限"
+    )
+    threshold_desc = f"质量分>={min_score}, {authority_desc}"
+
+    configured_file = str(ws_cfg.get("QUERIES_FILE", "") or "").strip()
+    default_file = configured_file or os.environ.get("SEARCH_QUERIES_PATH", "").strip() or "config/search_queries.txt"
+
+    topic_count: Optional[int] = None
+    resolved_path = default_file
+    file_error: Optional[str] = None
+    used_parser = False
+
+    try:
+        from trendradar.crawler.search import query_parser as qp  # type: ignore
+
+        load_fn = (
+            getattr(qp, "load_search_queries", None)
+            or getattr(qp, "parse_search_queries_file", None)
+            or getattr(qp, "load_queries", None)
+        )
+        if callable(load_fn):
+            used_parser = True
+            parsed = load_fn(configured_file or None)
+            if isinstance(parsed, tuple):
+                topics = parsed[0]
+            elif hasattr(parsed, "topics"):
+                topics = parsed.topics
+            elif isinstance(parsed, dict) and "topics" in parsed:
+                topics = parsed["topics"]
+            else:
+                topics = parsed
+            topic_count = len(topics) if topics is not None else 0
+
+            resolve_fn = getattr(qp, "resolve_queries_file", None) or getattr(qp, "resolve_search_queries_path", None)
+            if callable(resolve_fn):
+                try:
+                    resolved_path = str(resolve_fn(configured_file or None))
+                except Exception:
+                    pass
+    except ImportError:
+        used_parser = False
+    except FileNotFoundError as e:
+        used_parser = True
+        msg = str(e).strip()
+        file_error = msg if "找不到" in msg else f"找不到搜索任务文件: {msg}"
+    except Exception as e:
+        used_parser = True
+        file_error = f"搜索任务文件解析失败: {e}"
+
+    if not used_parser:
+        candidate = Path(default_file)
+        if not candidate.exists() and configured_file:
+            custom_candidate = Path("config/custom/search") / configured_file
+            if custom_candidate.exists():
+                candidate = custom_candidate
+        if not candidate.exists():
+            file_error = (
+                f"找不到搜索任务文件: {default_file}"
+                "（默认位于 config/search_queries.txt，自定义文件可放到 config/custom/search/）"
+            )
+        else:
+            resolved_path = str(candidate)
+            try:
+                content = candidate.read_text(encoding="utf-8")
+                topic_count = _count_search_topics_fallback(content)
+            except Exception as e:
+                file_error = f"读取搜索任务文件失败: {e}"
+
+    has_issue = False
+    if file_error:
+        has_issue = True
+        _record_result(results, "fail", "联网搜索任务文件", file_error)
+    elif topic_count == 0:
+        has_issue = True
+        _record_result(
+            results,
+            "warn",
+            "联网搜索任务文件",
+            f"文件 {resolved_path} 中尚未配置有效的搜索主题（请至少填写 1 个要搜索的主题）",
+        )
+
+    if not api_key:
+        has_issue = True
+        _record_result(
+            results,
+            "fail",
+            "联网搜索密钥",
+            f"搜索引擎 {provider} 未配置 API Key（可在 .env 中配置 WEB_SEARCH_API_KEY，使用 DeepSeek 时也会自动复用 AI_API_KEY）",
+        )
+
+    if not has_issue:
+        _record_result(
+            results,
+            "pass",
+            "联网搜索",
+            f"搜索引擎: {provider}，已配置 {topic_count} 个搜索主题（{resolved_path}），质量门槛: {threshold_desc}",
+        )
 
 
 def _check_notification_channels(results: List[Tuple[str, str, str]], config: Dict) -> None:

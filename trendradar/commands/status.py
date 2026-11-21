@@ -32,8 +32,16 @@ def handle_status_commands(config: Dict) -> None:
         else:
             print(f"  当前时间段: 无（使用默认配置）")
 
+        ws_cfg = config.get("WEB_SEARCH", {}) or {}
+        ws_enabled = bool(ws_cfg.get("ENABLED", False))
+
         print(f"\n🔧 行为开关:")
         print(f"  采集数据: {'✅ 是' if schedule.collect else '❌ 否'}")
+        if ws_enabled:
+            will_search = schedule.collect if schedule.search is None else bool(schedule.search)
+            follow_hint = "（跟随采集）" if schedule.search is None else ""
+            search_file = schedule.search_file or ws_cfg.get("QUERIES_FILE") or "config/search_queries.txt"
+            print(f"  联网搜索: {'✅ 是' if will_search else '❌ 否'}{follow_hint}（任务文件: {search_file}）")
         print(f"  AI 分析:  {'✅ 是' if schedule.analyze else '❌ 否'}")
         print(f"  推送通知: {'✅ 是' if schedule.push else '❌ 否'}")
         print(f"  报告模式: {schedule.report_mode}")
@@ -51,6 +59,12 @@ def handle_status_commands(config: Dict) -> None:
                 print(f"  推送通知: 仅一次 {'(今日已执行 ⚠️)' if already_pushed else '(今日未执行 ✅)'}")
             else:
                 print(f"  推送通知: 不限次数")
+            if ws_enabled or schedule.once_search:
+                if schedule.once_search:
+                    already_searched = scheduler.already_executed(schedule.period_key, "search", date_str)
+                    print(f"  联网搜索: 仅一次 {'(今日已执行 ⚠️)' if already_searched else '(今日未执行 ✅)'}")
+                else:
+                    print(f"  联网搜索: 不限次数")
 
     except Exception as e:
         print(f"\n❌ 获取调度状态失败: {e}")

@@ -18,7 +18,7 @@ from trendradar.core import load_config
 from trendradar.core.analyzer import convert_keyword_stats_to_platform_stats
 from trendradar.crawler import DataFetcher
 from trendradar.storage import convert_crawl_results_to_news_data
-from trendradar.utils.time import DEFAULT_TIMEZONE, is_within_days, calculate_days_old
+from trendradar.utils.time import DEFAULT_TIMEZONE, is_within_days, calculate_days_old, format_iso_time_friendly
 from trendradar.ai import AIAnalyzer, AIAnalysisResult
 from trendradar.core.scheduler import ResolvedSchedule
 from trendradar.commands import check_all_versions, run_doctor, run_test_notification, handle_status_commands
@@ -69,6 +69,7 @@ class NewsAnalyzer:
         self.frequency_file = None
         self.filter_method = None  # None=使用全局配置 ctx.filter_method
         self.interests_file = None  # None=使用全局配置 ai_filter.interests_file
+        self.search_file = None     # None=使用全局配置 web_search.queries_file
         self.rank_threshold = self.ctx.rank_threshold
         self.is_github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
         self.is_docker_container = self._detect_docker_environment()
@@ -80,12 +81,17 @@ class NewsAnalyzer:
             api_url=self.ctx.config.get("PLATFORMS_API_URL") or None,
         )
 
-        # RSS/平台元数据（用于报告头部展示）
+        # RSS/平台/联网搜索元数据（用于报告头部展示）
         self._rss_source_total = 0
         self._rss_source_failed = 0
         self._rss_total_count = 0
         self._rss_matched_count = 0
         self._hotlist_total_count = 0
+        self._search_topic_total = 0
+        self._search_topic_failed = 0
+        self._search_total_count = 0
+        self._search_matched_count = 0
+        self._search_new_count = 0
 
         # 初始化存储管理器（使用 AppContext）
         self._init_storage_manager()
@@ -312,6 +318,7 @@ class NewsAnalyzer:
         current_results: Optional[Dict] = None,
         schedule: ResolvedSchedule = None,
         standalone_data: Optional[Dict] = None,
+        search_items: Optional[List[Dict]] = None,
     ) -> Optional[AIAnalysisResult]:
         """执行 AI 分析"""
         analysis_config = self.ctx.config.get("AI_ANALYSIS", {})
@@ -388,17 +395,19 @@ class NewsAnalyzer:
             else:
                 ai_report_type = report_type
 
-            # 独立 AI 模式（ai_mode != 推送 mode）下，rss_items/standalone_data 仍是推送 mode 的数据，
+            # 独立 AI 模式（ai_mode != 推送 mode）下，rss_items/standalone_data/search_items 仍是推送 mode 的数据，
             # 与 ai_mode 的热榜 ai_stats 不同源。为避免时间窗错配的数据误导分析，独立模式下不向 AI
-            # 传入 RSS/独立展示区，使其专注于 ai_mode 的热榜分析（同 mode 时正常传入）。
+            # 传入 RSS/独立展示区/联网搜索，使其专注于 ai_mode 的热榜分析（同 mode 时正常传入）。
             ai_rss_stats = rss_items if ai_mode == mode else None
             ai_standalone = standalone_data if ai_mode == mode else None
-            if ai_mode != mode and (rss_items or standalone_data):
-                print(f"[AI] 独立分析模式（{ai_mode}）：RSS/独立展示区与推送模式（{mode}）不同源，本次分析仅聚焦热榜")
+            ai_search_stats = search_items if ai_mode == mode else None
+            if ai_mode != mode and (rss_items or standalone_data or search_items):
+                print(f"[AI] 独立分析模式（{ai_mode}）：RSS/独立展示区/联网搜索与推送模式（{mode}）不同源，本次分析仅聚焦热榜")
 
             result = analyzer.analyze(
                 stats=ai_stats,
                 rss_stats=ai_rss_stats,
+                search_stats=ai_search_stats,
                 report_mode=ai_mode,
                 report_type=ai_report_type,
                 platforms=platforms,
@@ -663,14 +672,16 @@ class NewsAnalyzer:
         quiet: bool = False,
         rss_items: Optional[List[Dict]] = None,
         rss_new_items: Optional[List[Dict]] = None,
+        search_items: Optional[List[Dict]] = None,
+        search_new_items: Optional[List[Dict]] = None,
         standalone_data: Optional[Dict] = None,
         schedule: ResolvedSchedule = None,
         rss_new_urls: Optional[set] = None,
-    ) -> Tuple[List[Dict], Optional[str], Optional[AIAnalysisResult], Optional[List[Dict]], Optional[Dict], Optional[List[Dict]]]:
+    ) -> Tuple[List[Dict], Optional[str], Optional[AIAnalysisResult], Optional[List[Dict]], Optional[Dict], Optional[List[Dict]], Optional[List[Dict]], Optional[List[Dict]]]:
         """统一的分析流水线：数据处理 → 统计计算（关键词/AI筛选）→ AI分析 → HTML生成"""
 
         # 根据筛选策略选择数据处理方式
-        if self.filter_method == "ai":
+        if self.filter_method == "ai" and (data_source or rss_items):
             # === AI 筛选策略 ===
             print("[筛选] 使用 AI 智能筛选策略")
             ai_filter_result = self.ctx.run_ai_filter(interests_file=self.interests_file)
@@ -697,13 +708,15 @@ class NewsAnalyzer:
                     id_to_name, title_info, new_titles,
                     mode=mode, global_filters=global_filters, quiet=quiet,
                 )
-        else:
+        elif data_source:
             # === 关键词匹配策略（默认）===
             stats, total_titles = self.ctx.count_frequency(
                 data_source, word_groups, filter_words,
                 id_to_name, title_info, new_titles,
                 mode=mode, global_filters=global_filters, quiet=quiet,
             )
+        else:
+            stats, total_titles = [], 0
 
         self._hotlist_total_count = total_titles
 
@@ -715,22 +728,27 @@ class NewsAnalyzer:
                 self.ctx.rank_threshold,
             )
 
-        # AI 分析（如果启用，用于 HTML 报告）
+        # AI 分析（如果启用，用于 HTML 报告；支持纯 RSS/纯联网搜索模式）
         ai_result = None
         ai_config = self.ctx.config.get("AI_ANALYSIS", {})
-        if ai_config.get("ENABLED", False) and stats:
+        has_ai_input = bool(
+            stats
+            or (ai_config.get("INCLUDE_RSS", True) and rss_items)
+            or (ai_config.get("INCLUDE_WEB_SEARCH", True) and search_items)
+            or (ai_config.get("INCLUDE_STANDALONE", False) and standalone_data)
+        )
+        if ai_config.get("ENABLED", False) and has_ai_input:
             # 获取模式策略来确定报告类型
             mode_strategy = self._get_mode_strategy()
             report_type = mode_strategy["report_type"]
             ai_result = self._run_ai_analysis(
                 stats, rss_items, mode, report_type, id_to_name,
                 current_results=data_source, schedule=schedule,
-                standalone_data=standalone_data
+                standalone_data=standalone_data,
+                search_items=search_items,
             )
 
-        # 翻译 RSS 和独立展示区内容（如果启用）— 在 HTML 生成前执行，确保网页版也能展示翻译内容
-        # standalone_data 在此翻译一次后贯穿到推送阶段复用，避免重复翻译并保证网页与推送译文一致
-        # 热榜翻译在推送时由 dispatch_all 处理 report_data
+        # 翻译 RSS、独立展示区与联网搜索内容（如果启用）— 在 HTML 生成前执行，确保网页版也能展示翻译内容
         trans_config = self.ctx.config.get("AI_TRANSLATION", {})
         translate_report_func = None  # 供 HTML 翻译热榜 report_data（在过滤之后翻译）
         if trans_config.get("ENABLED", False):
@@ -744,6 +762,12 @@ class NewsAnalyzer:
                     standalone_data=standalone_data,
                     display_regions=display_regions,
                 )
+            if search_items or search_new_items:
+                search_items, search_new_items = dispatcher.translate_search_items(
+                    search_items=search_items,
+                    search_new_items=search_new_items,
+                    display_regions=display_regions,
+                )
 
             # 热榜 report_data 翻译回调：HTML 在 prepare_report_data 过滤之后调用，
             # 仅翻译热榜（skip_rss/skip_standalone 跳过已在上游翻译的 RSS/独立区），网页版热榜展示译文
@@ -754,8 +778,10 @@ class NewsAnalyzer:
                 )
                 return translated_rd
 
-        # 计算 RSS 匹配条数（供 HTML 和推送共用）
+        # 计算 RSS / 联网搜索匹配条数（供 HTML 和推送共用）
         self._rss_matched_count = sum(stat.get("count", 0) for stat in rss_items) if rss_items else 0
+        self._search_matched_count = sum(stat.get("count", 0) for stat in search_items) if search_items else 0
+        self._search_new_count = sum(stat.get("count", 0) for stat in search_new_items) if search_new_items else 0
 
         # HTML生成（如果启用）— 使用翻译后的数据
         html_file = None
@@ -763,6 +789,8 @@ class NewsAnalyzer:
             display_regions = self.ctx.config.get("DISPLAY", {}).get("REGIONS", {})
             html_standalone = standalone_data if display_regions.get("STANDALONE", False) else None
             html_ai = ai_result if display_regions.get("AI_ANALYSIS", True) else None
+            html_search = search_items if display_regions.get("WEB_SEARCH", True) else None
+            html_search_new = search_new_items if (display_regions.get("WEB_SEARCH", True) and display_regions.get("NEW_ITEMS", True)) else None
             html_file = self.ctx.generate_html(
                 stats,
                 total_titles,
@@ -773,21 +801,28 @@ class NewsAnalyzer:
                 update_info=self.update_info if self.ctx.config["SHOW_VERSION_UPDATE"] else None,
                 rss_items=rss_items,
                 rss_new_items=rss_new_items,
+                search_items=html_search,
+                search_new_items=html_search_new,
                 ai_analysis=html_ai,
                 standalone_data=html_standalone,
                 frequency_file=self.frequency_file,
                 report_metadata={
                     "hotlist_total": total_titles,
-                    "platform_total": len(self.ctx.platform_ids),
+                    "platform_total": len(self.ctx.platform_ids) if self.ctx.config["ENABLE_CRAWLER"] else 0,
                     "rss_matched_count": self._rss_matched_count,
                     "rss_total_count": self._rss_total_count,
                     "rss_source_total": self._rss_source_total,
                     "rss_source_failed": self._rss_source_failed,
+                    "search_matched_count": self._search_matched_count,
+                    "search_total_count": self._search_total_count,
+                    "search_topic_total": self._search_topic_total,
+                    "search_topic_failed": self._search_topic_failed,
+                    "search_new_count": self._search_new_count,
                 },
                 translate_report_func=translate_report_func,
             )
 
-        return stats, html_file, ai_result, rss_items, standalone_data, rss_new_items
+        return stats, html_file, ai_result, rss_items, standalone_data, rss_new_items, search_items, search_new_items
 
     def _send_notification_if_needed(
         self,
@@ -800,23 +835,27 @@ class NewsAnalyzer:
         html_file_path: Optional[str] = None,
         rss_items: Optional[List[Dict]] = None,
         rss_new_items: Optional[List[Dict]] = None,
+        search_items: Optional[List[Dict]] = None,
+        search_new_items: Optional[List[Dict]] = None,
         standalone_data: Optional[Dict] = None,
         ai_result: Optional[AIAnalysisResult] = None,
         current_results: Optional[Dict] = None,
         schedule: ResolvedSchedule = None,
     ) -> bool:
-        """统一的通知发送逻辑，包含所有判断条件，支持热榜+RSS合并推送+AI分析+独立展示区"""
+        """统一的通知发送逻辑，包含所有判断条件，支持热榜+RSS+联网搜索合并推送+AI分析+独立展示区"""
         has_notification = self._has_notification_configured()
         cfg = self.ctx.config
 
-        # 检查是否有有效内容（热榜或RSS）
+        # 检查是否有有效内容（热榜、RSS 或联网搜索）
         has_news_content = self._has_valid_content(stats, new_titles)
         has_rss_content = bool(rss_items and len(rss_items) > 0)
-        has_any_content = has_news_content or has_rss_content
+        has_search_content = bool(search_items and len(search_items) > 0)
+        has_any_content = has_news_content or has_rss_content or has_search_content
 
-        # 计算热榜匹配条数
+        # 计算各数据源匹配条数
         news_count = sum(len(stat.get("titles", [])) for stat in stats) if stats else 0
         rss_count = sum(stat.get("count", 0) for stat in rss_items) if rss_items else 0
+        search_count = sum(stat.get("count", 0) for stat in search_items) if search_items else 0
 
         if (
             cfg["ENABLE_NOTIFICATION"]
@@ -829,7 +868,9 @@ class NewsAnalyzer:
                 content_parts.append(f"热榜 {news_count} 条")
             if rss_count > 0:
                 content_parts.append(f"RSS {rss_count} 条")
-            total_count = news_count + rss_count
+            if search_count > 0:
+                content_parts.append(f"联网搜索 {search_count} 条")
+            total_count = news_count + rss_count + search_count
             print(f"[推送] 准备发送：{' + '.join(content_parts)}，合计 {total_count} 条")
 
             # 调度系统决策
@@ -854,6 +895,7 @@ class NewsAnalyzer:
                         stats, rss_items, mode, report_type, id_to_name,
                         current_results=current_results, schedule=schedule,
                         standalone_data=standalone_data,
+                        search_items=search_items,
                     )
 
             # 准备报告数据
@@ -861,17 +903,22 @@ class NewsAnalyzer:
 
             # 注入元数据（用于推送头部展示）
             report_data["hotlist_total"] = self._hotlist_total_count
-            report_data["platform_total"] = len(self.ctx.platform_ids)
+            report_data["platform_total"] = len(self.ctx.platform_ids) if self.ctx.config["ENABLE_CRAWLER"] else 0
             report_data["rss_matched_count"] = self._rss_matched_count
             report_data["rss_total_count"] = self._rss_total_count
             report_data["rss_source_total"] = self._rss_source_total
             report_data["rss_source_failed"] = self._rss_source_failed
+            report_data["search_matched_count"] = self._search_matched_count
+            report_data["search_total_count"] = self._search_total_count
+            report_data["search_topic_total"] = self._search_topic_total
+            report_data["search_topic_failed"] = self._search_topic_failed
+            report_data["search_new_count"] = self._search_new_count
 
             # 是否发送版本更新信息
             update_info_to_send = self.update_info if cfg["SHOW_VERSION_UPDATE"] else None
 
             # 使用 NotificationDispatcher 发送到所有渠道
-            # RSS/独立展示区数据已在分析流水线中翻译过，跳过重复翻译（仅翻译热榜 report_data）
+            # RSS/独立展示区/联网搜索数据已在分析流水线中翻译过，跳过重复翻译（仅翻译热榜 report_data）
             dispatcher = self.ctx.create_notification_dispatcher()
             results = dispatcher.dispatch_all(
                 report_data=report_data,
@@ -882,6 +929,8 @@ class NewsAnalyzer:
                 html_file_path=html_file_path,
                 rss_items=rss_items,
                 rss_new_items=rss_new_items,
+                search_items=search_items,
+                search_new_items=search_new_items,
                 ai_analysis=ai_result,
                 standalone_data=standalone_data,
                 skip_translation=True,
@@ -911,13 +960,13 @@ class NewsAnalyzer:
         ):
             mode_strategy = self._get_mode_strategy()
             if self.report_mode == "incremental":
-                if not has_rss_content:
-                    print("跳过通知：增量模式下未检测到匹配的新闻和RSS")
+                if not has_rss_content and not has_search_content:
+                    print("跳过通知：增量模式下未检测到匹配的新闻、RSS 或联网搜索结果")
                 else:
                     print("跳过通知：增量模式下新闻未匹配到关键词")
             else:
                 print(
-                    f"跳过通知：{mode_strategy['mode_name']}下未检测到匹配的新闻"
+                    f"跳过通知：{mode_strategy['mode_name']}下未检测到匹配的新闻、RSS 或联网搜索结果"
                 )
 
         return False
@@ -927,8 +976,13 @@ class NewsAnalyzer:
         now = self.ctx.get_time()
         print(f"当前北京时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
-        if not self.ctx.config["ENABLE_CRAWLER"]:
-            print("爬虫功能已禁用（ENABLE_CRAWLER=False），程序退出")
+        has_any_source = (
+            self.ctx.config["ENABLE_CRAWLER"]
+            or self.ctx.rss_enabled
+            or self.ctx.web_search_enabled
+        )
+        if not has_any_source:
+            print("热榜、RSS 和联网搜索数据源均已禁用，程序退出")
             return False
 
         has_notification = self._has_notification_configured()
@@ -946,6 +1000,9 @@ class NewsAnalyzer:
 
     def _crawl_data(self) -> Tuple[Dict, Dict, List]:
         """执行数据爬取"""
+        if not self.ctx.config["ENABLE_CRAWLER"]:
+            print("[热榜] 热榜抓取已禁用，跳过热榜爬取")
+            return {}, {}, []
         ids = []
         domain_rules = {}
         for platform in self.ctx.platforms:
@@ -1388,22 +1445,264 @@ class NewsAnalyzer:
             print(f"[RSS] 生成 HTML 报告失败: {e}")
             return None
 
+    def _crawl_web_search_data(
+        self, schedule: Optional[ResolvedSchedule] = None
+    ) -> Tuple[Optional[List[Dict]], Optional[List[Dict]]]:
+        """
+        执行联网搜索数据采集与按模式整理
+
+        Returns:
+            (search_items, search_new_items) 元组，格式为按搜索主题分组的统计列表；
+            如果未启用或无结果返回 (None, None)
+        """
+        if not self.ctx.web_search_enabled:
+            return None, None
+
+        ws_config = self.ctx.web_search_config
+        dedup_days = ws_config.get("DEDUP_DAYS", 7)
+        today_str = self.ctx.format_date()
+
+        # 调度系统判断：决定本次是否发起新的联网搜索请求
+        should_fetch_now = True
+        if schedule is not None:
+            effective_search = schedule.search if schedule.search is not None else schedule.collect
+            if not effective_search:
+                print("[联网搜索] 调度器: 当前时间段不发起新的联网搜索，将读取当天已有记录")
+                should_fetch_now = False
+            elif schedule.once_search and schedule.period_key:
+                scheduler = self.ctx.create_scheduler()
+                if scheduler.already_executed(schedule.period_key, "search", today_str):
+                    print(
+                        f"[联网搜索] 调度器: 时间段 {schedule.period_name or schedule.period_key} "
+                        "今天已搜索过，跳过重复请求"
+                    )
+                    should_fetch_now = False
+                else:
+                    print(
+                        f"[联网搜索] 调度器: 时间段 {schedule.period_name or schedule.period_key} "
+                        "今天首次执行联网搜索"
+                    )
+
+        if not should_fetch_now:
+            # 不发起新请求时，在 daily/current 模式下尝试读取当天已存结果用于汇总报告
+            if self.report_mode == "incremental":
+                return None, None
+            cached_data = (
+                self.storage_manager.get_latest_search_data(today_str)
+                if self.report_mode == "current"
+                else self.storage_manager.get_search_data(today_str)
+            )
+            if not cached_data:
+                return None, None
+            self._search_topic_total = len(cached_data.items)
+            self._search_topic_failed = len(cached_data.failed_ids)
+            return self._process_web_search_data_by_mode(cached_data, new_items_dict=None)
+
+        try:
+            from trendradar.crawler.search import load_search_queries, WebSearchFetcher
+
+            queries_file = (
+                (schedule.search_file if schedule and schedule.search_file else None)
+                or self.search_file
+                or ws_config.get("QUERIES_FILE")
+                or None
+            )
+            topics, global_exclude_words, global_exclude_sites = load_search_queries(queries_file)
+            if not topics:
+                print("[联网搜索] 未在搜索任务文件中找到有效搜索主题")
+                return None, None
+
+            # 合并代理配置
+            fetcher_ws_config = dict(ws_config)
+            if not fetcher_ws_config.get("PROXY_URL") and self.proxy_url:
+                fetcher_ws_config["PROXY_URL"] = self.proxy_url
+
+            fetcher = WebSearchFetcher(
+                web_search_config=fetcher_ws_config,
+                topics=topics,
+                global_exclude_words=global_exclude_words,
+                global_exclude_sites=global_exclude_sites,
+                ai_config=self.ctx.config.get("AI", {}),
+                storage_manager=self.storage_manager,
+                timezone=self.ctx.timezone,
+            )
+
+            search_data = fetcher.fetch_all()
+            self._search_topic_total = len(topics)
+            self._search_topic_failed = len(search_data.failed_ids)
+
+            # 在保存前先基于历史库检测新增（支持跨天去重）
+            new_items_dict = self.storage_manager.detect_new_search_items(
+                search_data, dedup_days=dedup_days
+            )
+
+            if self.storage_manager.save_search_data(search_data):
+                print("[联网搜索] 数据已保存到存储后端")
+
+                # 记录时间段内已完成一次联网搜索
+                if (
+                    schedule
+                    and schedule.once_search
+                    and schedule.period_key
+                    and len(search_data.failed_ids) < len(topics)
+                ):
+                    scheduler = self.ctx.create_scheduler()
+                    scheduler.record_execution(schedule.period_key, "search", today_str)
+
+                return self._process_web_search_data_by_mode(
+                    search_data, new_items_dict=new_items_dict, topics_order=[t.id for t in topics]
+                )
+            else:
+                print("[联网搜索] 数据保存失败")
+                return None, None
+
+        except FileNotFoundError as e:
+            print(f"[联网搜索] 搜索任务文件不存在: {e}")
+            return None, None
+        except Exception as e:
+            print(f"[联网搜索] 抓取失败: {e}")
+            if self.ctx.config.get("DEBUG", False):
+                import traceback
+                traceback.print_exc()
+            return None, None
+
+    def _process_web_search_data_by_mode(
+        self,
+        search_data,
+        new_items_dict: Optional[Dict] = None,
+        topics_order: Optional[List[str]] = None,
+    ) -> Tuple[Optional[List[Dict]], Optional[List[Dict]]]:
+        """按当前报告模式整理联网搜索结果为统一展示结构"""
+        search_display_enabled = (
+            self.ctx.config.get("DISPLAY", {}).get("REGIONS", {}).get("WEB_SEARCH", True)
+        )
+        ws_config = self.ctx.web_search_config
+        global_max = ws_config.get("MAX_ITEMS_PER_TOPIC", 8)
+
+        # 构建新增 URL 集合（按 topic_id）
+        new_url_map: Dict[str, set] = {}
+        if new_items_dict:
+            for tid, items in new_items_dict.items():
+                new_url_map[tid] = {it.url for it in items if it.url}
+
+        # 根据报告模式确定主数据集合
+        if self.report_mode == "incremental":
+            if not new_items_dict:
+                print("[联网搜索] 增量模式：本次没有新的搜索结果")
+                self._search_total_count = 0
+                return None, None
+            base_items_dict = new_items_dict
+            id_to_name = search_data.id_to_name
+            id_to_query = search_data.id_to_query
+            id_to_provider = search_data.id_to_provider
+        elif self.report_mode == "current":
+            latest_data = self.storage_manager.get_latest_search_data(search_data.date) or search_data
+            base_items_dict = latest_data.items
+            id_to_name = {**latest_data.id_to_name, **search_data.id_to_name}
+            id_to_query = {**latest_data.id_to_query, **search_data.id_to_query}
+            id_to_provider = {**latest_data.id_to_provider, **search_data.id_to_provider}
+        else:  # daily
+            all_data = self.storage_manager.get_search_data(search_data.date) or search_data
+            base_items_dict = all_data.items
+            id_to_name = {**all_data.id_to_name, **search_data.id_to_name}
+            id_to_query = {**all_data.id_to_query, **search_data.id_to_query}
+            id_to_provider = {**all_data.id_to_provider, **search_data.id_to_provider}
+
+        self._search_total_count = sum(len(v) for v in base_items_dict.values())
+
+        if not search_display_enabled:
+            return None, None
+
+        def _format_groups(items_map: Dict, mark_all_new: bool = False) -> List[Dict]:
+            ordered_ids = []
+            if topics_order:
+                for tid in topics_order:
+                    if tid in items_map:
+                        ordered_ids.append(tid)
+            for tid in items_map.keys():
+                if tid not in ordered_ids:
+                    ordered_ids.append(tid)
+
+            groups: List[Dict] = []
+            for tid in ordered_ids:
+                raw_list = items_map.get(tid, [])
+                if not raw_list:
+                    continue
+                # 按质量分和发布时间排序
+                sorted_list = sorted(
+                    raw_list,
+                    key=lambda x: (x.score, x.published_at or ""),
+                    reverse=True,
+                )
+                if global_max > 0 and self.report_mode == "daily":
+                    # daily 模式合并全天多批结果时，也避免单个主题无限膨胀
+                    sorted_list = sorted_list[:max(global_max, len(search_data.items.get(tid, [])))]
+
+                titles = []
+                topic_new_urls = new_url_map.get(tid, set())
+                for it in sorted_list:
+                    time_display = ""
+                    if it.published_at:
+                        time_display = format_iso_time_friendly(
+                            it.published_at, self.ctx.timezone, include_date=True
+                        )
+                    titles.append({
+                        "title": it.title,
+                        "url": it.url,
+                        "source_name": it.site_name or it.provider,
+                        "site_icon": it.site_icon,
+                        "time_display": time_display,
+                        "published_at": it.published_at,
+                        "snippet": it.snippet,
+                        "summary": it.summary,
+                        "content": it.content,
+                        "score": it.score,
+                        "raw_score": it.raw_score,
+                        "authority": it.authority,
+                        "provider": it.provider,
+                        "is_new": True if mark_all_new else (it.url in topic_new_urls),
+                    })
+
+                if titles:
+                    groups.append({
+                        "topic_id": tid,
+                        "word": id_to_name.get(tid, tid),
+                        "query": id_to_query.get(tid, ""),
+                        "provider": id_to_provider.get(tid, ws_config.get("PROVIDER", "deepseek")),
+                        "count": len(titles),
+                        "titles": titles,
+                    })
+            return groups
+
+        search_stats = _format_groups(
+            base_items_dict, mark_all_new=(self.report_mode == "incremental")
+        )
+        search_new_stats = None
+        if self.report_mode != "incremental" and new_items_dict:
+            search_new_stats = _format_groups(new_items_dict, mark_all_new=True) or None
+
+        return (search_stats or None), search_new_stats
+
     def _execute_mode_strategy(
         self, mode_strategy: Dict, results: Dict, id_to_name: Dict, failed_ids: List,
         rss_items: Optional[List[Dict]] = None,
         rss_new_items: Optional[List[Dict]] = None,
         raw_rss_items: Optional[List[Dict]] = None,
         rss_new_urls: Optional[set] = None,
+        search_items: Optional[List[Dict]] = None,
+        search_new_items: Optional[List[Dict]] = None,
+        schedule: Optional[ResolvedSchedule] = None,
     ) -> Optional[str]:
-        """执行模式特定逻辑，支持热榜+RSS合并推送
+        """执行模式特定逻辑，支持热榜+RSS+联网搜索合并推送
 
         简化后的逻辑：
         - 每次运行都生成 HTML 报告（时间戳快照 + latest/{mode}.html + index.html）
         - 根据模式发送通知
         """
-        # 调度系统
-        scheduler = self.ctx.create_scheduler()
-        schedule = scheduler.resolve()
+        # 调度系统（如外部已解析则复用，避免重复打印调度日志）
+        if schedule is None:
+            scheduler = self.ctx.create_scheduler()
+            schedule = scheduler.resolve()
 
         # 使用 schedule 决定的 report_mode 覆盖全局配置
         effective_mode = schedule.report_mode
@@ -1423,16 +1722,24 @@ class NewsAnalyzer:
         # 使用 schedule 决定的 AI 筛选兴趣文件覆盖默认值
         self.interests_file = schedule.interests_file
 
-        # 如果调度器说不采集，则直接跳过
-        if not schedule.collect:
+        # 使用 schedule 决定的联网搜索任务文件覆盖默认值
+        self.search_file = schedule.search_file
+
+        # 如果调度器说既不采集也不搜索，则直接跳过
+        if not schedule.collect and schedule.search is not True:
             print("[调度] 当前时间段不执行数据采集，跳过分析流水线")
             return None
         # 获取当前监控平台ID列表
-        current_platform_ids = self.ctx.platform_ids
+        current_platform_ids = self.ctx.platform_ids if self.ctx.config["ENABLE_CRAWLER"] else []
 
-        new_titles = self.ctx.detect_new_titles(current_platform_ids)
+        new_titles = self.ctx.detect_new_titles(current_platform_ids) if current_platform_ids else {}
         time_info = self.ctx.format_time()
-        word_groups, filter_words, global_filters = self.ctx.load_frequency_words(self.frequency_file)
+        try:
+            word_groups, filter_words, global_filters = self.ctx.load_frequency_words(self.frequency_file)
+        except FileNotFoundError:
+            if current_platform_ids:
+                raise
+            word_groups, filter_words, global_filters = [], [], []
 
         html_file = None
         stats = []
@@ -1442,7 +1749,7 @@ class NewsAnalyzer:
 
         # current 模式需要使用完整的历史数据
         if self.report_mode == "current":
-            analysis_data = self._load_analysis_data()
+            analysis_data = self._load_analysis_data() if current_platform_ids else None
             if analysis_data:
                 (
                     all_results,
@@ -1463,7 +1770,7 @@ class NewsAnalyzer:
                     all_results, historical_id_to_name, historical_title_info, raw_rss_items
                 )
 
-                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
+                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items, search_items, search_new_items = self._run_analysis_pipeline(
                     all_results,
                     self.report_mode,
                     historical_title_info,
@@ -1475,6 +1782,8 @@ class NewsAnalyzer:
                     global_filters=global_filters,
                     rss_items=rss_items,
                     rss_new_items=rss_new_items,
+                    search_items=search_items,
+                    search_new_items=search_new_items,
                     standalone_data=standalone_data,
                     schedule=schedule,
                     rss_new_urls=rss_new_urls,
@@ -1485,12 +1794,34 @@ class NewsAnalyzer:
                 id_to_name = combined_id_to_name
                 title_info = historical_title_info
                 results = all_results
-            else:
+            elif current_platform_ids and results:
                 print("❌ 严重错误：无法读取刚保存的数据文件")
                 raise RuntimeError("数据一致性检查失败：保存后立即读取失败")
+            else:
+                # 仅启用了 RSS / 联网搜索，无热榜数据
+                title_info = {}
+                standalone_data = self._prepare_standalone_data({}, {}, {}, raw_rss_items)
+                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items, search_items, search_new_items = self._run_analysis_pipeline(
+                    {},
+                    self.report_mode,
+                    title_info,
+                    {},
+                    word_groups,
+                    filter_words,
+                    {},
+                    failed_ids=failed_ids,
+                    global_filters=global_filters,
+                    rss_items=rss_items,
+                    rss_new_items=rss_new_items,
+                    search_items=search_items,
+                    search_new_items=search_new_items,
+                    standalone_data=standalone_data,
+                    schedule=schedule,
+                    rss_new_urls=rss_new_urls,
+                )
         elif self.report_mode == "daily":
             # daily 模式：使用全天累计数据
-            analysis_data = self._load_analysis_data()
+            analysis_data = self._load_analysis_data() if current_platform_ids else None
             if analysis_data:
                 (
                     all_results,
@@ -1507,7 +1838,7 @@ class NewsAnalyzer:
                     all_results, historical_id_to_name, historical_title_info, raw_rss_items
                 )
 
-                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
+                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items, search_items, search_new_items = self._run_analysis_pipeline(
                     all_results,
                     self.report_mode,
                     historical_title_info,
@@ -1519,6 +1850,8 @@ class NewsAnalyzer:
                     global_filters=global_filters,
                     rss_items=rss_items,
                     rss_new_items=rss_new_items,
+                    search_items=search_items,
+                    search_new_items=search_new_items,
                     standalone_data=standalone_data,
                     schedule=schedule,
                     rss_new_urls=rss_new_urls,
@@ -1535,7 +1868,7 @@ class NewsAnalyzer:
                 standalone_data = self._prepare_standalone_data(
                     results, id_to_name, title_info, raw_rss_items
                 )
-                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
+                stats, html_file, ai_result, rss_items, standalone_data, rss_new_items, search_items, search_new_items = self._run_analysis_pipeline(
                     results,
                     self.report_mode,
                     title_info,
@@ -1547,6 +1880,8 @@ class NewsAnalyzer:
                     global_filters=global_filters,
                     rss_items=rss_items,
                     rss_new_items=rss_new_items,
+                    search_items=search_items,
+                    search_new_items=search_new_items,
                     standalone_data=standalone_data,
                     schedule=schedule,
                     rss_new_urls=rss_new_urls,
@@ -1557,7 +1892,7 @@ class NewsAnalyzer:
             standalone_data = self._prepare_standalone_data(
                 results, id_to_name, title_info, raw_rss_items
             )
-            stats, html_file, ai_result, rss_items, standalone_data, rss_new_items = self._run_analysis_pipeline(
+            stats, html_file, ai_result, rss_items, standalone_data, rss_new_items, search_items, search_new_items = self._run_analysis_pipeline(
                 results,
                 self.report_mode,
                 title_info,
@@ -1569,6 +1904,8 @@ class NewsAnalyzer:
                 global_filters=global_filters,
                 rss_items=rss_items,
                 rss_new_items=rss_new_items,
+                search_items=search_items,
+                search_new_items=search_new_items,
                 standalone_data=standalone_data,
                 schedule=schedule,
                 rss_new_urls=rss_new_urls,
@@ -1580,8 +1917,7 @@ class NewsAnalyzer:
 
         # 发送通知
         if mode_strategy["should_send_notification"]:
-            # standalone_data 已在分析流水线中翻译，直接复用（不再重新 prepare 原文，
-            # 避免覆盖译文、避免重复翻译，并保证网页报告与推送译文一致）
+            # standalone_data/rss/search 已在分析流水线中翻译，直接复用
             self._send_notification_if_needed(
                 stats,
                 mode_strategy["report_type"],
@@ -1592,6 +1928,8 @@ class NewsAnalyzer:
                 html_file_path=html_file,
                 rss_items=rss_items,
                 rss_new_items=rss_new_items,
+                search_items=search_items,
+                search_new_items=search_new_items,
                 standalone_data=standalone_data,
                 ai_result=ai_result,
                 current_results=results,
@@ -1614,19 +1952,44 @@ class NewsAnalyzer:
             if not self._initialize_and_check_config():
                 return
 
+            # 提前解析调度状态，使报告模式和搜索调度开关在采集阶段即可生效
+            scheduler = self.ctx.create_scheduler()
+            schedule = scheduler.resolve()
+            if schedule.report_mode != self.report_mode:
+                print(f"[调度] 报告模式覆盖: {self.report_mode} -> {schedule.report_mode}")
+                self.report_mode = schedule.report_mode
+            self.frequency_file = schedule.frequency_file
+            self.search_file = schedule.search_file
+
             mode_strategy = self._get_mode_strategy()
 
-            # 抓取热榜数据
-            results, id_to_name, failed_ids = self._crawl_data()
+            # 如果调度器规定既不采集也不搜索，直接退出
+            if not schedule.collect and schedule.search is not True:
+                print("[调度] 当前时间段不执行数据采集与联网搜索，跳过本轮运行")
+                return
 
-            # 抓取 RSS 数据（如果启用），返回统计条目、新增条目和原始条目
-            rss_items, rss_new_items, raw_rss_items, rss_new_urls = self._crawl_rss_data()
+            # 1. 抓取热榜数据（如启用且调度允许采集）
+            if schedule.collect:
+                results, id_to_name, failed_ids = self._crawl_data()
+            else:
+                results, id_to_name, failed_ids = {}, {}, []
 
-            # 执行模式策略，传递 RSS 数据用于合并推送
+            # 2. 抓取 RSS 数据（如启用且调度允许采集）
+            if schedule.collect:
+                rss_items, rss_new_items, raw_rss_items, rss_new_urls = self._crawl_rss_data()
+            else:
+                rss_items, rss_new_items, raw_rss_items, rss_new_urls = None, None, None, set()
+
+            # 3. 抓取联网搜索数据（如启用，支持独立于热榜/RSS 的调度控制）
+            search_items, search_new_items = self._crawl_web_search_data(schedule=schedule)
+
+            # 4. 执行模式策略，传递三大数据源进行统一分析、报告生成与合并推送
             self._execute_mode_strategy(
                 mode_strategy, results, id_to_name, failed_ids,
                 rss_items=rss_items, rss_new_items=rss_new_items,
-                raw_rss_items=raw_rss_items, rss_new_urls=rss_new_urls
+                raw_rss_items=raw_rss_items, rss_new_urls=rss_new_urls,
+                search_items=search_items, search_new_items=search_new_items,
+                schedule=schedule,
             )
 
         except Exception as e:

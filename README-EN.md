@@ -192,12 +192,12 @@ This contributes to the sustainable maintenance of the project and the growth of
 <a href="https://ocr.sandev.cc/en/"><img src="_image/sanframe-icon.webp" alt="SanFrame" width="72" height="72"></a>
 </td>
 <td align="left">
-<strong>A workspace for your clipboard and collected content</strong><br>
-Keep text, screenshots, and file references on your computer, organized with tags, groups, and search. Capture and annotate scrolling screenshots, extract text with offline OCR, and process PDFs in batches, or connect models to recognize tables and formulas.
+<strong>A workspace for your clipboard and collected material</strong><br>
+Keep everyday screenshots, copied text, and file references locally on your computer with automatic source-app tags, mixed-type groups across images, text, and files, notes, highlighted search snippets, and related records. Includes frozen/scrolling capture with annotation, offline OCR, batch PDF recognition, and optional models for tables and formulas.
 <br><br>
-Use the built-in assistant or connect an AI app through MCP to find material, save discussion notes, and group, tag, and pin records. You control what AI can access and change.
+Mirror selected records and images one-way to a Markdown folder for tools like Obsidian. Use the built-in AI assistant or external MCP clients to search material and organize mixed-type groups, tags, and pins—while you control access scope, permissions, and local privacy (block private records or share redacted text only).
 <br><br>
-Transfer and sync content between Windows and macOS computers on your local network, with rules you choose. Exchange text, images, and files with the Android companion app. Free to use, with no account required.
+Pair Windows and macOS computers once to reconnect automatically on your local network with rule-based selective sync, and exchange text, images, and files with the SanFrame Transfer Android app. All features are free to use, with no account required.
 <br><br>
 <a href="https://ocr.sandev.cc/en/"><strong>Explore SanFrame →</strong></a>
 </td>

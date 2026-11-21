@@ -118,6 +118,11 @@ def _render_ai_analysis_markdown_like(
             ["**RSS 深度洞察**", _format_list_content(result.rss_insights), ""]
         )
 
+    if result.search_insights:
+        lines.extend(
+            ["**联网搜索专题研判**", _format_list_content(result.search_insights), ""]
+        )
+
     if result.outlook_strategy:
         lines.extend(
             ["**研判策略建议**", _format_list_content(result.outlook_strategy), ""]
@@ -181,6 +186,11 @@ def render_ai_analysis_dingtalk(result: AIAnalysisResult) -> str:
             ["#### RSS 深度洞察", _format_list_content(result.rss_insights), ""]
         )
 
+    if result.search_insights:
+        lines.extend(
+            ["#### 联网搜索专题研判", _format_list_content(result.search_insights), ""]
+        )
+
     if result.outlook_strategy:
         lines.extend(
             ["#### 研判策略建议", _format_list_content(result.outlook_strategy), ""]
@@ -216,6 +226,11 @@ def render_ai_analysis_plain(result: AIAnalysisResult) -> str:
 
     if result.rss_insights:
         lines.extend(["[RSS 深度洞察]", _format_list_content(result.rss_insights), ""])
+
+    if result.search_insights:
+        lines.extend(
+            ["[联网搜索专题研判]", _format_list_content(result.search_insights), ""]
+        )
 
     if result.outlook_strategy:
         lines.extend(["[研判策略建议]", _format_list_content(result.outlook_strategy), ""])
@@ -254,6 +269,9 @@ def render_ai_analysis_telegram(result: AIAnalysisResult) -> str:
     if result.rss_insights:
         lines.extend(["<b>RSS 深度洞察</b>", _escape_html(_format_list_content(result.rss_insights)), ""])
 
+    if result.search_insights:
+        lines.extend(["<b>联网搜索专题研判</b>", _escape_html(_format_list_content(result.search_insights)), ""])
+
     if result.outlook_strategy:
         lines.extend(["<b>研判策略建议</b>", _escape_html(_format_list_content(result.outlook_strategy)), ""])
 
@@ -290,7 +308,7 @@ def render_ai_analysis_html_rich(result: AIAnalysisResult) -> str:
         if result.skipped:
             return f"""
                 <div class="ai-section">
-                    <div class="ai-info">ℹ️ {_escape_html(str(result.error))}</div>
+                    <div class="ai-info"><!--EMAIL_STRIP_START--><svg class="ui-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6M8 5.2h.01"/></svg><!--EMAIL_STRIP_END-->{_escape_html(str(result.error))}</div>
                 </div>"""
         error_msg = result.error or "未知错误"
         return f"""
@@ -298,68 +316,75 @@ def render_ai_analysis_html_rich(result: AIAnalysisResult) -> str:
                     <div class="ai-warning">AI 分析失败: {_escape_html(str(error_msg))}</div>
                 </div>"""
 
-    ai_html = """
+    _AI_BLOCK_ICONS = {
+        "core": '<svg class="ai-block-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 11.5 6 7.5 9 10 14 4.5"/><polyline points="10.5 4.5 14 4.5 14 8"/></svg>',
+        "sentiment": '<svg class="ai-block-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4A1.5 1.5 0 0 1 4 2.5h8A1.5 1.5 0 0 1 13.5 4v5.5A1.5 1.5 0 0 1 12 11H6.5L3.5 13.5V11H4A1.5 1.5 0 0 1 2.5 9.5z"/></svg>',
+        "signals": '<svg class="ai-block-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.8L3.5 9h4.3L7 14.2 12.5 7H8.2z"/></svg>',
+        "rss": '<svg class="ai-block-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h.01"/><path d="M3 8.5a4.5 4.5 0 0 1 4.5 4.5"/><path d="M3 4a9 9 0 0 1 9 9"/></svg>',
+        "search": '<svg class="ai-block-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>',
+        "strategy": '<svg class="ai-block-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5.5"/><polygon points="10.2 5.8 8.9 8.9 5.8 10.2 7.1 7.1"/></svg>',
+        "standalone": '<svg class="ai-block-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M5 6h6M5 9h6"/></svg>',
+    }
+    _COPY_ICON_SVG = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M5 11H3.5A1.5 1.5 0 0 1 2 9.5v-7A1.5 1.5 0 0 1 3.5 1h7A1.5 1.5 0 0 1 12 2.5V5"/></svg>'
+
+    def _render_block(title: str, content_html: str, accent: str) -> str:
+        icon_svg = _AI_BLOCK_ICONS.get(accent, _AI_BLOCK_ICONS["core"])
+        return f"""
+                    <div class="ai-block" data-ai-accent="{accent}">
+                        <div class="ai-block-head">
+                            <div class="ai-block-title"><!--EMAIL_STRIP_START--><span class="ai-block-icon-wrap accent-{accent}">{icon_svg}</span><!--EMAIL_STRIP_END--><span>{title}</span></div>
+                            <!--EMAIL_STRIP_START--><button type="button" class="ai-block-copy-btn" title="复制本节内容" aria-label="复制本节内容">{_COPY_ICON_SVG}</button><!--EMAIL_STRIP_END-->
+                        </div>
+                        <div class="ai-block-content">{content_html}</div>
+                    </div>"""
+
+    ai_html = f"""
                 <div class="ai-section">
                     <div class="ai-section-header">
-                        <div class="ai-section-title">✨ AI 热点分析</div>
-                        <span class="ai-section-badge">AI</span>
+                        <div class="ai-section-header-left">
+                            <!--EMAIL_STRIP_START--><span class="section-icon-badge badge-ai"><svg class="ai-title-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5l1.45 4.55L14 7.5l-4.55 1.45L8 13.5l-1.45-4.55L2 7.5l4.55-1.45z"/></svg></span><!--EMAIL_STRIP_END-->
+                            <div class="ai-section-title">AI 热点分析</div>
+                            <span class="ai-section-badge">AI</span>
+                        </div>
+                        <!--EMAIL_STRIP_START--><button type="button" class="ai-copy-all-btn" title="复制全部 AI 研判内容">{_COPY_ICON_SVG}<span>复制全文</span></button><!--EMAIL_STRIP_END-->
                     </div>
                     <div class="ai-blocks-grid">"""
 
     if result.core_trends:
         content = _format_list_content(result.core_trends)
         content_html = _escape_html(content).replace("\n", "<br>")
-        ai_html += f"""
-                    <div class="ai-block">
-                        <div class="ai-block-title">核心热点态势</div>
-                        <div class="ai-block-content">{content_html}</div>
-                    </div>"""
+        ai_html += _render_block("核心热点态势", content_html, "core")
 
     if result.sentiment_controversy:
         content = _format_list_content(result.sentiment_controversy)
         content_html = _escape_html(content).replace("\n", "<br>")
-        ai_html += f"""
-                    <div class="ai-block">
-                        <div class="ai-block-title">舆论风向争议</div>
-                        <div class="ai-block-content">{content_html}</div>
-                    </div>"""
+        ai_html += _render_block("舆论风向争议", content_html, "sentiment")
 
     if result.signals:
         content = _format_list_content(result.signals)
         content_html = _escape_html(content).replace("\n", "<br>")
-        ai_html += f"""
-                    <div class="ai-block">
-                        <div class="ai-block-title">异动与弱信号</div>
-                        <div class="ai-block-content">{content_html}</div>
-                    </div>"""
+        ai_html += _render_block("异动与弱信号", content_html, "signals")
 
     if result.rss_insights:
         content = _format_list_content(result.rss_insights)
         content_html = _escape_html(content).replace("\n", "<br>")
-        ai_html += f"""
-                    <div class="ai-block">
-                        <div class="ai-block-title">RSS 深度洞察</div>
-                        <div class="ai-block-content">{content_html}</div>
-                    </div>"""
+        ai_html += _render_block("RSS 深度洞察", content_html, "rss")
+
+    if result.search_insights:
+        content = _format_list_content(result.search_insights)
+        content_html = _escape_html(content).replace("\n", "<br>")
+        ai_html += _render_block("联网搜索专题研判", content_html, "search")
 
     if result.outlook_strategy:
         content = _format_list_content(result.outlook_strategy)
         content_html = _escape_html(content).replace("\n", "<br>")
-        ai_html += f"""
-                    <div class="ai-block">
-                        <div class="ai-block-title">研判策略建议</div>
-                        <div class="ai-block-content">{content_html}</div>
-                    </div>"""
+        ai_html += _render_block("研判策略建议", content_html, "strategy")
 
     if result.standalone_summaries:
         summaries_text = _format_standalone_summaries(result.standalone_summaries)
         if summaries_text:
             summaries_html = _escape_html(summaries_text).replace("\n", "<br>")
-            ai_html += f"""
-                    <div class="ai-block">
-                        <div class="ai-block-title">独立源点速览</div>
-                        <div class="ai-block-content">{summaries_html}</div>
-                    </div>"""
+            ai_html += _render_block("独立源点速览", summaries_html, "standalone")
 
     ai_html += """
                     </div>

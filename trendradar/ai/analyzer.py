@@ -34,11 +34,12 @@ def _coerce_analysis_text(value: Any) -> str:
 @dataclass
 class AIAnalysisResult:
     """AI 分析结果"""
-    # 新版 5 核心板块
+    # 新版核心板块
     core_trends: str = ""                # 核心热点与舆情态势
     sentiment_controversy: str = ""      # 舆论风向与争议
     signals: str = ""                    # 异动与弱信号
     rss_insights: str = ""               # RSS 深度洞察
+    search_insights: str = ""            # 联网搜索专题研判
     outlook_strategy: str = ""           # 研判与策略建议
     standalone_summaries: Dict[str, str] = field(default_factory=dict)  # 独立展示区概括 {源ID: 概括}
 
@@ -49,16 +50,19 @@ class AIAnalysisResult:
     error: str = ""                      # 错误信息
 
     # 新闻数量统计
-    total_news: int = 0                  # 总新闻数（热榜+RSS）
+    total_news: int = 0                  # 总新闻数（热榜+RSS+联网搜索）
     analyzed_news: int = 0               # 实际分析的新闻数
     max_news_limit: int = 0              # 分析上限配置值
     hotlist_count: int = 0               # 热榜新闻数（总数）
     rss_count: int = 0                   # RSS 新闻数（总数）
+    search_count: int = 0                # 联网搜索结果数（总数）
     hotlist_analyzed: int = 0            # 热榜实际分析数
     rss_analyzed: int = 0               # RSS 实际分析数
+    search_analyzed: int = 0             # 联网搜索实际分析数
     standalone_analyzed: int = 0        # 独立展示区实际分析数
     ai_mode: str = ""                    # AI 分析使用的模式 (daily/current/incremental)
     include_rss: bool = True             # 是否启用 RSS 分析
+    include_web_search: bool = True      # 是否启用联网搜索分析
     include_standalone: bool = False     # 是否启用独立展示区分析
 
 
@@ -70,6 +74,9 @@ class PreparedNewsContent(NamedTuple):
     analyzed_count: int
     hotlist_analyzed: int
     rss_analyzed: int
+    search_content: str = ""
+    search_total: int = 0
+    search_analyzed: int = 0
 
 
 class AIAnalyzer:
@@ -107,6 +114,10 @@ class AIAnalyzer:
         # 从分析配置获取功能参数
         self.max_news = analysis_config.get("MAX_NEWS_FOR_ANALYSIS", 50)
         self.include_rss = analysis_config.get("INCLUDE_RSS", True)
+        self.include_web_search = analysis_config.get("INCLUDE_WEB_SEARCH", True)
+        self.search_summary_max_chars = int(
+            analysis_config.get("SEARCH_SUMMARY_MAX_CHARS", 300) or 300
+        )
         self.include_rank_timeline = analysis_config.get("INCLUDE_RANK_TIMELINE", False)
         self.include_standalone = analysis_config.get("INCLUDE_STANDALONE", False)
         self.language = analysis_config.get("LANGUAGE", "Chinese")
@@ -126,6 +137,7 @@ class AIAnalyzer:
         platforms: Optional[List[str]] = None,
         keywords: Optional[List[str]] = None,
         standalone_data: Optional[Dict] = None,
+        search_stats: Optional[List[Dict]] = None,
     ) -> AIAnalysisResult:
         """
         执行 AI 分析
@@ -137,6 +149,8 @@ class AIAnalyzer:
             report_type: 报告类型
             platforms: 平台列表
             keywords: 关键词列表
+            standalone_data: 独立展示区数据
+            search_stats: 联网搜索统计数据
 
         Returns:
             AIAnalysisResult: 分析结果
@@ -166,10 +180,10 @@ class AIAnalyzer:
             )
 
         # 准备新闻内容并获取统计数据
-        prepared = self._prepare_news_content(stats, rss_stats)
-        total_news = prepared.hotlist_total + prepared.rss_total
+        prepared = self._prepare_news_content(stats, rss_stats, search_stats)
+        total_news = prepared.hotlist_total + prepared.rss_total + prepared.search_total
 
-        if not prepared.news_content and not prepared.rss_content:
+        if not prepared.news_content and not prepared.rss_content and not prepared.search_content:
             return AIAnalysisResult(
                 success=False,
                 skipped=True,
@@ -177,8 +191,12 @@ class AIAnalyzer:
                 total_news=total_news,
                 hotlist_count=prepared.hotlist_total,
                 rss_count=prepared.rss_total,
+                search_count=prepared.search_total,
                 analyzed_news=0,
-                max_news_limit=self.max_news
+                max_news_limit=self.max_news,
+                include_rss=self.include_rss,
+                include_web_search=self.include_web_search,
+                include_standalone=self.include_standalone,
             )
 
         # 构建提示词
@@ -187,6 +205,8 @@ class AIAnalyzer:
         # 提取关键词
         if not keywords:
             keywords = [s.get("word", "") for s in stats if s.get("word")] if stats else []
+            if not keywords and search_stats:
+                keywords = [s.get("word", "") for s in search_stats if s.get("word")]
 
         # 使用安全的字符串替换，避免模板中其他花括号（如 JSON 示例）被误解析
         user_prompt = self.user_prompt_template
@@ -195,10 +215,12 @@ class AIAnalyzer:
         user_prompt = user_prompt.replace("{current_time}", current_time)
         user_prompt = user_prompt.replace("{news_count}", str(prepared.hotlist_total))
         user_prompt = user_prompt.replace("{rss_count}", str(prepared.rss_total))
+        user_prompt = user_prompt.replace("{search_count}", str(prepared.search_total))
         user_prompt = user_prompt.replace("{platforms}", ", ".join(platforms) if platforms else "多平台")
         user_prompt = user_prompt.replace("{keywords}", ", ".join(keywords[:20]) if keywords else "无")
         user_prompt = user_prompt.replace("{news_content}", prepared.news_content)
         user_prompt = user_prompt.replace("{rss_content}", prepared.rss_content)
+        user_prompt = user_prompt.replace("{search_content}", prepared.search_content)
         user_prompt = user_prompt.replace("{language}", self.language)
 
         # 构建独立展示区内容
@@ -239,6 +261,10 @@ class AIAnalyzer:
             if not self.include_rss:
                 result.rss_insights = ""
 
+            # 如果配置未启用联网搜索分析，强制清空 AI 返回的联网搜索研判
+            if not self.include_web_search:
+                result.search_insights = ""
+
             # 如果配置未启用 standalone 分析，强制清空
             if not self.include_standalone:
                 result.standalone_summaries = {}
@@ -247,12 +273,15 @@ class AIAnalyzer:
             result.total_news = total_news
             result.hotlist_count = prepared.hotlist_total
             result.rss_count = prepared.rss_total
+            result.search_count = prepared.search_total
             result.analyzed_news = prepared.analyzed_count
             result.hotlist_analyzed = prepared.hotlist_analyzed
             result.rss_analyzed = prepared.rss_analyzed
+            result.search_analyzed = prepared.search_analyzed
             result.standalone_analyzed = standalone_count
             result.max_news_limit = self.max_news
             result.include_rss = self.include_rss
+            result.include_web_search = self.include_web_search
             result.include_standalone = self.include_standalone
             return result
         except Exception as e:
@@ -273,15 +302,19 @@ class AIAnalyzer:
         self,
         stats: List[Dict],
         rss_stats: Optional[List[Dict]] = None,
+        search_stats: Optional[List[Dict]] = None,
     ) -> PreparedNewsContent:
         news_lines = []
         rss_lines = []
+        search_lines = []
         news_count = 0
         rss_count = 0
+        search_count = 0
 
         # 计算总新闻数
         hotlist_total = sum(len(s.get("titles", [])) for s in stats) if stats else 0
         rss_total = sum(len(s.get("titles", [])) for s in rss_stats) if rss_stats else 0
+        search_total = sum(len(s.get("titles", [])) for s in search_stats) if search_stats else 0
 
         # 热榜内容
         if stats:
@@ -373,9 +406,63 @@ class AIAnalyzer:
                         if rss_count >= remaining:
                             break
 
+        # 联网搜索内容（仅在启用时构建）
+        if self.include_web_search and search_stats:
+            remaining = max(0, self.max_news - news_count - rss_count)
+            # 当热榜/RSS 占满 max_news 额度时，仍为联网搜索预留独立配额，避免搜索结果完全无法进入 AI 分析
+            search_quota = max(
+                remaining,
+                min(search_total, max(20, self.max_news // 3)),
+            )
+            for stat in search_stats:
+                if search_count >= search_quota:
+                    break
+                topic_name = stat.get("word") or stat.get("query") or stat.get("topic_id") or ""
+                titles = stat.get("titles", [])
+                if topic_name and titles:
+                    search_lines.append(f"\n**{topic_name}** ({len(titles)}条)")
+                    for t in titles:
+                        if not isinstance(t, dict):
+                            continue
+                        title = t.get("title", "")
+                        if not title:
+                            continue
+
+                        source = t.get("source_name", "")
+                        if source:
+                            line = f"- [{source}] {title}"
+                        else:
+                            line = f"- {title}"
+
+                        time_display = t.get("time_display", "")
+                        if time_display:
+                            line += f" | {time_display}"
+
+                        authority = t.get("authority", 0)
+                        try:
+                            authority_val = int(authority or 0)
+                        except (TypeError, ValueError):
+                            authority_val = 0
+                        if authority_val >= 3:
+                            line += " | 高权威"
+
+                        search_lines.append(line)
+
+                        raw_excerpt = (t.get("summary") or t.get("snippet") or "").strip()
+                        if raw_excerpt:
+                            excerpt = " ".join(raw_excerpt.split())
+                            if self.search_summary_max_chars > 0 and len(excerpt) > self.search_summary_max_chars:
+                                excerpt = excerpt[:self.search_summary_max_chars].rstrip() + "..."
+                            search_lines.append(f"  摘要：{excerpt}")
+
+                        search_count += 1
+                        if search_count >= search_quota:
+                            break
+
         news_content = "\n".join(news_lines) if news_lines else ""
         rss_content = "\n".join(rss_lines) if rss_lines else ""
-        total_count = news_count + rss_count
+        search_content = "\n".join(search_lines) if search_lines else ""
+        total_count = news_count + rss_count + search_count
 
         return PreparedNewsContent(
             news_content=news_content,
@@ -385,6 +472,9 @@ class AIAnalyzer:
             analyzed_count=total_count,
             hotlist_analyzed=news_count,
             rss_analyzed=rss_count,
+            search_content=search_content,
+            search_total=search_total,
+            search_analyzed=search_count,
         )
 
     def _call_ai(self, user_prompt: str) -> str:
@@ -643,6 +733,7 @@ class AIAnalyzer:
             result.sentiment_controversy = _coerce_analysis_text(data.get("sentiment_controversy", ""))
             result.signals = _coerce_analysis_text(data.get("signals", ""))
             result.rss_insights = _coerce_analysis_text(data.get("rss_insights", ""))
+            result.search_insights = _coerce_analysis_text(data.get("search_insights", ""))
             result.outlook_strategy = _coerce_analysis_text(data.get("outlook_strategy", ""))
 
             # 解析独立展示区概括

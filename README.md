@@ -191,12 +191,6 @@
 
 ## 🪄 赞助商
 
-> **[ApiSmart](https://www.apismart.ai/)** 提供统一的 AI 模型 API，支持智能路由、故障切换与按量计费。通过兼容接口接入多种模型，适用于热点分析、内容生成与自动化工作流，让 AI 应用集成更省心。
-
-<a href="https://www.apismart.ai/"><img src="_image/banner-apismart.webp" alt="ApiSmart 一站式 AI 模型 API，支持文本、图像与视频，智能路由、按量计费" width="100%"></a>
-
-<br>
-
 > **[DeepSider API](https://www.deepsiderapi.com/?utm_source=trendradar)** 提供统一的 AI API 接入服务，一个 API Key 即可调用 GPT、Claude、Gemini、DeepSeek 等主流模型。非号池，非逆向，大厂官方渠道。支持按量计费与实时用量监控，方便为你的自动化工作流接入 AI。
 
 <a href="https://www.deepsiderapi.com/?utm_source=trendradar"><img src="_image/banner-deepsider.webp" alt="DeepSider API：一个 API Key，连接全球主流 AI 模型；非号池，非逆向，大厂官方渠道" width="100%"></a>

@@ -143,12 +143,6 @@ After communication, the author indicated no concerns about server pressure, but
 
 ## 🪄 Sponsors
 
-> **[ApiSmart](https://www.apismart.ai/)** provides a unified AI model API with intelligent routing, automatic failover, and pay-as-you-go billing. Access multiple models through compatible interfaces for trend analysis, content generation, and automated workflows, simplifying AI integration.
-
-<a href="https://www.apismart.ai/"><img src="_image/banner-apismart.webp" alt="ApiSmart unified AI model API for text, images, and video, with intelligent routing and pay-as-you-go billing" width="100%"></a>
-
-<br>
-
 > **[DeepSider API](https://www.deepsiderapi.com/?utm_source=trendradar)** provides unified access to leading AI models, including GPT, Claude, Gemini, and DeepSeek, through a single API key. It uses official channels from major providers, with no account pools or reverse-engineered APIs. Pay-as-you-go billing and real-time usage monitoring make it easy to add AI to your automated workflows.
 
 <a href="https://www.deepsiderapi.com/?utm_source=trendradar"><img src="_image/banner-deepsider.webp" alt="DeepSider API: one API key connects leading AI models worldwide; official channels from major providers, with no account pools or reverse-engineered APIs" width="100%"></a>

@@ -388,7 +388,7 @@ class AIFilter:
         response: str,
         titles: List[Dict],
         tags: List[Dict],
-    ) -> List[Dict]:
+    ) -> Optional[List[Dict]]:
         """解析分类的 AI 响应
 
         支持两种 JSON 格式：
@@ -396,25 +396,30 @@ class AIFilter:
         - 旧格式（嵌套）: [{"id": 1, "tags": [{"tag_id": 1, "score": 0.9}]}, ...]
 
         每条新闻只保留一个最高分的 tag，杜绝同一条出现在多个标签下。
+
+        Returns:
+            解析成功返回结果列表（无匹配时为空列表）；
+            响应为空、不是 JSON 或顶层不是数组时返回 None，
+            按调用失败处理，该批次不标记已分析，下次运行重试
         """
         json_str = self._extract_json(response)
         if not json_str:
+            print("[AI筛选] 分类响应为空或不含 JSON（可检查 ai.max_tokens 是否过小，部分模型的思考 token 也计入该上限）")
             if self.debug:
                 print(f"[AI筛选][DEBUG] 无法从分类响应中提取 JSON，原始响应前 500 字符: {(response or '')[:500]}")
-            return []
+            return None
 
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
+            print(f"[AI筛选] 分类响应 JSON 解析失败: {e}")
             if self.debug:
-                print(f"[AI筛选][DEBUG] 分类响应 JSON 解析失败: {e}")
                 print(f"[AI筛选][DEBUG] 提取的 JSON 文本前 500 字符: {json_str[:500]}")
-            return []
+            return None
 
         if not isinstance(data, list):
-            if self.debug:
-                print(f"[AI筛选][DEBUG] 分类响应顶层不是数组，实际类型: {type(data).__name__}")
-            return []
+            print(f"[AI筛选] 分类响应顶层不是数组，实际类型: {type(data).__name__}")
+            return None
 
         # 构建 id 映射
         title_ids = {t["id"] for t in titles}

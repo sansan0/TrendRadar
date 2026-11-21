@@ -13,11 +13,12 @@ Deploy in <strong>30 seconds</strong> — Say goodbye to endless scrolling, only
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/sansan0/TrendRadar?style=flat-square&logo=github&color=blue)](https://github.com/sansan0/TrendRadar/network/members)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=flat-square)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v6.11.0-blue.svg)](https://github.com/sansan0/TrendRadar)
-[![MCP](https://img.shields.io/badge/MCP-v4.1.1-green.svg)](https://github.com/sansan0/TrendRadar)
+[![Version](https://img.shields.io/badge/version-v6.12.0-blue.svg)](https://github.com/sansan0/TrendRadar)
+[![MCP](https://img.shields.io/badge/MCP-v4.2.0-green.svg)](https://github.com/sansan0/TrendRadar)
 [![Docker Pulls](https://img.shields.io/docker/pulls/wantcat/trendradar?style=flat-square&logo=docker&logoColor=white&label=TrendRadar%20Pulls&color=2496ED)](https://hub.docker.com/r/wantcat/trendradar)
 [![Docker Pulls](https://img.shields.io/docker/pulls/wantcat/trendradar-mcp?style=flat-square&logo=docker&logoColor=white&label=MCP%20Pulls&color=2496ED)](https://hub.docker.com/r/wantcat/trendradar-mcp)
 [![RSS](https://img.shields.io/badge/RSS-Feed_Support-orange.svg?style=flat-square&logo=rss&logoColor=white)](#rss-feed-support-v450-new)
+[![Web Search](https://img.shields.io/badge/Web_Search-Scheduled_Tracking-F59E0B.svg?style=flat-square)](#web-search-support-v6120-new)
 [![AI Translation](https://img.shields.io/badge/AI-Multi--Language-purple.svg?style=flat-square)](#ai-multi-language-translation-v520-new)
 [![MCP Support](https://img.shields.io/badge/MCP-AI_Analysis-FF6B6B?style=flat-square&logo=ai&logoColor=white)](#-mcp-clients)
 [![AI Analysis Push](https://img.shields.io/badge/AI-Analysis_Push-FF6B6B?style=flat-square&logo=openai&logoColor=white)](#ai-analysis-push-v500-new)
@@ -217,6 +218,24 @@ Transfer and sync content between Windows and macOS computers on your local netw
 - **Tip**: Check [Changelog] to understand specific [Features]
 
 
+### 2026/11/21 - v6.12.0
+
+- **New 3rd Data Source — Scheduled Web Search**: Beyond trending hotlists and RSS feeds, TrendRadar can now actively search the web on your schedule for specific topics (policies, company news, open-source releases, official announcements). Results appear in a dedicated Web Search section without being filtered out by `frequency_words.txt` or AI filtering
+- **Quality & Relevance Filtering Funnel**: Powered by DeepSeek Search API by default (with an extensible multi-provider architecture), filtering wide recalls by relevance score (`min_score`), site authority (`min_authority`), freshness window, per-topic display cap, and cross-day deduplication — plus optional `smart` mode to distill plain-language prompts into crisp search queries (cached daily)
+- **Full Pipeline & Visual Editor Integration**: Web Search integrates with all push channels (Feishu, DingTalk, WeWork, Telegram, Email, etc.), adds a dedicated "Web Search Topic Insights" section to AI analysis, supports per-period toggling in `timeline.yaml`, and adds visual editing for `web_search` and `search_queries.txt` in the web editor
+- **Modern Minimalist HTML Report & Rank Timeline Popover**: Redesigned every section into crisp neutral cards with unified outline SVG icons (zero emojis); hover or click any hotlist rank pill to view an inverted-Y rank-change sparkline chart and timestamp breakdown (including off-list gaps); added glassmorphic header metric tooltips, click-to-jump navigation, and a frosted floating dock with reading-progress ring and clickable shortcuts panel
+- **Email-Safe HTML Sanitization**: Automatically strips scripts, dead buttons, and interactive overlays before emailing (reducing email size by ~70%+ to stay safely below Gmail's 102KB clipping limit) while expanding every topic and section vertically
+
+### 2026/11/21 - mcp-v4.2.0
+
+- **4 New Web Search MCP Tools**: AI clients can query saved web search results (`get_latest_web_search`), search historical web findings (`search_web_history`), check web search status (`get_web_search_status`), and run on-demand live searches (`live_web_search`)
+- **DeepSeek Fetch for Article Reading**: `read_article` now supports DeepSeek Fetch to retrieve clean Markdown bodies directly from search results or news URLs
+- **Config Resource & Remote Sync**: Added the `config://search-queries` MCP resource and extended remote storage sync to cover `search/{date}.db`
+
+
+<details>
+<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
+
 ### 2026/10/13 - v6.11.0
 
 - **Chinese and English Configuration Editing**: Switch the visual editor between Chinese and English and use English configuration templates to set application options, keywords, and schedules in your preferred language
@@ -230,10 +249,6 @@ Transfer and sync content between Windows and macOS computers on your local netw
 - **Smart batch splitting**: Long messages auto-split per channel byte limits (Feishu 30KB, DingTalk 20KB, etc.), reads config from config.yaml
 - **Fixed channel detection**: ntfy no longer falsely reported as "configured" due to default server URL
 - **Code reuse**: Batch utilities now imported from trendradar core instead of duplicated
-
-
-<details>
-<summary>👉 Click to expand: <strong>Historical Updates</strong></summary>
 
 ### 2026/06/19 - v6.10.0
 
@@ -987,9 +1002,21 @@ Supports RSS/Atom feed crawling, keyword-based grouping and statistics (consiste
 
 > 💡 RSS uses the same `frequency_words.txt` for keyword filtering as trending
 
+### **Web Search Support** (v6.12.0 New)
+
+As TrendRadar's **third data source** alongside hotlists and RSS feeds, Web Search works like a personal research assistant that checks the open web on schedule for specific topics you care about (regulations, company updates, open-source releases, official announcements):
+
+- **Dedicated Display, Never Over-Filtered**: Because you explicitly choose each search topic, results appear in their own "Web Search" section and **bypass `frequency_words.txt` and AI filtering**
+- **Simple Blank-Line Syntax**: Write topics in `config/search_queries.txt` separated by a blank line; supports handy modifiers like `site:gov.cn` (restrict to official sites), `-site:` (block domains), `!word` (exclude words), `@N` (item cap), and `~Nd` (freshness window)
+- **Built-In Quality Funnel**: Fetches wide results and narrows them down by relevance score (`min_score`), site authority (`min_authority`), per-topic count cap (`max_items_per_topic`), and cross-day deduplication
+- **Plain-Language Smart Queries**: Set `query_mode: "smart"` to write natural-language prompts — AI distills them into crisp search queries and caches them daily to avoid extra calls
+- **Independent Scheduling & AI Synthesis**: Toggle `search` per time period in `timeline.yaml`, automatically include findings in AI analysis ("Web Search Topic Insights"), or run TrendRadar in **Web-Search-only mode**
+
+> 💡 For step-by-step setup, see [Configuration Guide - Let TrendRadar search the web on a schedule](#13-let-trendradar-search-the-web-on-a-schedule)
+
 ### **Visual Configuration Editor**
 
-A web-based graphical configuration interface — no need to manually edit YAML files. Complete all configuration changes and exports through simple forms.
+A web-based graphical configuration interface — no need to manually edit YAML files. Complete edits and exports for `config.yaml`, `frequency_words.txt`, `search_queries.txt` (web search topics), and `timeline.yaml` through simple forms.
 
 Switch between Chinese and English and use English configuration templates to set application options, keywords, and schedules in your preferred language.
 
@@ -1018,8 +1045,8 @@ Switch between Chinese and English and use English configuration templates to se
 
 | Feature | Description | Default |
 |---------|-------------|---------|
-| **Scheduling System** | Per-day-of-week scheduling: assign different time periods, push modes, and AI analysis strategies to each day (Mon–Sun). **Each period can independently set its filter method (keyword/AI) and interest focus**, enabling different content at different times. 5 built-in presets (always_on / morning_evening / office_hours / night_owl / custom), or define your own. Supports weekday vs weekend differentiation, cross-midnight periods, per-period once-only dedup, and overlap conflict detection (v6.0.0 + v6.5.0) | morning_evening |
-| **Content Order Configuration** | Use `display.region_order` to adjust display order of all regions (hotlist, new items, RSS, standalone, AI analysis); use `display.regions` to toggle each region on/off (v5.2.0) | See config |
+| **Scheduling System** | Per-day-of-week scheduling: assign different time periods, push modes, web search switches, and AI analysis strategies to each day (Mon–Sun). **Each period can independently set its filter method (keyword/AI) and interest focus**, enabling different content at different times. 5 built-in presets (always_on / morning_evening / office_hours / night_owl / custom), or define your own. Supports weekday vs weekend differentiation, cross-midnight periods, per-period once-only dedup, and overlap conflict detection (v6.0.0 + v6.5.0 + v6.12.0) | morning_evening |
+| **Content Order Configuration** | Use `display.region_order` to adjust display order of all regions (hotlist, RSS, web search, new items, standalone, AI analysis); use `display.regions` to toggle each region on/off (v5.2.0 + v6.12.0) | See config |
 | **Display Mode Switch** | `keyword`=group by keyword, `platform`=group by platform (v4.6.0 new) | keyword |
 
 > 💡 For detailed configuration, see [Configuration Guide - Report Configuration](#7-report-configuration) and [Configuration Guide - Scheduling System](#8-when-will-i-receive-pushes)
@@ -1106,18 +1133,18 @@ ai_translation:
 
 > ⚠️ Some international media content may involve sensitive topics that AI models might refuse to translate. Please filter subscription sources based on your actual needs
 
-### **HTML Report Browser Enhancement** (v6.6.0 New)
+### **HTML Report Browser Enhancement & Email Compatibility** (v6.6.0 New · v6.12.0 Overhaul)
 
-Open the pushed HTML report in a browser to unlock an enhanced experience (email clients are unaffected):
+Open the generated HTML report in a browser for a calm minimalist layout and rich micro-interactions (while emails receive a dedicated clean edition):
 
-- **Widescreen Mode**: Auto-switches to 1200px wide layout on desktop, making full use of screen space
-- **Tab Navigation**: Both keyword groups and standalone sections support Tab switching — no more endless scrolling
-- **Dark Mode**: One-click dark theme toggle with automatic preference persistence
-- **Live Search**: Press `/` to open the search box and instantly filter news titles
-- **One-Click Copy**: Hover over a news number to copy the title and link
-- **Keyboard Shortcuts**: `W` widescreen, `D` dark mode, `/` search, `?` view all shortcuts
+- **Unified Minimalist Design & Zero Emojis**: Clean hairline-bordered white cards with subtle semantic badges across Hotlist, RSS, Web Search, Standalone, New Items, and AI Analysis in both light and dark modes
+- **Rank-Change Sparkline & Timestamp Popover**: Hover or click any hotlist rank pill to inspect its inverted-Y rank history chart and per-timestamp changes (including off-list gaps)
+- **Header Metric Tooltips & Click-to-Jump**: Hover top-bar stats for breakdowns across all three data sources and click to jump directly to any section
+- **Widescreen & Segmented Section Navigation**: Auto-switches to 1200px wide layout on desktop with smooth sliding section switcher and per-group tabs
+- **Fast Reading & One-Click Copy**: Press `/` to filter titles and snippets live; copy items from hotlist numbers, RSS cards, search query chips, or AI insight blocks; frosted floating dock includes a live reading-progress ring and clickable shortcuts panel (`W`, `D`, `/`, `?`)
+- **Email-Safe Sanitization**: Automatically strips scripts, interactive controls, and overlays before sending emails (~70%+ smaller, well below Gmail's 102KB clipping limit) while expanding all topics vertically
 
-> 💡 All enhancements are built on progressive enhancement — email clients still show the original 600px layout with zero regression
+> 💡 Local browser reports keep full interactivity while email pushes stay lightweight and clean with zero broken buttons
 
 ### **Flexible Storage Architecture (v4.0.0 Major Update)**
 
@@ -3516,19 +3543,85 @@ Think the AI sounds too official? You can modify its prompt to change its style 
 
 </details>
 
+### 13. Let TrendRadar search the web on a schedule
+
+<details id="web-search-config">
+<summary>👉 Click to expand: <strong>Enable Scheduled Web Search (v6.12.0 New)</strong></summary>
+<br>
+
+#### When is Web Search useful?
+
+- **Hotlists** tell you what everyone is talking about, **RSS** follows fixed feeds, and **Web Search** acts like a research assistant that periodically searches the open web for specific niches (government policies, company releases, open-source launches).
+- Results appear in their own **Web Search** section and are **not filtered** by `frequency_words.txt` or AI filtering.
+
+#### 3 Steps to Enable
+
+**Step 1: Set up an API Key**
+
+Uses the **DeepSeek native Web Search API** by default (extensible to additional providers):
+- If you already configured a DeepSeek `AI_API_KEY`, **Web Search reuses it automatically**.
+- To use a separate key, set `WEB_SEARCH_API_KEY` (or `DEEPSEEK_API_KEY`) in GitHub Secrets / `.env` (or `web_search.providers.deepseek.api_key` in `config/config.yaml`).
+
+**Step 2: Add topics to `config/search_queries.txt`**
+
+Leave a blank line between topics (also editable in the visual config editor):
+
+```txt
+[GLOBAL_FILTER]
+clickbait
+-site:example-spam.com
+
+[SEARCH_TOPICS]
+
+[AI Policy & Regulation]
+AI infrastructure regulation policy latest update
+AI compute subsidy pilot policy
+@8
+~7d
+
+[Official Low-Altitude Policy]
+low altitude economy policy site:gov.cn
+@5
+~14d
+
+DeepSeek new open source model release
+```
+
+> 💡 **Quick syntax**: `[Topic Name]` sets a display title; `site:domain` limits to one site; `-site:domain` blocks a site; `!word` excludes matching results; `@N` caps items per topic; `~Nd` limits freshness to the last N days (`~0d` = unlimited).
+
+**Step 3: Turn it on in `config/config.yaml`**
+
+```yaml
+web_search:
+  enabled: true                   # Or set env var WEB_SEARCH_ENABLED=true
+  provider: "deepseek"
+  query_mode: "direct"            # direct = search as written | smart = AI distills long prompts (cached daily)
+  fetch_count: 20                 # Wide recall per query (same per-request cost on DeepSeek)
+  max_items_per_topic: 8          # Final display cap per topic after filtering
+  min_score: 0.45                 # Relevance threshold (0-1, higher = stricter)
+  min_authority: 0                # Site authority threshold (-1 any, 0 normal, 3 authoritative, 4 official)
+  freshness_days: 7               # Only keep pages from the last 7 days
+  dedup_days: 7                   # Avoid repeating the same URL across 7 days
+```
+
+> 💡 **Tips**: Control which time slots run Web Search via `search: true/false` in `config/timeline.yaml`; keep `ai_analysis.include_web_search: true` to get automatic "Web Search Topic Insights"; you can even disable `platforms` and `rss` to run TrendRadar purely as a scheduled web search tracker.
+
+</details>
+
 <br>
 
 ## ✨ AI Analysis
 
-TrendRadar v3.0.0 added **MCP (Model Context Protocol)** based AI analysis feature, allowing natural language conversations with news data for deep analysis.
+TrendRadar v3.0.0 added **MCP (Model Context Protocol)** based AI analysis feature, allowing natural language conversations with news data for deep analysis. **Starting with mcp-v4.2.0, MCP also supports historical web search queries, on-demand live web search, and DeepSeek Fetch article reading** (31 MCP tools & 5 config resources).
 
 
 ### ⚠️ Important Notice Before Use
 
 
-**Critical: AI features require local news data support**
+**Local News Data + Optional Live Web Search**
 
-AI analysis **does not** query real-time online data directly, but analyzes **locally accumulated news data** (stored in the `output` folder)
+- Hotlist and RSS analysis queries your **locally accumulated news data** stored under `output/` (`news/`, `rss/`, and `search/` SQLite databases);
+- When a DeepSeek API Key is configured, your AI client can also run on-demand web searches via `live_web_search` and fetch full Markdown article content via `read_article` (DeepSeek Fetch).
 
 
 #### Usage Instructions:

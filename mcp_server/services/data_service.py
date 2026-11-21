@@ -474,7 +474,7 @@ class DataService:
         获取当前系统配置
 
         Args:
-            section: 配置节 - all/crawler/push/keywords/weights
+            section: 配置节 - all/crawler/push/keywords/weights/web_search
 
         Returns:
             配置字典
@@ -483,16 +483,16 @@ class DataService:
             FileParseError: 配置文件解析错误
         """
         # 解析配置文件
-        config_data = self.parser.parse_yaml_config()
+        config_data = self.parser.parse_yaml_config() or {}
         word_groups = self.parser.parse_frequency_words()
 
         # 将 word_groups 中的正则表达式对象转换为字符串，使其可 JSON 序列化
         word_groups = self._make_json_serializable(word_groups)
 
         # 根据section返回对应配置
-        advanced = config_data.get("advanced", {})
-        advanced_crawler = advanced.get("crawler", {})
-        platforms_config = config_data.get("platforms", {})
+        advanced = config_data.get("advanced", {}) or {}
+        advanced_crawler = advanced.get("crawler", {}) or {}
+        platforms_config = config_data.get("platforms", {}) or {}
 
         if section == "all" or section == "crawler":
             crawler_config = {
@@ -504,8 +504,8 @@ class DataService:
             }
 
         if section == "all" or section == "push":
-            notification = config_data.get("notification", {})
-            batch_size = advanced.get("batch_size", {})
+            notification = config_data.get("notification", {}) or {}
+            batch_size = advanced.get("batch_size", {}) or {}
             push_config = {
                 "enable_notification": notification.get("enabled", True),
                 "enabled_channels": [],
@@ -540,11 +540,36 @@ class DataService:
             }
 
         if section == "all" or section == "weights":
-            weight = advanced.get("weight", {})
+            weight = advanced.get("weight", {}) or {}
             weights_config = {
                 "rank_weight": weight.get("rank", 0.6),
                 "frequency_weight": weight.get("frequency", 0.3),
                 "hotness_weight": weight.get("hotness", 0.1)
+            }
+
+        if section == "all" or section == "web_search":
+            from trendradar.core.loader import _load_ai_config, _load_web_search_config
+
+            ai_cfg = _load_ai_config(config_data)
+            ws_cfg = _load_web_search_config(config_data, ai_config=ai_cfg)
+            provider_name = ws_cfg.get("PROVIDER", "deepseek")
+            provider_cfg = (ws_cfg.get("PROVIDERS") or {}).get(provider_name, {})
+            api_key_configured = bool(str(provider_cfg.get("api_key", "") or "").strip())
+            queries_file = ws_cfg.get("QUERIES_FILE") or None
+            search_topics = self.parser.parse_search_queries(queries_file)
+
+            web_search_config = {
+                "enabled": bool(ws_cfg.get("ENABLED", False)),
+                "provider": provider_name,
+                "query_mode": ws_cfg.get("QUERY_MODE", "direct"),
+                "fetch_count": ws_cfg.get("FETCH_COUNT", 20),
+                "max_items_per_topic": ws_cfg.get("MAX_ITEMS_PER_TOPIC", 8),
+                "freshness_days": ws_cfg.get("FRESHNESS_DAYS", 7),
+                "dedup_days": ws_cfg.get("DEDUP_DAYS", 7),
+                "min_score": ws_cfg.get("MIN_SCORE", 0.5),
+                "min_authority": ws_cfg.get("MIN_AUTHORITY", -1),
+                "topics_count": len(search_topics),
+                "api_key_configured": api_key_configured,
             }
 
         # 组装结果
@@ -553,7 +578,8 @@ class DataService:
                 "crawler": crawler_config,
                 "push": push_config,
                 "keywords": keywords_config,
-                "weights": weights_config
+                "weights": weights_config,
+                "web_search": web_search_config,
             }
         elif section == "crawler":
             result = crawler_config
@@ -563,6 +589,8 @@ class DataService:
             result = keywords_config
         elif section == "weights":
             result = weights_config
+        elif section == "web_search":
+            result = web_search_config
         else:
             result = {}
 
@@ -573,7 +601,7 @@ class DataService:
         扫描 output 目录，返回实际可用的日期范围
 
         Args:
-            db_type: 数据库类型 ("news" 或 "rss")
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             (最早日期, 最新日期) 元组，如果没有数据则返回 (None, None)
@@ -850,4 +878,276 @@ class DataService:
 
         self.cache.set(cache_key, result)
 
+        return result
+
+    # ========================================
+    # 联网搜索数据查询方法
+    # ========================================
+
+    def get_latest_web_search(
+        self,
+        topics: Optional[List[str]] = None,
+        days: int = 1,
+        limit: int = 50,
+        include_summary: bool = False
+    ) -> List[Dict]:
+        """
+        获取最新的本地联网搜索数据（支持多日查询与跨天去重）
+
+        Args:
+            topics: 搜索主题 ID 或主题名称列表，None 表示所有主题
+            days: 获取最近 N 天的数据，默认 1（仅今天），最大 30 天
+            limit: 返回条数限制
+            include_summary: 是否包含完整长摘要，默认 False（节省 token）
+
+        Returns:
+            联网搜索结果列表（按 URL 跨天去重）
+        """
+        days = min(max(int(days), 1), 30)
+        normalized_topics = [t.strip() for t in topics if t and str(t).strip()] if topics else []
+        topic_filter = {t.lower() for t in normalized_topics}
+
+        cache_key = (
+            f"latest_web_search:{','.join(sorted(topic_filter))}:"
+            f"{days}:{limit}:{include_summary}"
+        )
+        cached = self.cache.get(cache_key, ttl=900)
+        if cached is not None:
+            return cached
+
+        search_list: List[Dict] = []
+        seen_urls = set()
+        today = datetime.now()
+
+        for i in range(days):
+            target_date = today - timedelta(days=i)
+            date_str = target_date.strftime("%Y-%m-%d")
+
+            try:
+                all_items, id_to_name, timestamps = self.parser.read_all_titles_for_date(
+                    date=target_date,
+                    platform_ids=None,
+                    db_type="search"
+                )
+
+                if timestamps:
+                    latest_timestamp = max(timestamps.values())
+                    fetch_time = datetime.fromtimestamp(latest_timestamp).strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    fetch_time = date_str
+
+                for topic_id, items in all_items.items():
+                    topic_name = id_to_name.get(topic_id, topic_id)
+                    if topic_filter and (
+                        topic_id.lower() not in topic_filter
+                        and topic_name.lower() not in topic_filter
+                    ):
+                        continue
+
+                    for title, info in items.items():
+                        url = info.get("url", "")
+                        if url and url in seen_urls:
+                            continue
+                        if url:
+                            seen_urls.add(url)
+
+                        search_item = {
+                            "title": title,
+                            "topic_id": topic_id,
+                            "topic_name": topic_name,
+                            "url": url,
+                            "site_name": info.get("site_name", ""),
+                            "published_at": info.get("published_at", ""),
+                            "score": float(info.get("score", 0.0) or 0.0),
+                            "authority": int(info.get("authority", -1) if info.get("authority") is not None else -1),
+                            "provider": info.get("provider", ""),
+                            "snippet": info.get("snippet", ""),
+                            "date": date_str,
+                            "fetch_time": fetch_time,
+                        }
+
+                        if include_summary:
+                            search_item["summary"] = info.get("summary", "")
+
+                        search_list.append(search_item)
+
+            except DataNotFoundError:
+                continue
+
+        search_list.sort(
+            key=lambda x: (
+                x.get("date", ""),
+                float(x.get("score", 0.0) or 0.0),
+                x.get("published_at", ""),
+            ),
+            reverse=True,
+        )
+
+        result = search_list[:limit]
+        self.cache.set(cache_key, result)
+        return result
+
+    def search_web_history(
+        self,
+        keyword: str,
+        topics: Optional[List[str]] = None,
+        days: int = 7,
+        limit: int = 50,
+        include_summary: bool = False
+    ) -> List[Dict]:
+        """
+        在最近 N 天的本地联网搜索历史库中检索关键词（匹配标题/短摘要/长摘要，跨天按 URL 去重）
+
+        Args:
+            keyword: 搜索关键词
+            topics: 搜索主题 ID 或主题名称列表，None 表示所有主题
+            days: 搜索最近 N 天的数据，默认 7 天，最大 30 天
+            limit: 返回条数限制
+            include_summary: 是否包含完整长摘要
+
+        Returns:
+            匹配的联网搜索条目列表
+        """
+        days = min(max(int(days), 1), 30)
+        normalized_topics = [t.strip() for t in topics if t and str(t).strip()] if topics else []
+        topic_filter = {t.lower() for t in normalized_topics}
+        keyword_lower = keyword.lower()
+
+        cache_key = (
+            f"search_web_history:{keyword_lower}:{','.join(sorted(topic_filter))}:"
+            f"{days}:{limit}:{include_summary}"
+        )
+        cached = self.cache.get(cache_key, ttl=900)
+        if cached is not None:
+            return cached
+
+        results: List[Dict] = []
+        seen_urls = set()
+        today = datetime.now()
+
+        for i in range(days):
+            target_date = today - timedelta(days=i)
+            date_str = target_date.strftime("%Y-%m-%d")
+
+            try:
+                all_items, id_to_name, timestamps = self.parser.read_all_titles_for_date(
+                    date=target_date,
+                    platform_ids=None,
+                    db_type="search"
+                )
+
+                if timestamps:
+                    latest_timestamp = max(timestamps.values())
+                    fetch_time = datetime.fromtimestamp(latest_timestamp).strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    fetch_time = date_str
+
+                for topic_id, items in all_items.items():
+                    topic_name = id_to_name.get(topic_id, topic_id)
+                    if topic_filter and (
+                        topic_id.lower() not in topic_filter
+                        and topic_name.lower() not in topic_filter
+                    ):
+                        continue
+
+                    for title, info in items.items():
+                        snippet = info.get("snippet", "")
+                        summary = info.get("summary", "")
+                        if not (
+                            keyword_lower in title.lower()
+                            or keyword_lower in snippet.lower()
+                            or keyword_lower in summary.lower()
+                        ):
+                            continue
+
+                        url = info.get("url", "")
+                        if url and url in seen_urls:
+                            continue
+                        if url:
+                            seen_urls.add(url)
+
+                        search_item = {
+                            "title": title,
+                            "topic_id": topic_id,
+                            "topic_name": topic_name,
+                            "url": url,
+                            "site_name": info.get("site_name", ""),
+                            "published_at": info.get("published_at", ""),
+                            "score": float(info.get("score", 0.0) or 0.0),
+                            "authority": int(info.get("authority", -1) if info.get("authority") is not None else -1),
+                            "provider": info.get("provider", ""),
+                            "snippet": snippet,
+                            "date": date_str,
+                            "fetch_time": fetch_time,
+                        }
+
+                        if include_summary:
+                            search_item["summary"] = summary
+
+                        results.append(search_item)
+
+            except DataNotFoundError:
+                continue
+
+        results.sort(
+            key=lambda x: (
+                float(x.get("score", 0.0) or 0.0),
+                x.get("published_at", ""),
+            ),
+            reverse=True,
+        )
+
+        result = results[:limit]
+        self.cache.set(cache_key, result)
+        return result
+
+    def get_web_search_status(self) -> Dict:
+        """
+        获取联网搜索状态（可用日期、今日主题统计、当前配置的搜索主题列表）
+
+        Returns:
+            联网搜索状态字典
+        """
+        cache_key = "web_search_status"
+        cached = self.cache.get(cache_key, ttl=900)
+        if cached is not None:
+            return cached
+
+        available_dates = self.parser.get_available_dates(db_type="search")
+
+        today_topics = {}
+        try:
+            all_items, id_to_name, _ = self.parser.read_all_titles_for_date(
+                date=None,
+                platform_ids=None,
+                db_type="search"
+            )
+            for topic_id, items in all_items.items():
+                today_topics[topic_id] = {
+                    "name": id_to_name.get(topic_id, topic_id),
+                    "item_count": len(items),
+                }
+        except DataNotFoundError:
+            pass
+
+        queries_file = None
+        try:
+            cfg = self.parser.parse_yaml_config() or {}
+            ws_cfg = cfg.get("web_search", {}) or {}
+            queries_file = ws_cfg.get("queries_file") or None
+        except Exception:
+            pass
+
+        configured_topics = self.parser.parse_search_queries(queries_file)
+
+        result = {
+            "available_dates": available_dates[:10],
+            "total_dates": len(available_dates),
+            "today_topics": today_topics,
+            "configured_topics": configured_topics,
+            "configured_topics_count": len(configured_topics),
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        self.cache.set(cache_key, result)
         return result

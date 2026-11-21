@@ -5,8 +5,10 @@ v2.0.0: 仅支持 SQLite 数据库，移除 TXT 文件支持
 新存储结构：output/{type}/{date}.db
 """
 
+import hashlib
 import re
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
@@ -39,6 +41,11 @@ class ParserService:
         self._freq_words_cache: Optional[List[Dict]] = None
         self._freq_words_mtime: float = 0.0
 
+        # search_queries.txt mtime 缓存
+        self._search_queries_cache: Optional[List[Dict]] = None
+        self._search_queries_mtime: float = 0.0
+        self._search_queries_path: Optional[str] = None
+
     @staticmethod
     def clean_title(title: str) -> str:
         """清理标题文本"""
@@ -68,7 +75,7 @@ class ParserService:
 
         Args:
             date: 日期对象，默认为今天
-            db_type: 数据库类型 ("news" 或 "rss")
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             数据库文件路径，如果不存在则返回 None
@@ -90,8 +97,8 @@ class ParserService:
 
         Args:
             date: 日期对象，默认为今天
-            platform_ids: 平台ID列表，None表示所有平台
-            db_type: 数据库类型 ("news" 或 "rss")
+            platform_ids: 平台/Feed/主题 ID 列表，None 表示全部
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             (all_titles, id_to_name, all_timestamps) 元组，如果数据库不存在返回 None
@@ -113,9 +120,11 @@ class ParserService:
                 return self._read_news_from_sqlite(cursor, platform_ids, all_titles, id_to_name, all_timestamps)
             elif db_type == "rss":
                 return self._read_rss_from_sqlite(cursor, platform_ids, all_titles, id_to_name, all_timestamps)
+            elif db_type == "search":
+                return self._read_search_from_sqlite(cursor, platform_ids, all_titles, id_to_name, all_timestamps)
 
         except Exception as e:
-            print(f"Warning: 从 SQLite 读取数据失败: {e}")
+            print(f"Warning: 从 SQLite 读取数据失败: {e}", file=sys.stderr)
             return None
         finally:
             if 'conn' in locals():
@@ -304,6 +313,104 @@ class ParserService:
 
         return (all_items, id_to_name, all_timestamps)
 
+    def _read_search_from_sqlite(
+        self,
+        cursor,
+        topic_ids: Optional[List[str]],
+        all_items: Dict,
+        id_to_name: Dict,
+        all_timestamps: Dict
+    ) -> Optional[Tuple[Dict, Dict, Dict]]:
+        """从联网搜索数据库读取数据"""
+        # 检查表是否存在
+        cursor.execute("""
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='search_items'
+        """)
+        if not cursor.fetchone():
+            return None
+
+        # 构建查询
+        if topic_ids:
+            placeholders = ','.join(['?' for _ in topic_ids])
+            query = f"""
+                SELECT i.id, i.topic_id, t.name as topic_name, i.title,
+                       i.url, i.query, i.provider, i.snippet, i.summary,
+                       i.site_name, i.published_at, i.score, i.raw_score,
+                       i.authority, i.first_crawl_time, i.last_crawl_time,
+                       i.crawl_count
+                FROM search_items i
+                LEFT JOIN search_topics t ON i.topic_id = t.id
+                WHERE i.topic_id IN ({placeholders})
+                ORDER BY i.score DESC, i.published_at DESC
+            """
+            cursor.execute(query, topic_ids)
+        else:
+            cursor.execute("""
+                SELECT i.id, i.topic_id, t.name as topic_name, i.title,
+                       i.url, i.query, i.provider, i.snippet, i.summary,
+                       i.site_name, i.published_at, i.score, i.raw_score,
+                       i.authority, i.first_crawl_time, i.last_crawl_time,
+                       i.crawl_count
+                FROM search_items i
+                LEFT JOIN search_topics t ON i.topic_id = t.id
+                ORDER BY i.score DESC, i.published_at DESC
+            """)
+
+        rows = cursor.fetchall()
+
+        for row in rows:
+            topic_id = row['topic_id']
+            topic_name = row['topic_name'] or topic_id
+            title = row['title']
+
+            if topic_id not in id_to_name:
+                id_to_name[topic_id] = topic_name
+
+            if topic_id not in all_items:
+                all_items[topic_id] = {}
+
+            if title not in all_items[topic_id]:
+                all_items[topic_id][title] = {
+                    "url": row['url'] or "",
+                    "query": row['query'] or "",
+                    "provider": row['provider'] or "",
+                    "snippet": row['snippet'] or "",
+                    "summary": row['summary'] or "",
+                    "site_name": row['site_name'] or "",
+                    "published_at": row['published_at'] or "",
+                    "score": float(row['score']) if row['score'] is not None else 0.0,
+                    "raw_score": float(row['raw_score']) if row['raw_score'] is not None else 0.0,
+                    "authority": int(row['authority']) if row['authority'] is not None else -1,
+                    "first_time": row['first_crawl_time'] or "",
+                    "last_time": row['last_crawl_time'] or "",
+                    "count": int(row['crawl_count']) if row['crawl_count'] is not None else 1,
+                }
+
+        # 获取抓取时间
+        cursor.execute("""
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='search_crawl_records'
+        """)
+        if cursor.fetchone():
+            cursor.execute("""
+                SELECT crawl_time, created_at FROM search_crawl_records
+                ORDER BY crawl_time
+            """)
+            for row in cursor.fetchall():
+                crawl_time = row['crawl_time']
+                created_at = row['created_at']
+                try:
+                    ts = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S").timestamp()
+                except (ValueError, TypeError):
+                    ts = datetime.now().timestamp()
+                all_timestamps[f"{crawl_time}.db"] = ts
+
+        if not all_items:
+            return None
+
+        return (all_items, id_to_name, all_timestamps)
+
     def read_all_titles_for_date(
         self,
         date: datetime = None,
@@ -315,8 +422,8 @@ class ParserService:
 
         Args:
             date: 日期对象，默认为今天
-            platform_ids: 平台/Feed ID列表，None表示所有
-            db_type: 数据库类型 ("news" 或 "rss")
+            platform_ids: 平台/Feed/主题 ID 列表，None 表示所有
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             (all_titles, id_to_name, all_timestamps) 元组
@@ -422,12 +529,252 @@ class ParserService:
         except Exception as e:
             raise FileParseError(words_file, str(e))
 
+    def _resolve_search_queries_path(self, queries_file: Optional[str] = None) -> Path:
+        """解析 search_queries.txt 路径"""
+        if not queries_file:
+            return self.project_root / "config" / "search_queries.txt"
+
+        candidate = Path(queries_file)
+        if candidate.is_file():
+            return candidate
+        if not candidate.is_absolute():
+            for base in (
+                self.project_root,
+                self.project_root / "config" / "custom" / "search",
+                self.project_root / "config",
+            ):
+                resolved = base / queries_file
+                if resolved.is_file():
+                    return resolved
+        return self.project_root / "config" / queries_file
+
+    @staticmethod
+    def _normalize_parsed_topic(item) -> Optional[Dict]:
+        """将 query_parser 返回的对象或字典统一转为可 JSON 序列化的字典"""
+        def _val(obj, *keys, default=None):
+            for k in keys:
+                if isinstance(obj, dict):
+                    v = obj.get(k)
+                else:
+                    v = getattr(obj, k, None)
+                if v is not None:
+                    return v
+            return default
+
+        queries = _val(item, "queries", default=[])
+        if isinstance(queries, str):
+            queries = [queries]
+        elif isinstance(queries, (list, tuple, set)):
+            queries = [str(q) for q in queries if str(q).strip()]
+        else:
+            queries = []
+
+        name = str(_val(item, "name", "display_name", "title", default="") or "").strip()
+        if not name and queries:
+            name = queries[0][:50]
+        if not name and not queries:
+            return None
+
+        topic_id = str(_val(item, "id", "topic_id", default="") or "").strip()
+        if not topic_id:
+            topic_id = f"topic_{hashlib.md5(name.encode('utf-8')).hexdigest()[:8]}"
+
+        def _str_list(val) -> List[str]:
+            if isinstance(val, (list, tuple, set)):
+                return [str(x) for x in val if str(x).strip()]
+            return []
+
+        max_items = _val(item, "max_items", "max_results", default=None)
+        freshness_days = _val(item, "freshness_days", default=None)
+        provider = str(_val(item, "provider", default="") or "").strip()
+
+        return {
+            "id": topic_id,
+            "name": name,
+            "queries": queries,
+            "exclude_words": _str_list(_val(item, "exclude_words", "filter_words", default=[])),
+            "exclude_sites": _str_list(_val(item, "exclude_sites", default=[])),
+            "include_sites": _str_list(_val(item, "include_sites", default=[])),
+            "max_items": int(max_items) if max_items is not None else None,
+            "freshness_days": int(freshness_days) if freshness_days is not None else None,
+            "provider": provider,
+        }
+
+    @staticmethod
+    def _parse_search_queries_fallback(file_path: Path) -> List[Dict]:
+        """轻量解析 config/search_queries.txt（当 query_parser 不可用时回退）"""
+        with open(file_path, "r", encoding="utf-8") as f:
+            raw_lines = f.readlines()
+
+        topics: List[Dict] = []
+        current_block: List[str] = []
+        in_global_filter = False
+
+        def _flush_block(block: List[str]) -> None:
+            if not block:
+                return
+            name = ""
+            lines = block
+            header_match = re.match(r'^\[(.+)\]$', block[0])
+            if header_match:
+                name = header_match.group(1).strip()
+                lines = block[1:]
+
+            queries: List[str] = []
+            exclude_words: List[str] = []
+            exclude_sites: List[str] = []
+            include_sites: List[str] = []
+            max_items: Optional[int] = None
+            freshness_days: Optional[int] = None
+            provider = ""
+
+            for line in lines:
+                prov_match = re.match(r'^@provider:(.+)$', line, re.IGNORECASE)
+                if prov_match:
+                    provider = prov_match.group(1).strip().lower()
+                    continue
+                limit_match = re.match(r'^@(\d+)$', line)
+                if limit_match:
+                    max_items = int(limit_match.group(1))
+                    continue
+                fresh_match = re.match(r'^~(\d+)d$', line, re.IGNORECASE)
+                if fresh_match:
+                    freshness_days = int(fresh_match.group(1))
+                    continue
+                if line.startswith("!"):
+                    word = line[1:].strip()
+                    if word:
+                        exclude_words.append(word)
+                    continue
+                if line.lower().startswith("-site:"):
+                    site = line[6:].strip()
+                    if site:
+                        exclude_sites.append(site)
+                    continue
+                if line.lower().startswith("site:") and " " not in line:
+                    site = line[5:].strip()
+                    if site:
+                        include_sites.append(site)
+                    continue
+                queries.append(line)
+
+            if not queries:
+                return
+            if not name:
+                name = queries[0][:50]
+
+            topic_id = f"topic_{hashlib.md5(name.encode('utf-8')).hexdigest()[:8]}"
+            topics.append({
+                "id": topic_id,
+                "name": name,
+                "queries": queries,
+                "exclude_words": exclude_words,
+                "exclude_sites": exclude_sites,
+                "include_sites": include_sites,
+                "max_items": max_items,
+                "freshness_days": freshness_days,
+                "provider": provider,
+            })
+
+        for raw_line in raw_lines:
+            line = raw_line.strip()
+            if line.startswith("#"):
+                continue
+            if line == "[GLOBAL_FILTER]":
+                _flush_block(current_block)
+                current_block = []
+                in_global_filter = True
+                continue
+            if line == "[SEARCH_TOPICS]":
+                _flush_block(current_block)
+                current_block = []
+                in_global_filter = False
+                continue
+            if in_global_filter:
+                continue
+            if not line:
+                _flush_block(current_block)
+                current_block = []
+                continue
+            current_block.append(line)
+
+        _flush_block(current_block)
+        return topics
+
+    def parse_search_queries(self, queries_file: str = None) -> List[Dict]:
+        """
+        解析联网搜索任务配置文件（带 mtime 缓存）
+
+        优先复用 trendradar.crawler.search.query_parser，模块不可用时自动使用内置轻量解析。
+        文件不存在时返回空列表，不抛出异常。
+
+        Args:
+            queries_file: 搜索任务文件路径或文件名，默认为 config/search_queries.txt
+
+        Returns:
+            搜索主题字典列表
+        """
+        import os
+
+        target_path = self._resolve_search_queries_path(queries_file)
+        if not target_path.is_file():
+            return []
+
+        target_str = str(target_path)
+        try:
+            current_mtime = os.path.getmtime(target_str)
+            if (
+                self._search_queries_cache is not None
+                and self._search_queries_path == target_str
+                and current_mtime == self._search_queries_mtime
+            ):
+                return self._search_queries_cache
+
+            parsed_topics: Optional[List[Dict]] = None
+            try:
+                from trendradar.crawler.search import query_parser
+
+                load_fn = (
+                    getattr(query_parser, "load_search_queries", None)
+                    or getattr(query_parser, "parse_search_queries", None)
+                )
+                if callable(load_fn):
+                    raw_parsed = load_fn(target_str)
+                    if isinstance(raw_parsed, tuple) and raw_parsed:
+                        raw_items = raw_parsed[0]
+                    elif hasattr(raw_parsed, "topics"):
+                        raw_items = getattr(raw_parsed, "topics")
+                    else:
+                        raw_items = raw_parsed
+
+                    if isinstance(raw_items, list):
+                        normalized = []
+                        for item in raw_items:
+                            norm = self._normalize_parsed_topic(item)
+                            if norm:
+                                normalized.append(norm)
+                        parsed_topics = normalized
+            except Exception:
+                parsed_topics = None
+
+            if parsed_topics is None:
+                parsed_topics = self._parse_search_queries_fallback(target_path)
+
+            self._search_queries_cache = parsed_topics
+            self._search_queries_mtime = current_mtime
+            self._search_queries_path = target_str
+            return parsed_topics
+        except FileNotFoundError:
+            return []
+        except Exception as e:
+            raise FileParseError(target_str, str(e))
+
     def get_available_dates(self, db_type: str = "news") -> List[str]:
         """
         获取可用的日期列表
 
         Args:
-            db_type: 数据库类型 ("news" 或 "rss")
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             日期字符串列表（YYYY-MM-DD 格式，降序排列）
@@ -449,7 +796,7 @@ class ParserService:
         获取可用的日期范围
 
         Args:
-            db_type: 数据库类型 ("news" 或 "rss")
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             (最早日期, 最新日期) 元组，如果没有数据则返回 (None, None)

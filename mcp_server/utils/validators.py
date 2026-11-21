@@ -572,7 +572,7 @@ def validate_config_section(section: Optional[str]) -> str:
     Raises:
         InvalidParameterError: 配置节无效
     """
-    valid_sections = ["all", "crawler", "push", "keywords", "weights"]
+    valid_sections = ["all", "crawler", "push", "keywords", "weights", "web_search"]
     return validate_mode(section, valid_sections, "all")
 
 

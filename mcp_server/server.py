@@ -19,6 +19,7 @@ from .tools.system import SystemManagementTools
 from .tools.storage_sync import StorageSyncTools
 from .tools.article_reader import ArticleReaderTools
 from .tools.notification import NotificationTools
+from .tools.web_search import WebSearchTools
 from .utils.date_parser import DateParser
 from .utils.errors import MCPError
 
@@ -41,6 +42,7 @@ def _get_tools(project_root: Optional[str] = None):
         _tools_instances['storage'] = StorageSyncTools(project_root)
         _tools_instances['article'] = ArticleReaderTools(project_root)
         _tools_instances['notification'] = NotificationTools(project_root)
+        _tools_instances['web_search'] = WebSearchTools(project_root)
     return _tools_instances
 
 
@@ -110,6 +112,22 @@ async def get_keywords_resource() -> str:
         "word_groups": config.get("word_groups", []),
         "total_groups": config.get("total_groups", 0),
         "description": "TrendRadar 关注词配置"
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.resource("config://search-queries")
+async def get_search_queries_resource() -> str:
+    """
+    获取联网搜索任务配置
+
+    返回 config/search_queries.txt 中配置的联网搜索主题与过滤规则。
+    """
+    tools = _get_tools()
+    status = await asyncio.to_thread(tools['data'].get_web_search_status)
+    return json.dumps({
+        "topics": status.get("configured_topics", []),
+        "total_topics": status.get("configured_topics_count", 0),
+        "description": "TrendRadar 联网搜索任务配置（config/search_queries.txt）"
     }, ensure_ascii=False, indent=2)
 
 
@@ -344,6 +362,155 @@ async def get_rss_feeds_status() -> str:
     """
     tools = _get_tools()
     result = await asyncio.to_thread(tools['data'].get_rss_feeds_status)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+# ==================== 联网搜索工具 ====================
+
+@mcp.tool
+async def get_latest_web_search(
+    topics: Optional[List[str]] = None,
+    days: int = 1,
+    limit: int = 50,
+    include_summary: bool = False
+) -> str:
+    """
+    获取最新的本地联网搜索数据（支持多日查询）
+
+    查询 TrendRadar 已抓取并存储在本地 output/search/{date}.db 中的联网搜索结果，
+    跨天自动按 URL 去重，并按日期、质量分与发布时间排序。
+
+    Args:
+        topics: 搜索主题 ID 或主题名称列表（可选），如 ['人工智能产业政策'] 或 ['topic_a1b2c3d4']；不指定则返回全部主题
+        days: 获取最近 N 天的数据，默认 1（仅今天），最大 30 天
+        limit: 返回条数限制，默认 50，最大 500
+        include_summary: 是否包含完整长摘要，默认 False（默认返回短摘要 snippet 以节省 token）
+
+    Returns:
+        JSON 格式的联网搜索结果列表，每条包含标题、主题、链接、站点、发布时间、质量分、权威度与摘要
+
+    Examples:
+        - get_latest_web_search()
+        - get_latest_web_search(topics=['人工智能产业政策'], days=3, include_summary=True)
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(
+        tools['data'].get_latest_web_search,
+        topics=topics,
+        days=days,
+        limit=limit,
+        include_summary=include_summary,
+    )
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+async def search_web_history(
+    keyword: str,
+    topics: Optional[List[str]] = None,
+    days: int = 7,
+    limit: int = 50,
+    include_summary: bool = False
+) -> str:
+    """
+    在本地联网搜索历史库中按关键词检索
+
+    在最近 N 天的本地联网搜索数据库中匹配标题、短摘要（snippet）与长摘要（summary），
+    跨天按 URL 去重，按质量分与发布时间排序返回。不发起外部网络请求。
+
+    Args:
+        keyword: 搜索关键词（必需）
+        topics: 搜索主题 ID 或主题名称列表（可选），不指定则检索所有主题
+        days: 检索最近 N 天的数据，默认 7 天，最大 30 天
+        limit: 返回条数限制，默认 50，最大 500
+        include_summary: 是否包含完整长摘要，默认 False
+
+    Returns:
+        JSON 格式的匹配联网搜索条目列表
+
+    Examples:
+        - search_web_history(keyword="算力")
+        - search_web_history(keyword="试点政策", topics=['低空经济最新政策'], days=14)
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(
+        tools['data'].search_web_history,
+        keyword=keyword,
+        topics=topics,
+        days=days,
+        limit=limit,
+        include_summary=include_summary,
+    )
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+async def get_web_search_status() -> str:
+    """
+    获取联网搜索数据与任务配置状态
+
+    查看本地已归档的联网搜索日期、今日各搜索主题抓取条数，以及 config/search_queries.txt 中配置的搜索主题列表。
+
+    Returns:
+        JSON 格式的联网搜索状态，包含：
+        - available_dates: 最近可用搜索日期列表
+        - total_dates: 本地联网搜索数据总天数
+        - today_topics: 今日各搜索主题统计 {topic_id: {name, item_count}}
+        - configured_topics: 当前配置的搜索主题列表
+        - configured_topics_count: 配置主题总数
+        - generated_at: 生成时间
+
+    Examples:
+        - get_web_search_status()
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(tools['data'].get_web_search_status)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+async def live_web_search(
+    query: str,
+    count: int = 10,
+    freshness_days: int = 7,
+    min_score: float = 0.0,
+    min_authority: int = -1,
+    need_content: bool = False,
+    provider: Optional[str] = None
+) -> str:
+    """
+    实时调用搜索引擎检索全网最新信息
+
+    直接调用已配置的搜索引擎 API（默认 DeepSeek Search）执行即时联网检索，
+    适合查询本地历史库尚未收录的突发消息、专题资料或实时事实核查。
+
+    Args:
+        query: 搜索关键词或问题（必需）
+        count: 返回结果条数，范围 1~50，默认 10
+        freshness_days: 仅检索最近 N 天发布的内容，0 表示不限制时间，默认 7
+        min_score: 最低质量分门槛（0.0~1.0，如 0.5 为 DeepSeek 优质线），默认 0.0（不过滤）
+        min_authority: 最低来源权威度（-1~4，-1 表示不限制，2~3 偏向官网/权威媒体），默认 -1
+        need_content: 是否附带完整网页 Markdown 正文（消耗更多 token），默认 False
+        provider: 指定搜索引擎名称（如 "deepseek"），留空使用配置默认值
+
+    Returns:
+        JSON 格式的实时搜索结果，每条包含标题、链接、来源站点、发布时间、质量分、权威度、短摘要与长摘要（可选正文）
+
+    Examples:
+        - live_web_search(query="DeepSeek 最新模型发布")
+        - live_web_search(query="低空经济政策 site:gov.cn", count=5, min_score=0.5, min_authority=2)
+    """
+    tools = _get_tools()
+    result = await asyncio.to_thread(
+        tools['web_search'].live_web_search,
+        query=query,
+        count=count,
+        freshness_days=freshness_days,
+        min_score=min_score,
+        min_authority=min_authority,
+        need_content=need_content,
+        provider=provider,
+    )
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -763,6 +930,7 @@ async def get_current_config(
             - "push": 推送配置
             - "keywords": 关键词配置
             - "weights": 权重配置
+            - "web_search": 联网搜索配置（脱敏，不含明文 API Key）
 
     Returns:
         JSON格式的配置信息
@@ -930,39 +1098,46 @@ async def list_available_dates(
 @mcp.tool
 async def read_article(
     url: str,
-    timeout: int = 30
+    timeout: int = 30,
+    provider: str = "auto"
 ) -> str:
     """
     读取指定 URL 的文章内容，返回 LLM 友好的 Markdown 格式
 
-    通过 Jina AI Reader 将网页转换为干净的 Markdown，自动去除广告、导航栏等噪音内容。
-    适合用于：阅读新闻正文、获取文章详情、分析文章内容。
+    支持 DeepSeek Fetch 与 Jina AI Reader 双引擎，自动去除广告、导航栏等噪音内容，提取干净正文。
+    适合用于：阅读新闻正文、获取搜索结果详情、深度分析文章内容。
 
     **典型使用流程：**
-    1. 先用 search_news(include_url=True) 搜索新闻获取链接
+    1. 先用 search_news(include_url=True) / live_web_search() 获取链接
     2. 再用 read_article(url=链接) 读取正文内容
     3. AI 对 Markdown 正文进行分析、摘要、翻译等
 
     Args:
         url: 文章链接（必需），以 http:// 或 https:// 开头
-        timeout: 请求超时时间（秒），默认 30，最大 60
+        timeout: 请求超时时间（秒），默认 30，范围 10~60
+        provider: 抓取引擎选择，默认 "auto"：
+            - "auto": 已配置 DeepSeek API Key 时优先使用 DeepSeek Fetch，失败自动回退 Jina Reader；
+                      未配置 Key 时直接使用免费的 Jina Reader
+            - "deepseek": 强制使用 DeepSeek Fetch（需配置 WEB_SEARCH_API_KEY / DEEPSEEK_API_KEY / AI_API_KEY）
+            - "jina": 强制使用 Jina AI Reader（免费服务，每次间隔 5 秒限速）
 
     Returns:
-        JSON格式的文章内容，包含完整 Markdown 正文
+        JSON格式的文章内容，包含完整 Markdown 正文、标题（DeepSeek 支持）及实际使用的抓取引擎
 
     Examples:
         - read_article(url="https://example.com/news/123")
+        - read_article(url="https://example.com/news/123", provider="deepseek")
+        - read_article(url="https://example.com/news/123", provider="jina")
 
     Note:
-        - 使用 Jina AI Reader 免费服务（100 RPM 限制）
-        - 每次请求间隔 5 秒（内置速率控制）
+        - 使用 Jina Reader 时每次请求间隔 5 秒（内置速率控制，100 RPM 限制）
         - 部分付费墙/登录墙页面可能无法完整获取
     """
     tools = _get_tools()
     timeout = min(max(timeout, 10), 60)
     result = await asyncio.to_thread(
         tools['article'].read_article,
-        url=url, timeout=timeout
+        url=url, timeout=timeout, provider=provider
     )
     return json.dumps(result, ensure_ascii=False, indent=2)
 
@@ -970,38 +1145,44 @@ async def read_article(
 @mcp.tool
 async def read_articles_batch(
     urls: List[str],
-    timeout: int = 30
+    timeout: int = 30,
+    provider: str = "auto"
 ) -> str:
     """
-    批量读取多篇文章内容（最多 5 篇，间隔 5 秒）
+    批量读取多篇文章内容（最多 5 篇）
 
-    逐篇请求文章内容，每篇之间自动间隔 5 秒以遵守速率限制。
+    支持 DeepSeek Fetch 与 Jina AI Reader 双引擎。使用 Jina 时每篇之间自动间隔 5 秒以遵守速率限制。
 
     **典型使用流程：**
-    1. 先用 search_news(include_url=True) 搜索新闻获取多个链接
+    1. 先用 search_news(include_url=True) / live_web_search() 获取多个链接
     2. 再用 read_articles_batch(urls=[...]) 批量读取正文
     3. AI 对多篇文章进行对比分析、综合报告
 
     Args:
         urls: 文章链接列表（必需），最多处理 5 篇
-        timeout: 每篇的请求超时时间（秒），默认 30
+        timeout: 每篇的请求超时时间（秒），默认 30，范围 10~60
+        provider: 抓取引擎选择，默认 "auto"：
+            - "auto": 已配置 DeepSeek API Key 时优先 DeepSeek Fetch，失败回退 Jina Reader；未配 Key 时直接用 Jina
+            - "deepseek": 强制使用 DeepSeek Fetch
+            - "jina": 强制使用 Jina Reader
 
     Returns:
-        JSON格式的批量读取结果，包含每篇的完整内容和状态
+        JSON格式的批量读取结果，包含每篇的完整内容、引擎和状态
 
     Examples:
         - read_articles_batch(urls=["https://a.com/1", "https://b.com/2"])
+        - read_articles_batch(urls=["https://a.com/1", "https://b.com/2"], provider="deepseek")
 
     Note:
         - 单次最多读取 5 篇，超出部分会被跳过
-        - 5 篇约需 25-30 秒（每篇间隔 5 秒）
+        - 使用 Jina 时 5 篇约需 25-30 秒（每篇间隔 5 秒）
         - 单篇失败不影响其他篇的读取
     """
     tools = _get_tools()
     timeout = min(max(timeout, 10), 60)
     result = await asyncio.to_thread(
         tools['article'].read_articles_batch,
-        urls=urls, timeout=timeout
+        urls=urls, timeout=timeout, provider=provider
     )
     return json.dumps(result, ensure_ascii=False, indent=2)
 
@@ -1171,37 +1352,43 @@ def run_server(
     print("    5. search_rss             - 搜索 RSS 数据")
     print("    6. get_rss_feeds_status   - 获取 RSS 源状态")
     print()
+    print("    === 联网搜索工具 ===")
+    print("    7. get_latest_web_search  - 获取最新本地联网搜索数据")
+    print("    8. search_web_history     - 检索本地联网搜索历史库")
+    print("    9. get_web_search_status  - 获取联网搜索数据与主题配置状态")
+    print("    10. live_web_search       - 实时调用搜索引擎检索全网信息")
+    print()
     print("    === 智能检索工具 ===")
-    print("    7. search_news            - 统一新闻搜索（关键词/模糊/实体）")
-    print("    8. find_related_news      - 相关新闻查找（支持历史数据）")
+    print("    11. search_news           - 统一新闻搜索（关键词/模糊/实体）")
+    print("    12. find_related_news     - 相关新闻查找（支持历史数据）")
     print()
     print("    === 高级数据分析 ===")
-    print("    9. analyze_topic_trend      - 统一话题趋势分析（热度/生命周期/爆火/预测）")
-    print("    10. analyze_data_insights   - 统一数据洞察分析（平台对比/活跃度/关键词共现）")
-    print("    11. analyze_sentiment       - 情感倾向分析")
-    print("    12. aggregate_news          - 跨平台新闻聚合去重")
-    print("    13. compare_periods         - 时期对比分析（周环比/月环比）")
-    print("    14. generate_summary_report - 每日/每周摘要生成")
+    print("    13. analyze_topic_trend      - 统一话题趋势分析（热度/生命周期/爆火/预测）")
+    print("    14. analyze_data_insights    - 统一数据洞察分析（平台对比/活跃度/关键词共现）")
+    print("    15. analyze_sentiment        - 情感倾向分析")
+    print("    16. aggregate_news           - 跨平台新闻聚合去重")
+    print("    17. compare_periods          - 时期对比分析（周环比/月环比）")
+    print("    18. generate_summary_report  - 每日/每周摘要生成")
     print()
     print("    === 配置与系统管理 ===")
-    print("    15. get_current_config      - 获取当前系统配置")
-    print("    16. get_system_status       - 获取系统运行状态")
-    print("    17. check_version           - 检查版本更新（对比本地与远程版本）")
-    print("    18. trigger_crawl           - 手动触发爬取任务")
+    print("    19. get_current_config       - 获取当前系统配置（含 web_search）")
+    print("    20. get_system_status        - 获取系统运行状态")
+    print("    21. check_version            - 检查版本更新（对比本地与远程版本）")
+    print("    22. trigger_crawl            - 手动触发爬取任务")
     print()
     print("    === 存储同步工具 ===")
-    print("    19. sync_from_remote        - 从远程存储拉取数据到本地")
-    print("    20. get_storage_status      - 获取存储配置和状态")
-    print("    21. list_available_dates    - 列出本地/远程可用日期")
+    print("    23. sync_from_remote         - 从远程存储拉取数据到本地")
+    print("    24. get_storage_status       - 获取存储配置和状态")
+    print("    25. list_available_dates     - 列出本地/远程可用日期")
     print()
     print("    === 文章内容读取 ===")
-    print("    22. read_article            - 读取单篇文章内容（Markdown格式）")
-    print("    23. read_articles_batch     - 批量读取多篇文章（自动限速）")
+    print("    26. read_article             - 读取单篇文章内容（DeepSeek Fetch / Jina）")
+    print("    27. read_articles_batch      - 批量读取多篇文章（DeepSeek Fetch / Jina）")
     print()
     print("    === 通知推送工具 ===")
-    print("    24. get_channel_format_guide  - 获取渠道格式化策略指南（提示词）")
-    print("    25. get_notification_channels - 获取已配置的通知渠道状态")
-    print("    26. send_notification         - 向通知渠道发送消息（自动适配格式）")
+    print("    28. get_channel_format_guide  - 获取渠道格式化策略指南（提示词）")
+    print("    29. get_notification_channels - 获取已配置的通知渠道状态")
+    print("    30. send_notification         - 向通知渠道发送消息（自动适配格式）")
     print("=" * 60)
     print()
 

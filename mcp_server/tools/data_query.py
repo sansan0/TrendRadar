@@ -15,9 +15,12 @@ from ..utils.validators import (
     validate_top_n,
     validate_mode,
     validate_date_query,
-    normalize_date_range
+    normalize_date_range,
+    _parse_string_to_list,
+    _parse_string_to_int,
+    _parse_string_to_bool,
 )
-from ..utils.errors import MCPError
+from ..utils.errors import MCPError, InvalidParameterError
 
 
 class DataQueryTools:
@@ -468,3 +471,192 @@ class DataQueryTools:
                 }
             }
 
+    # ========================================
+    # 联网搜索数据查询方法
+    # ========================================
+
+    @staticmethod
+    def _validate_topics(topics: Optional[Union[List[str], str]]) -> Optional[List[str]]:
+        """规范化并校验搜索主题过滤列表（兼容字符串序列化输入）"""
+        if topics is None:
+            return None
+        if isinstance(topics, str):
+            parsed = _parse_string_to_list(topics)
+            cleaned = [t.strip() for t in parsed if t and t.strip()]
+            return cleaned or None
+        if isinstance(topics, list):
+            cleaned = [str(t).strip() for t in topics if t is not None and str(t).strip()]
+            return cleaned or None
+        raise InvalidParameterError(
+            "topics 参数必须是主题名称或主题 ID 列表",
+            suggestion="例如 ['人工智能产业政策'] 或 ['topic_a1b2c3d4']"
+        )
+
+    @staticmethod
+    def _validate_days(days: Optional[Union[int, str]], default: int = 1) -> int:
+        """校验并裁剪查询天数（1~30 天）"""
+        if days is None:
+            return default
+        if isinstance(days, str):
+            days = _parse_string_to_int(days, "days")
+        if not isinstance(days, int):
+            raise InvalidParameterError(
+                "days 参数必须是整数",
+                suggestion="请提供 1 到 30 之间的整数"
+            )
+        return min(max(days, 1), 30)
+
+    def get_latest_web_search(
+        self,
+        topics: Optional[Union[List[str], str]] = None,
+        days: int = 1,
+        limit: Optional[int] = None,
+        include_summary: bool = False
+    ) -> Dict:
+        """
+        获取最新的本地联网搜索数据（支持多日查询）
+
+        Args:
+            topics: 搜索主题 ID 或主题名称列表，None 表示所有主题
+            days: 获取最近 N 天的数据，默认 1（仅今天），最大 30 天
+            limit: 返回条数限制，默认 50
+            include_summary: 是否包含完整长摘要，默认 False（节省 token）
+
+        Returns:
+            联网搜索结果字典
+        """
+        try:
+            validated_topics = self._validate_topics(topics)
+            validated_days = self._validate_days(days, default=1)
+            validated_limit = validate_limit(limit, default=50, max_limit=500)
+            if isinstance(include_summary, str):
+                include_summary = _parse_string_to_bool(include_summary)
+
+            items = self.data_service.get_latest_web_search(
+                topics=validated_topics,
+                days=validated_days,
+                limit=validated_limit,
+                include_summary=bool(include_summary)
+            )
+
+            return {
+                "success": True,
+                "summary": {
+                    "description": (
+                        f"最近 {validated_days} 天的联网搜索数据"
+                        if validated_days > 1 else "最新的联网搜索数据"
+                    ),
+                    "total": len(items),
+                    "returned": len(items),
+                    "days": validated_days,
+                    "topics": validated_topics or "全部搜索主题"
+                },
+                "data": items
+            }
+
+        except MCPError as e:
+            return {
+                "success": False,
+                "error": e.to_dict()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(e)
+                }
+            }
+
+    def search_web_history(
+        self,
+        keyword: str,
+        topics: Optional[Union[List[str], str]] = None,
+        days: int = 7,
+        limit: Optional[int] = None,
+        include_summary: bool = False
+    ) -> Dict:
+        """
+        在本地联网搜索历史库中按关键词检索（匹配标题、短摘要和长摘要）
+
+        Args:
+            keyword: 搜索关键词（必需）
+            topics: 搜索主题 ID 或主题名称列表，None 表示所有主题
+            days: 搜索最近 N 天的数据，默认 7 天，最大 30 天
+            limit: 返回条数限制，默认 50
+            include_summary: 是否包含完整长摘要，默认 False
+
+        Returns:
+            匹配的联网搜索历史条目字典
+        """
+        try:
+            validated_keyword = validate_keyword(keyword)
+            validated_topics = self._validate_topics(topics)
+            validated_days = self._validate_days(days, default=7)
+            validated_limit = validate_limit(limit, default=50, max_limit=500)
+            if isinstance(include_summary, str):
+                include_summary = _parse_string_to_bool(include_summary)
+
+            items = self.data_service.search_web_history(
+                keyword=validated_keyword,
+                topics=validated_topics,
+                days=validated_days,
+                limit=validated_limit,
+                include_summary=bool(include_summary)
+            )
+
+            return {
+                "success": True,
+                "summary": {
+                    "description": f"本地联网搜索历史检索结果（关键词: {validated_keyword}）",
+                    "total": len(items),
+                    "returned": len(items),
+                    "keyword": validated_keyword,
+                    "topics": validated_topics or "全部搜索主题",
+                    "days": validated_days
+                },
+                "data": items
+            }
+
+        except MCPError as e:
+            return {
+                "success": False,
+                "error": e.to_dict()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(e)
+                }
+            }
+
+    def get_web_search_status(self) -> Dict:
+        """
+        获取联网搜索状态（可用日期、今日各主题统计及当前配置的搜索主题列表）
+
+        Returns:
+            联网搜索状态字典
+        """
+        try:
+            status = self.data_service.get_web_search_status()
+
+            return {
+                **status,
+                "success": True
+            }
+
+        except MCPError as e:
+            return {
+                "success": False,
+                "error": e.to_dict()
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(e)
+                }
+            }

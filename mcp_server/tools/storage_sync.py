@@ -153,10 +153,10 @@ class StorageSyncTools:
         获取本地可用的日期列表
 
         存储结构: output/{db_type}/{date}.db
-        例如: output/news/2025-12-30.db, output/rss/2025-12-30.db
+        例如: output/news/2025-12-30.db, output/rss/2025-12-30.db, output/search/2025-12-30.db
 
         Args:
-            db_type: 数据库类型 ("news" 或 "rss")，默认 "news"
+            db_type: 数据库类型 ("news"、"rss" 或 "search")，默认 "news"
 
         Returns:
             日期列表（按时间倒序）
@@ -182,22 +182,25 @@ class StorageSyncTools:
 
     def _get_all_local_dates(self) -> Dict[str, List[str]]:
         """
-        获取所有本地可用的日期列表（包括 news 和 rss）
+        获取所有本地可用的日期列表（包括 news、rss 和 search）
 
         Returns:
             {
                 "news": ["2025-12-30", ...],
                 "rss": ["2025-12-30", ...],
+                "search": ["2025-12-30", ...],
                 "all": ["2025-12-30", ...]  # 合并去重
             }
         """
         news_dates = set(self._get_local_dates("news"))
         rss_dates = set(self._get_local_dates("rss"))
-        all_dates = news_dates | rss_dates
+        search_dates = set(self._get_local_dates("search"))
+        all_dates = news_dates | rss_dates | search_dates
 
         return {
             "news": sorted(list(news_dates), reverse=True),
             "rss": sorted(list(rss_dates), reverse=True),
+            "search": sorted(list(search_dates), reverse=True),
             "all": sorted(list(all_dates), reverse=True)
         }
 
@@ -271,29 +274,51 @@ class StorageSyncTools:
             synced_dates = []
             skipped_dates = []
             failed_dates = []
+            synced_rss_dates = []
+            synced_search_dates = []
+            can_check_remote = hasattr(remote_backend, "_check_object_exists")
 
             for date_str in target_dates:
                 # 检查本地是否已存在
                 if date_str in local_dates:
                     skipped_dates.append(date_str)
-                    continue
+                else:
+                    # 拉取单个日期的 news 数据库
+                    try:
+                        local_db_path = local_dir / "news" / f"{date_str}.db"
+                        remote_key = f"news/{date_str}.db"
 
-                # 拉取单个日期
-                try:
-                    local_db_path = local_dir / "news" / f"{date_str}.db"
-                    remote_key = f"news/{date_str}.db"
+                        local_db_path.parent.mkdir(parents=True, exist_ok=True)
+                        remote_backend.s3_client.download_file(
+                            remote_backend.bucket_name,
+                            remote_key,
+                            str(local_db_path)
+                        )
+                        synced_dates.append(date_str)
+                        print(f"[存储同步] 已拉取: {date_str}")
+                    except Exception as e:
+                        failed_dates.append({"date": date_str, "error": str(e)})
+                        print(f"[存储同步] 拉取失败 ({date_str}): {e}")
 
-                    local_db_path.parent.mkdir(parents=True, exist_ok=True)
-                    remote_backend.s3_client.download_file(
-                        remote_backend.bucket_name,
-                        remote_key,
-                        str(local_db_path)
-                    )
-                    synced_dates.append(date_str)
-                    print(f"[存储同步] 已拉取: {date_str}")
-                except Exception as e:
-                    failed_dates.append({"date": date_str, "error": str(e)})
-                    print(f"[存储同步] 拉取失败 ({date_str}): {e}")
+                # 尽力拉取对应的 rss/{date}.db 和 search/{date}.db（仅当远程支持存在性检查且文件存在时）
+                if can_check_remote:
+                    for extra_type, tracker in (("rss", synced_rss_dates), ("search", synced_search_dates)):
+                        extra_local_path = local_dir / extra_type / f"{date_str}.db"
+                        if extra_local_path.exists():
+                            continue
+                        extra_remote_key = f"{extra_type}/{date_str}.db"
+                        try:
+                            if remote_backend._check_object_exists(extra_remote_key):
+                                extra_local_path.parent.mkdir(parents=True, exist_ok=True)
+                                remote_backend.s3_client.download_file(
+                                    remote_backend.bucket_name,
+                                    extra_remote_key,
+                                    str(extra_local_path)
+                                )
+                                tracker.append(date_str)
+                        except Exception:
+                            # 辅助库拉取失败静默跳过，不影响主热榜同步结果
+                            pass
 
             return {
                 "success": True,
@@ -306,7 +331,9 @@ class StorageSyncTools:
                 "data": {
                     "synced_dates": synced_dates,
                     "skipped_dates": skipped_dates,
-                    "failed_dates": failed_dates
+                    "failed_dates": failed_dates,
+                    "synced_rss_dates": synced_rss_dates,
+                    "synced_search_dates": synced_search_dates,
                 },
                 "message": f"成功同步 {len(synced_dates)} 天数据" + (
                     f"，跳过 {len(skipped_dates)} 天（本地已存在）" if skipped_dates else ""
@@ -349,6 +376,7 @@ class StorageSyncTools:
             all_dates = self._get_all_local_dates()
             news_dates = all_dates["news"]
             rss_dates = all_dates["rss"]
+            search_dates = all_dates["search"]
             combined_dates = all_dates["all"]
 
             local_status = {
@@ -366,6 +394,10 @@ class StorageSyncTools:
                 "rss": {
                     "date_count": len(rss_dates),
                     "dates": rss_dates[:10],  # 最近 10 天
+                },
+                "search": {
+                    "date_count": len(search_dates),
+                    "dates": search_dates[:10],  # 最近 10 天
                 },
             }
 
@@ -456,6 +488,7 @@ class StorageSyncTools:
                 all_dates = self._get_all_local_dates()
                 news_dates = all_dates["news"]
                 rss_dates = all_dates["rss"]
+                search_dates = all_dates["search"]
                 combined_dates = all_dates["all"]
 
                 data_result["local"] = {
@@ -470,6 +503,10 @@ class StorageSyncTools:
                     "rss": {
                         "dates": rss_dates,
                         "count": len(rss_dates),
+                    },
+                    "search": {
+                        "dates": search_dates,
+                        "count": len(search_dates),
                     },
                 }
 

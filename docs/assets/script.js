@@ -7393,7 +7393,7 @@ window.removeSearchTopicExclude = function(topicIndex, type, value) {
 /* __DEFAULT_TEMPLATES_START__ */
 const DEFAULT_YAML_ZH = `# ═══════════════════════════════════════════════════════════════
 #                    TrendRadar 配置文件
-#                      Version: 2.4.0
+#                      Version: 2.5.0
 # ═══════════════════════════════════════════════════════════════
 
 
@@ -7953,7 +7953,7 @@ advanced:
 
 const DEFAULT_YAML_EN = `# ═══════════════════════════════════════════════════════════════
 #                   TrendRadar Configuration
-#                      Version: 2.4.0
+#                      Version: 2.5.0
 # ═══════════════════════════════════════════════════════════════
 
 

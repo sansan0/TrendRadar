@@ -94,6 +94,7 @@ def check_all_versions(
         Path("config/config.yaml"),
         Path("config/timeline.yaml"),
         Path("config/frequency_words.txt"),
+        Path("config/search_queries.txt"),
         Path("config/ai_interests.txt"),
         Path("config/ai_analysis_prompt.txt"),
         Path("config/ai_translation_prompt.txt"),

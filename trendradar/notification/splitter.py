@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Callable
 
 from trendradar.report.formatter import format_title_for_platform
-from trendradar.report.helpers import format_rank_display
+from trendradar.report.helpers import clean_title, format_rank_display, html_escape
 from trendradar.utils.time import DEFAULT_TIMEZONE, format_iso_time_friendly, convert_time_for_display
 from trendradar.notification.batch import truncate_at_line_boundary
 
@@ -129,7 +129,7 @@ DEFAULT_BATCH_SIZES = {
 }
 
 # 默认区域顺序
-DEFAULT_REGION_ORDER = ["hotlist", "rss", "new_items", "standalone", "ai_analysis"]
+DEFAULT_REGION_ORDER = ["hotlist", "rss", "web_search", "new_items", "standalone", "ai_analysis"]
 
 
 def split_content_into_batches(
@@ -152,10 +152,13 @@ def split_content_into_batches(
     ai_stats: Optional[Dict] = None,
     report_type: str = "热点分析报告",
     show_new_section: bool = True,
+    search_items: Optional[list] = None,
+    search_new_items: Optional[list] = None,
+    show_search_snippet: bool = False,
 ) -> List[str]:
-    """分批处理消息内容，确保词组标题+至少第一条新闻的完整性（支持热榜+RSS合并+AI分析+独立展示区）
+    """分批处理消息内容，确保词组标题+至少第一条新闻的完整性（支持热榜+RSS+联网搜索合并+AI分析+独立展示区）
 
-    热榜统计与RSS统计并列显示，热榜新增与RSS新增并列显示。
+    热榜统计、RSS统计与联网搜索统计并列显示，热榜新增、RSS新增与联网搜索新增并列显示。
     region_order 控制各区域的显示顺序。
     AI分析内容根据 region_order 中的位置显示。
     独立展示区根据 region_order 中的位置显示。
@@ -177,6 +180,9 @@ def split_content_into_batches(
         ai_content: AI 分析内容（已渲染的字符串，可选）
         standalone_data: 独立展示区数据（可选），包含 platforms 和 rss_feeds 列表
         ai_stats: AI 分析统计数据（可选），包含 total_news, analyzed_news, max_news_limit 等
+        search_items: 联网搜索统计条目列表（按主题分组，可选）
+        search_new_items: 联网搜索新增条目列表（可选，用于新增区块）
+        show_search_snippet: 是否在搜索结果条目下附带简短摘要（可选，默认 False）
 
     Returns:
         分批后的消息内容列表
@@ -202,10 +208,18 @@ def split_content_into_batches(
         len(stat["titles"]) for stat in report_data["stats"] if stat["count"] > 0
     )
     total_titles = total_hotlist_count
-    
+
     # 累加 RSS 条目数
     if rss_items:
         total_titles += sum(stat.get("count", 0) for stat in rss_items)
+
+    # 累加联网搜索条目数
+    search_items_count = 0
+    if search_items:
+        search_items_count = sum(
+            stat.get("count", len(stat.get("titles", []))) for stat in search_items
+        )
+        total_titles += search_items_count
 
     now = get_time_func() if get_time_func else datetime.now()
 
@@ -232,14 +246,25 @@ def split_content_into_batches(
     rss_source_failed = report_data.get("rss_source_failed", 0)
     rss_source_success = max(0, rss_source_total - rss_source_failed)
 
+    search_matched = report_data.get("search_matched_count")
+    if search_matched is None:
+        search_matched = search_items_count
+    search_topic_total = report_data.get("search_topic_total", 0) or 0
+    search_topic_failed = report_data.get("search_topic_failed", 0) or 0
+    search_topic_success = max(0, search_topic_total - search_topic_failed)
+
     # === 上半部分：数据统计 ===
 
     # 1. 总新闻
     rss_new_count = sum(len(stat.get("titles", [])) for stat in (rss_new_items or []))
-    total_new = new_count + rss_new_count
+    search_new_count = sum(len(stat.get("titles", [])) for stat in (search_new_items or []))
+    total_new = new_count + rss_new_count + search_new_count
     total_news_line = f"{b_s}总新闻：{b_e} {total_titles} 条"
     if total_new > 0:
-        total_news_line += f"（新增 {new_count} + {rss_new_count}）"
+        if search_new_count > 0:
+            total_news_line += f"（新增 热榜 {new_count} + RSS {rss_new_count} + 搜索 {search_new_count}）"
+        else:
+            total_news_line += f"（新增 {new_count} + {rss_new_count}）"
     base_header += f"{total_news_line}\n"
 
     # 2. 热榜
@@ -252,6 +277,13 @@ def split_content_into_batches(
     if rss_source_total > 0:
         rss_info = f"{b_s}RSS：{b_e} {rss_matched}/{rss_total_items}（源 {rss_source_success}/{rss_source_total}）"
         base_header += f"{rss_info}\n"
+
+    # 3.5. 联网搜索
+    if search_topic_total > 0 or search_items:
+        search_info = f"{b_s}联网搜索：{b_e} {search_matched} 条"
+        if search_topic_total > 0:
+            search_info += f"（主题 {search_topic_success}/{search_topic_total}）"
+        base_header += f"{search_info}\n"
 
     # 4. 独立展示区（仅在有数据时显示）
     if standalone_data:
@@ -268,7 +300,12 @@ def split_content_into_batches(
 
     # 5. AI 分析（仅在有分析数据时显示）
     standalone_analyzed = ai_stats.get("standalone_analyzed", 0) if ai_stats else 0
-    ai_has_data = ai_stats and (ai_stats.get("analyzed_news", 0) > 0 or standalone_analyzed > 0)
+    search_analyzed = ai_stats.get("search_analyzed", 0) if ai_stats else 0
+    ai_has_data = ai_stats and (
+        ai_stats.get("analyzed_news", 0) > 0
+        or standalone_analyzed > 0
+        or search_analyzed > 0
+    )
     if ai_has_data:
         hotlist_analyzed = ai_stats.get("hotlist_analyzed", 0)
         rss_analyzed = ai_stats.get("rss_analyzed", 0)
@@ -277,6 +314,8 @@ def split_content_into_batches(
         ai_parts = [str(hotlist_analyzed)]
         if ai_stats.get("include_rss", True):
             ai_parts.append(str(rss_analyzed))
+        if ai_stats.get("include_web_search", True) and search_analyzed > 0:
+            ai_parts.append(str(search_analyzed))
         if ai_stats.get("include_standalone", False):
             ai_parts.append(str(standalone_analyzed))
         ai_display = " + ".join(ai_parts) if sum(int(p) for p in ai_parts) > 0 else "0"
@@ -359,6 +398,8 @@ def split_content_into_batches(
         and not report_data["failed_ids"]
         and not ai_content  # 有 AI 内容时不返回"暂无匹配"
         and not rss_items  # 有 RSS 内容时也不返回
+        and not search_items  # 有联网搜索内容时也不返回
+        and not (show_new_section and search_new_items)  # 有联网搜索新增内容时也不返回
         and not standalone_data  # 有独立展示区数据时也不返回
     ):
         if mode == "incremental":
@@ -874,6 +915,30 @@ def split_content_into_batches(
             add_separator
         )
 
+    # 定义处理联网搜索统计的函数
+    def process_search_stats_wrapper(current_batch, current_batch_has_content, batches, add_separator=True):
+        """处理联网搜索统计"""
+        if not search_items:
+            return current_batch, current_batch_has_content, batches
+        return _process_search_stats_section(
+            search_items, format_type, feishu_separator, base_header, base_footer,
+            max_bytes, current_batch, current_batch_has_content, batches,
+            show_search_snippet=show_search_snippet,
+            add_separator=add_separator,
+        )
+
+    # 定义处理联网搜索新增的函数
+    def process_search_new_wrapper(current_batch, current_batch_has_content, batches, add_separator=True):
+        """处理联网搜索新增"""
+        if not show_new_section or not search_new_items:
+            return current_batch, current_batch_has_content, batches
+        return _process_search_new_section(
+            search_new_items, format_type, feishu_separator, base_header, base_footer,
+            max_bytes, current_batch, current_batch_has_content, batches,
+            show_search_snippet=show_search_snippet,
+            add_separator=add_separator,
+        )
+
     # 按 region_order 顺序处理各区域
     # 记录是否已有区域内容（用于决定是否添加分割线）
     has_region_content = False
@@ -897,6 +962,11 @@ def split_content_into_batches(
             current_batch, current_batch_has_content, batches = process_rss_stats_wrapper(
                 current_batch, current_batch_has_content, batches, add_separator
             )
+        elif region == "web_search":
+            # 处理联网搜索结果
+            current_batch, current_batch_has_content, batches = process_search_stats_wrapper(
+                current_batch, current_batch_has_content, batches, add_separator
+            )
         elif region == "new_items":
             # 处理热榜新增
             current_batch, current_batch_has_content, batches = process_new_titles_section(
@@ -912,6 +982,16 @@ def split_content_into_batches(
             rss_new_separator = new_batch_changed or has_region_content
             current_batch, current_batch_has_content, batches = process_rss_new_wrapper(
                 current_batch, current_batch_has_content, batches, rss_new_separator
+            )
+            # 处理联网搜索新增（跟随 new_items，继承 add_separator 逻辑）
+            search_new_changed = (
+                current_batch != batch_before or
+                current_batch_has_content != has_content_before or
+                len(batches) != batches_len_before
+            )
+            search_new_separator = search_new_changed or has_region_content
+            current_batch, current_batch_has_content, batches = process_search_new_wrapper(
+                current_batch, current_batch_has_content, batches, search_new_separator
             )
         elif region == "standalone":
             # 处理独立展示区
@@ -1869,3 +1949,429 @@ def _format_standalone_rss_item(
 
     item_line += "\n"
     return item_line
+
+
+def _format_search_item_line(
+    item: Dict,
+    index: int,
+    format_type: str,
+    show_new_badge: bool = True,
+    show_snippet: bool = False,
+) -> str:
+    """格式化单条联网搜索结果条目
+
+    Args:
+        item: 联网搜索条目字典（title, url, source_name, time_display, snippet, score, authority, is_new）
+        index: 序号（从 1 开始）
+        format_type: 格式类型 (feishu, dingtalk, wework, bark, telegram, ntfy, slack)
+        show_new_badge: 是否显示 🆕 标记（新增区块中设为 False）
+        show_snippet: 是否在下一行附带截断至 80 字符的简短摘要
+
+    Returns:
+        格式化后的条目行字符串（以换行符结尾）
+    """
+    raw_title = item.get("title", "")
+    url = str(item.get("url") or "").strip()
+    cleaned_title = clean_title(raw_title) if raw_title else ""
+    if not cleaned_title:
+        cleaned_title = url or "无标题"
+
+    source_name = clean_title(item.get("source_name") or "")
+    time_display = str(item.get("time_display") or "").strip()
+    authority = item.get("authority")
+    is_authoritative = isinstance(authority, (int, float)) and authority >= 3
+    is_new = bool(item.get("is_new")) and show_new_badge
+
+    snippet_text = ""
+    if show_snippet:
+        raw_snippet = item.get("snippet") or ""
+        cleaned_snippet = clean_title(raw_snippet) if raw_snippet else ""
+        if cleaned_snippet:
+            if len(cleaned_snippet) > 80:
+                snippet_text = cleaned_snippet[:77].rstrip() + "..."
+            else:
+                snippet_text = cleaned_snippet
+
+    new_prefix = "🆕 " if is_new else ""
+
+    if format_type == "feishu":
+        # 飞书 CommonMark：方括号使用 &#91; &#93; 防止被解析为引用链接吞字
+        link_part = f"[{cleaned_title}]({url})" if url else cleaned_title
+        source_part = f"<font color='grey'>&#91;{source_name}&#93;</font> " if source_name else ""
+        item_line = f"  {index}. {source_part}{new_prefix}{link_part}"
+        if is_authoritative:
+            item_line += " <font color='blue'>&#91;权威&#93;</font>"
+        if time_display:
+            item_line += f" <font color='grey'>- {time_display}</font>"
+        if snippet_text:
+            item_line += f"\n     <font color='grey'>{snippet_text}</font>"
+    elif format_type == "telegram":
+        escaped_title = html_escape(cleaned_title)
+        link_part = f'<a href="{html_escape(url)}">{escaped_title}</a>' if url else escaped_title
+        source_part = f"[{html_escape(source_name)}] " if source_name else ""
+        item_line = f"  {index}. {source_part}{new_prefix}{link_part}"
+        if is_authoritative:
+            item_line += " [权威]"
+        if time_display:
+            item_line += f" <code>- {html_escape(time_display)}</code>"
+        if snippet_text:
+            item_line += f"\n     {html_escape(snippet_text)}"
+    elif format_type == "slack":
+        link_part = f"<{url}|{cleaned_title}>" if url else cleaned_title
+        source_part = f"[{source_name}] " if source_name else ""
+        item_line = f"  {index}. {source_part}{new_prefix}{link_part}"
+        if is_authoritative:
+            item_line += " [权威]"
+        if time_display:
+            item_line += f" `- {time_display}`"
+        if snippet_text:
+            item_line += f"\n     {snippet_text}"
+    elif format_type == "ntfy":
+        link_part = f"[{cleaned_title}]({url})" if url else cleaned_title
+        source_part = f"[{source_name}] " if source_name else ""
+        item_line = f"  {index}. {source_part}{new_prefix}{link_part}"
+        if is_authoritative:
+            item_line += " [权威]"
+        if time_display:
+            item_line += f" `- {time_display}`"
+        if snippet_text:
+            item_line += f"\n     {snippet_text}"
+    else:
+        # dingtalk, wework, bark 及其他 markdown 格式
+        link_part = f"[{cleaned_title}]({url})" if url else cleaned_title
+        source_part = f"[{source_name}] " if source_name else ""
+        item_line = f"  {index}. {source_part}{new_prefix}{link_part}"
+        if is_authoritative:
+            item_line += " [权威]"
+        if time_display:
+            item_line += f" - {time_display}"
+        if snippet_text:
+            item_line += f"\n     {snippet_text}"
+
+    return item_line + "\n"
+
+
+def _build_search_topic_header(
+    word: str,
+    count: int,
+    sequence_display: str,
+    format_type: str,
+) -> str:
+    """构建联网搜索统计区块的主题标题"""
+    if format_type == "feishu":
+        return f"📌 <font color='grey'>{sequence_display}</font> **{word}** : {count} 条\n\n"
+    elif format_type == "slack":
+        return f"📌 {sequence_display} *{word}* : {count} 条\n\n"
+    elif format_type == "telegram":
+        return f"📌 {sequence_display} {html_escape(word)} : {count} 条\n\n"
+    else:
+        # wework, bark, ntfy, dingtalk
+        return f"📌 {sequence_display} **{word}** : {count} 条\n\n"
+
+
+def _process_search_stats_section(
+    search_stats: list,
+    format_type: str,
+    feishu_separator: str,
+    base_header: str,
+    base_footer: str,
+    max_bytes: int,
+    current_batch: str,
+    current_batch_has_content: bool,
+    batches: List[str],
+    show_search_snippet: bool = False,
+    add_separator: bool = True,
+) -> tuple:
+    """处理联网搜索结果区块（按主题分组，与 RSS 统计区块视觉一致）
+
+    Args:
+        search_stats: 联网搜索主题统计列表：
+            [{"topic_id": ..., "word": "低空经济政策", "query": ..., "provider": ..., "count": 5, "titles": [...]}]
+        format_type: 格式类型 (feishu, dingtalk, wework, bark, telegram, ntfy, slack)
+        feishu_separator: 飞书分隔符
+        base_header: 基础头部
+        base_footer: 基础尾部
+        max_bytes: 最大字节数
+        current_batch: 当前批次内容
+        current_batch_has_content: 当前批次是否有内容
+        batches: 已完成的批次列表
+        show_search_snippet: 是否在每条结果下附带简短摘要
+        add_separator: 是否在区块前添加分割线（第一个区域时为 False）
+
+    Returns:
+        (current_batch, current_batch_has_content, batches) 元组
+    """
+    if not search_stats:
+        return current_batch, current_batch_has_content, batches
+
+    valid_stats = [stat for stat in search_stats if stat.get("titles")]
+    if not valid_stats:
+        return current_batch, current_batch_has_content, batches
+
+    total_items = sum(len(stat.get("titles", [])) for stat in valid_stats)
+    total_topics = len(valid_stats)
+    footer_size = len(base_footer.encode("utf-8"))
+
+    # 构建不带前置分割线的区块标题（新开批次复用）
+    if format_type == "telegram":
+        raw_search_header = f"🔍 联网搜索结果 (共 {total_items} 条)\n\n"
+    elif format_type == "slack":
+        raw_search_header = f"🔍 *联网搜索结果* (共 {total_items} 条)\n\n"
+    else:
+        # feishu, dingtalk, wework, bark, ntfy
+        raw_search_header = f"🔍 **联网搜索结果** (共 {total_items} 条)\n\n"
+
+    # 根据 add_separator 决定是否添加前置分割线
+    if add_separator and current_batch_has_content:
+        if format_type == "feishu":
+            search_header = f"\n{feishu_separator}\n\n{raw_search_header}"
+        elif format_type == "dingtalk":
+            search_header = f"\n---\n\n{raw_search_header}"
+        elif format_type in ("wework", "bark"):
+            search_header = f"\n\n\n\n{raw_search_header}"
+        else:
+            search_header = f"\n\n{raw_search_header}"
+    else:
+        search_header = raw_search_header
+
+    # 预判第一个主题（主题头+第一条）是否能同区块头一起放入当前批次，避免孤立区块头
+    first_stat = valid_stats[0]
+    first_word = str(first_stat.get("word") or first_stat.get("query") or "未命名主题")
+    first_titles = first_stat.get("titles", [])
+    first_topic_header = _build_search_topic_header(
+        first_word, len(first_titles), f"[1/{total_topics}]", format_type
+    )
+    first_topic_line = _format_search_item_line(
+        first_titles[0], 1, format_type, show_new_badge=True, show_snippet=show_search_snippet
+    )
+    if len(first_titles) > 1:
+        first_topic_line += "\n"
+
+    header_probe = current_batch + search_header + first_topic_header + first_topic_line
+    if len(header_probe.encode("utf-8")) + footer_size < max_bytes:
+        current_batch = current_batch + search_header
+        current_batch_has_content = True
+    else:
+        if current_batch_has_content:
+            _safe_append_batch(batches, current_batch, base_footer, max_bytes, base_header)
+        current_batch = _safe_new_batch(
+            base_header + raw_search_header, base_footer, max_bytes, base_header, batches
+        )
+        current_batch_has_content = True
+
+    # 逐个处理主题（确保主题头 + 第一条新闻的原子性）
+    for i, stat in enumerate(valid_stats):
+        word = str(stat.get("word") or stat.get("query") or "未命名主题")
+        titles = stat.get("titles", [])
+        count = len(titles)
+        sequence_display = f"[{i + 1}/{total_topics}]"
+
+        topic_header = _build_search_topic_header(word, count, sequence_display, format_type)
+
+        first_news_line = _format_search_item_line(
+            titles[0], 1, format_type, show_new_badge=True, show_snippet=show_search_snippet
+        )
+        if len(titles) > 1:
+            first_news_line += "\n"
+
+        # 原子性检查：主题头 + 第一条新闻必须一起处理
+        topic_with_first_news = topic_header + first_news_line
+        test_content = current_batch + topic_with_first_news
+
+        if len(test_content.encode("utf-8")) + footer_size >= max_bytes:
+            if current_batch_has_content:
+                _safe_append_batch(batches, current_batch, base_footer, max_bytes, base_header)
+            current_batch = _safe_new_batch(
+                base_header + raw_search_header + topic_with_first_news,
+                base_footer, max_bytes, base_header, batches
+            )
+            current_batch_has_content = True
+        else:
+            current_batch = test_content
+            current_batch_has_content = True
+
+        # 处理剩余条目
+        for j in range(1, len(titles)):
+            news_line = _format_search_item_line(
+                titles[j], j + 1, format_type, show_new_badge=True, show_snippet=show_search_snippet
+            )
+            if j < len(titles) - 1:
+                news_line += "\n"
+
+            test_content = current_batch + news_line
+            if len(test_content.encode("utf-8")) + footer_size >= max_bytes:
+                if current_batch_has_content:
+                    _safe_append_batch(batches, current_batch, base_footer, max_bytes, base_header)
+                current_batch = _safe_new_batch(
+                    base_header + raw_search_header + topic_header + news_line,
+                    base_footer, max_bytes, base_header, batches
+                )
+                current_batch_has_content = True
+            else:
+                current_batch = test_content
+                current_batch_has_content = True
+
+        # 主题间分隔符
+        if i < total_topics - 1:
+            if format_type in ("wework", "bark"):
+                separator = "\n\n\n\n"
+            elif format_type == "feishu":
+                separator = f"\n{feishu_separator}\n\n"
+            elif format_type == "dingtalk":
+                separator = "\n---\n\n"
+            else:
+                # telegram, ntfy, slack
+                separator = "\n\n"
+
+            test_content = current_batch + separator
+            if len(test_content.encode("utf-8")) + footer_size < max_bytes:
+                current_batch = test_content
+
+    return current_batch, current_batch_has_content, batches
+
+
+def _process_search_new_section(
+    search_new_stats: list,
+    format_type: str,
+    feishu_separator: str,
+    base_header: str,
+    base_footer: str,
+    max_bytes: int,
+    current_batch: str,
+    current_batch_has_content: bool,
+    batches: List[str],
+    show_search_snippet: bool = False,
+    add_separator: bool = True,
+) -> tuple:
+    """处理联网搜索本次新增区块（按主题分组，与热榜/RSS 新增区块视觉一致）
+
+    Args:
+        search_new_stats: 联网搜索新增主题列表：
+            [{"topic_id": ..., "word": "低空经济政策", "count": 2, "titles": [...]}]
+        format_type: 格式类型 (feishu, dingtalk, wework, bark, telegram, ntfy, slack)
+        feishu_separator: 飞书分隔符
+        base_header: 基础头部
+        base_footer: 基础尾部
+        max_bytes: 最大字节数
+        current_batch: 当前批次内容
+        current_batch_has_content: 当前批次是否有内容
+        batches: 已完成的批次列表
+        show_search_snippet: 是否在每条结果下附带简短摘要
+        add_separator: 是否在区块前添加分割线（第一个区域时为 False）
+
+    Returns:
+        (current_batch, current_batch_has_content, batches) 元组
+    """
+    if not search_new_stats:
+        return current_batch, current_batch_has_content, batches
+
+    valid_stats = [stat for stat in search_new_stats if stat.get("titles")]
+    if not valid_stats:
+        return current_batch, current_batch_has_content, batches
+
+    total_items = sum(len(stat.get("titles", [])) for stat in valid_stats)
+    footer_size = len(base_footer.encode("utf-8"))
+
+    # 构建不带前置分割线的新增区块标题（新开批次复用）
+    if format_type == "telegram":
+        raw_new_header = f"🆕 联网搜索本次新增 (共 {total_items} 条)\n\n"
+    elif format_type == "slack":
+        raw_new_header = f"🆕 *联网搜索本次新增* (共 {total_items} 条)\n\n"
+    else:
+        # feishu, dingtalk, wework, bark, ntfy
+        raw_new_header = f"🆕 **联网搜索本次新增** (共 {total_items} 条)\n\n"
+
+    # 根据 add_separator 决定是否添加前置分割线
+    if add_separator and current_batch_has_content:
+        if format_type == "feishu":
+            new_header = f"\n{feishu_separator}\n\n{raw_new_header}"
+        elif format_type == "dingtalk":
+            new_header = f"\n---\n\n{raw_new_header}"
+        elif format_type in ("wework", "bark"):
+            new_header = f"\n\n\n\n{raw_new_header}"
+        else:
+            new_header = f"\n\n{raw_new_header}"
+    else:
+        new_header = raw_new_header
+
+    def _build_new_topic_header(topic_word: str, topic_count: int) -> str:
+        if format_type == "telegram":
+            return f"{html_escape(topic_word)} ({topic_count} 条):\n\n"
+        elif format_type == "slack":
+            return f"*{topic_word}* ({topic_count} 条):\n\n"
+        else:
+            return f"**{topic_word}** ({topic_count} 条):\n\n"
+
+    # 预判第一个主题（主题头+第一条）是否能同区块头一起放入当前批次
+    first_stat = valid_stats[0]
+    first_word = str(first_stat.get("word") or first_stat.get("query") or "未命名主题")
+    first_titles = first_stat.get("titles", [])
+    first_topic_header = _build_new_topic_header(first_word, len(first_titles))
+    first_topic_line = _format_search_item_line(
+        first_titles[0], 1, format_type, show_new_badge=False, show_snippet=show_search_snippet
+    )
+
+    header_probe = current_batch + new_header + first_topic_header + first_topic_line
+    if len(header_probe.encode("utf-8")) + footer_size < max_bytes:
+        current_batch = current_batch + new_header
+        current_batch_has_content = True
+    else:
+        if current_batch_has_content:
+            _safe_append_batch(batches, current_batch, base_footer, max_bytes, base_header)
+        current_batch = _safe_new_batch(
+            base_header + raw_new_header, base_footer, max_bytes, base_header, batches
+        )
+        current_batch_has_content = True
+
+    # 按主题分组展示新增条目
+    for stat in valid_stats:
+        word = str(stat.get("word") or stat.get("query") or "未命名主题")
+        titles = stat.get("titles", [])
+        count = len(titles)
+
+        topic_header = _build_new_topic_header(word, count)
+        first_news_line = _format_search_item_line(
+            titles[0], 1, format_type, show_new_badge=False, show_snippet=show_search_snippet
+        )
+
+        # 原子性检查：主题头 + 第一条新闻必须一起处理
+        topic_with_first_news = topic_header + first_news_line
+        test_content = current_batch + topic_with_first_news
+
+        if len(test_content.encode("utf-8")) + footer_size >= max_bytes:
+            if current_batch_has_content:
+                _safe_append_batch(batches, current_batch, base_footer, max_bytes, base_header)
+            current_batch = _safe_new_batch(
+                base_header + raw_new_header + topic_with_first_news,
+                base_footer, max_bytes, base_header, batches
+            )
+            current_batch_has_content = True
+        else:
+            current_batch = test_content
+            current_batch_has_content = True
+
+        # 处理剩余新增条目
+        for j in range(1, len(titles)):
+            news_line = _format_search_item_line(
+                titles[j], j + 1, format_type, show_new_badge=False, show_snippet=show_search_snippet
+            )
+
+            test_content = current_batch + news_line
+            if len(test_content.encode("utf-8")) + footer_size >= max_bytes:
+                if current_batch_has_content:
+                    _safe_append_batch(batches, current_batch, base_footer, max_bytes, base_header)
+                current_batch = _safe_new_batch(
+                    base_header + raw_new_header + topic_header + news_line,
+                    base_footer, max_bytes, base_header, batches
+                )
+                current_batch_has_content = True
+            else:
+                current_batch = test_content
+                current_batch_has_content = True
+
+        # 主题间空行（仅在不超过限制时追加）
+        test_content = current_batch + "\n"
+        if len(test_content.encode("utf-8")) + footer_size < max_bytes:
+            current_batch = test_content
+
+    return current_batch, current_batch_has_content, batches

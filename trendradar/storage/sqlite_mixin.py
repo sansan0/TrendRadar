@@ -5,13 +5,14 @@ SQLite 存储 Mixin
 提供共用的 SQLite 数据库操作逻辑，供 LocalStorageBackend 和 RemoteStorageBackend 复用。
 """
 
+import json
 import sqlite3
 from abc import abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from trendradar.storage.base import NewsItem, NewsData, RSSItem, RSSData
+from trendradar.storage.base import NewsItem, NewsData, RSSItem, RSSData, SearchItem, SearchData
 from trendradar.utils.url import normalize_url
 
 
@@ -59,14 +60,20 @@ class SQLiteStorageMixin:
         获取 schema.sql 文件路径
 
         Args:
-            db_type: 数据库类型 ("news" 或 "rss")
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             schema 文件路径
         """
         if db_type == "rss":
             return Path(__file__).parent / "rss_schema.sql"
+        if db_type == "search":
+            return Path(__file__).parent / "search_schema.sql"
         return Path(__file__).parent / "schema.sql"
+
+    def _db_exists(self, date: Optional[str] = None, db_type: str = "news") -> bool:
+        """检查指定日期和类型的数据库是否存在（避免只读查重时创建空库）"""
+        return True
 
     def _get_ai_filter_schema_path(self) -> Path:
         """获取 AI 筛选 schema 文件路径"""
@@ -1763,3 +1770,419 @@ class SQLiteStorageMixin:
         except Exception as e:
             print(f"[AI筛选] 获取 RSS 列表失败: {e}")
             return []
+
+    # ========================================
+    # 联网搜索数据存储
+    # ========================================
+
+    def _save_search_data_impl(self, data: SearchData, log_prefix: str = "[存储]") -> tuple[bool, int, int]:
+        """
+        保存联网搜索数据到 SQLite（以 URL + topic_id 为唯一标识）
+
+        Returns:
+            (success, new_count, updated_count)
+        """
+        try:
+            conn = self._get_connection(data.date, db_type="search")
+            cursor = conn.cursor()
+
+            now_str = self._get_configured_time().strftime("%Y-%m-%d %H:%M:%S")
+
+            # 同步搜索主题信息到 search_topics 表
+            all_topic_ids = set(data.id_to_name.keys()) | set(data.items.keys())
+            for topic_id in all_topic_ids:
+                topic_name = data.id_to_name.get(topic_id, topic_id)
+                query_text = data.id_to_query.get(topic_id, "")
+                provider = data.id_to_provider.get(topic_id, "deepseek")
+                item_count = len(data.items.get(topic_id, []))
+                status = "failed" if topic_id in data.failed_ids else "success"
+                cursor.execute("""
+                    INSERT INTO search_topics
+                    (id, name, query_text, provider, last_fetch_time, last_fetch_status, item_count, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        name = excluded.name,
+                        query_text = CASE WHEN excluded.query_text != '' THEN excluded.query_text ELSE search_topics.query_text END,
+                        provider = excluded.provider,
+                        last_fetch_time = excluded.last_fetch_time,
+                        last_fetch_status = excluded.last_fetch_status,
+                        item_count = excluded.item_count,
+                        updated_at = excluded.updated_at
+                """, (topic_id, topic_name, query_text, provider, data.crawl_time, status, item_count, now_str))
+
+            new_count = 0
+            updated_count = 0
+
+            for topic_id, item_list in data.items.items():
+                for item in item_list:
+                    try:
+                        if not item.url:
+                            continue
+                        cursor.execute("""
+                            SELECT id, title, snippet, summary, content
+                            FROM search_items
+                            WHERE url = ? AND topic_id = ?
+                        """, (item.url, topic_id))
+                        existing = cursor.fetchone()
+
+                        if existing:
+                            existing_id = existing[0]
+                            cursor.execute("""
+                                UPDATE search_items SET
+                                    title = ?,
+                                    query = CASE WHEN ? != '' THEN ? ELSE query END,
+                                    provider = CASE WHEN ? != '' THEN ? ELSE provider END,
+                                    snippet = CASE WHEN ? != '' THEN ? ELSE snippet END,
+                                    summary = CASE WHEN ? != '' THEN ? ELSE summary END,
+                                    content = CASE WHEN ? != '' THEN ? ELSE content END,
+                                    site_name = CASE WHEN ? != '' THEN ? ELSE site_name END,
+                                    site_icon = CASE WHEN ? != '' THEN ? ELSE site_icon END,
+                                    published_at = CASE WHEN ? != '' THEN ? ELSE published_at END,
+                                    score = MAX(score, ?),
+                                    raw_score = MAX(raw_score, ?),
+                                    authority = CASE WHEN ? >= 0 THEN ? ELSE authority END,
+                                    last_crawl_time = ?,
+                                    crawl_count = crawl_count + 1,
+                                    updated_at = ?
+                                WHERE id = ?
+                            """, (
+                                item.title,
+                                item.query, item.query,
+                                item.provider, item.provider,
+                                item.snippet, item.snippet,
+                                item.summary, item.summary,
+                                item.content, item.content,
+                                item.site_name, item.site_name,
+                                item.site_icon, item.site_icon,
+                                item.published_at, item.published_at,
+                                item.score,
+                                item.raw_score,
+                                item.authority, item.authority,
+                                data.crawl_time,
+                                now_str,
+                                existing_id,
+                            ))
+                            updated_count += 1
+                        else:
+                            cursor.execute("""
+                                INSERT INTO search_items
+                                (title, topic_id, url, query, provider, snippet, summary, content,
+                                 site_name, site_icon, published_at, score, raw_score, authority,
+                                 first_crawl_time, last_crawl_time, crawl_count, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                            """, (
+                                item.title,
+                                topic_id,
+                                item.url,
+                                item.query,
+                                item.provider,
+                                item.snippet,
+                                item.summary,
+                                item.content,
+                                item.site_name,
+                                item.site_icon,
+                                item.published_at,
+                                item.score,
+                                item.raw_score,
+                                item.authority,
+                                data.crawl_time,
+                                data.crawl_time,
+                                now_str,
+                                now_str,
+                            ))
+                            new_count += 1
+                    except sqlite3.Error as e:
+                        print(f"{log_prefix} 保存联网搜索条目失败 [{item.title[:30]}...]: {e}")
+
+            total_items = new_count + updated_count
+
+            cursor.execute("""
+                INSERT OR REPLACE INTO search_crawl_records (crawl_time, total_items, created_at)
+                VALUES (?, ?, ?)
+            """, (data.crawl_time, total_items, now_str))
+
+            cursor.execute("SELECT id FROM search_crawl_records WHERE crawl_time = ?", (data.crawl_time,))
+            record_row = cursor.fetchone()
+            if record_row:
+                crawl_record_id = record_row[0]
+                for topic_id in data.items.keys():
+                    if topic_id in data.failed_ids:
+                        continue
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO search_crawl_status (crawl_record_id, topic_id, status)
+                        VALUES (?, ?, 'success')
+                    """, (crawl_record_id, topic_id))
+
+                for failed_id in data.failed_ids:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO search_topics (id, name, updated_at)
+                        VALUES (?, ?, ?)
+                    """, (failed_id, data.id_to_name.get(failed_id, failed_id), now_str))
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO search_crawl_status (crawl_record_id, topic_id, status)
+                        VALUES (?, ?, 'failed')
+                    """, (crawl_record_id, failed_id))
+
+            conn.commit()
+            return True, new_count, updated_count
+
+        except Exception as e:
+            print(f"{log_prefix} 保存联网搜索数据失败: {e}")
+            return False, 0, 0
+
+    def _build_search_data_from_rows(
+        self,
+        cursor: sqlite3.Cursor,
+        rows: List[Any],
+        crawl_date: str,
+        crawl_time: str,
+        failed_ids: List[str],
+    ) -> SearchData:
+        """从查询行构建 SearchData"""
+        items: Dict[str, List[SearchItem]] = {}
+        id_to_name: Dict[str, str] = {}
+        id_to_query: Dict[str, str] = {}
+        id_to_provider: Dict[str, str] = {}
+
+        # 读取所有 topic 元信息
+        cursor.execute("SELECT id, name, query_text, provider FROM search_topics")
+        for t_row in cursor.fetchall():
+            tid = t_row[0]
+            id_to_name[tid] = t_row[1] or tid
+            id_to_query[tid] = t_row[2] or ""
+            id_to_provider[tid] = t_row[3] or "deepseek"
+
+        for row in rows:
+            topic_id = row[2]
+            topic_name = row[3] or id_to_name.get(topic_id, topic_id)
+            id_to_name[topic_id] = topic_name
+            if topic_id not in items:
+                items[topic_id] = []
+            items[topic_id].append(SearchItem(
+                title=row[1],
+                topic_id=topic_id,
+                topic_name=topic_name,
+                url=row[4] or "",
+                query=row[5] or "",
+                provider=row[6] or id_to_provider.get(topic_id, "deepseek"),
+                snippet=row[7] or "",
+                summary=row[8] or "",
+                content=row[9] or "",
+                site_name=row[10] or "",
+                site_icon=row[11] or "",
+                published_at=row[12] or "",
+                score=float(row[13] or 0.0),
+                raw_score=float(row[14] or 0.0),
+                authority=int(row[15] if row[15] is not None else -1),
+                crawl_time=row[17] or "",
+                first_time=row[16] or "",
+                last_time=row[17] or "",
+                count=int(row[18] or 1),
+            ))
+
+        return SearchData(
+            date=crawl_date,
+            crawl_time=crawl_time,
+            items=items,
+            id_to_name=id_to_name,
+            id_to_query=id_to_query,
+            id_to_provider=id_to_provider,
+            failed_ids=failed_ids,
+        )
+
+    def _get_search_data_impl(self, date: Optional[str] = None) -> Optional[SearchData]:
+        """获取指定日期的所有联网搜索数据"""
+        try:
+            if not self._db_exists(date, db_type="search"):
+                return None
+            conn = self._get_connection(date, db_type="search")
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT i.id, i.title, i.topic_id, t.name as topic_name,
+                       i.url, i.query, i.provider, i.snippet, i.summary, i.content,
+                       i.site_name, i.site_icon, i.published_at,
+                       i.score, i.raw_score, i.authority,
+                       i.first_crawl_time, i.last_crawl_time, i.crawl_count
+                FROM search_items i
+                LEFT JOIN search_topics t ON i.topic_id = t.id
+                ORDER BY i.score DESC, i.published_at DESC
+            """)
+            rows = cursor.fetchall()
+            if not rows:
+                return None
+
+            cursor.execute("SELECT crawl_time FROM search_crawl_records ORDER BY crawl_time DESC LIMIT 1")
+            time_row = cursor.fetchone()
+            crawl_time = time_row[0] if time_row else self._format_time_filename()
+
+            cursor.execute("""
+                SELECT DISTINCT cs.topic_id
+                FROM search_crawl_status cs
+                JOIN search_crawl_records cr ON cs.crawl_record_id = cr.id
+                WHERE cs.status = 'failed'
+            """)
+            failed_ids = [row[0] for row in cursor.fetchall()]
+
+            crawl_date = self._format_date_folder(date)
+            return self._build_search_data_from_rows(cursor, rows, crawl_date, crawl_time, failed_ids)
+        except Exception as e:
+            print(f"[存储] 读取联网搜索数据失败: {e}")
+            return None
+
+    def _get_latest_search_data_impl(self, date: Optional[str] = None) -> Optional[SearchData]:
+        """获取最新一次抓取的联网搜索数据"""
+        try:
+            if not self._db_exists(date, db_type="search"):
+                return None
+            conn = self._get_connection(date, db_type="search")
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT crawl_time FROM search_crawl_records ORDER BY crawl_time DESC LIMIT 1")
+            time_row = cursor.fetchone()
+            if not time_row:
+                return None
+            latest_time = time_row[0]
+
+            cursor.execute("""
+                SELECT i.id, i.title, i.topic_id, t.name as topic_name,
+                       i.url, i.query, i.provider, i.snippet, i.summary, i.content,
+                       i.site_name, i.site_icon, i.published_at,
+                       i.score, i.raw_score, i.authority,
+                       i.first_crawl_time, i.last_crawl_time, i.crawl_count
+                FROM search_items i
+                LEFT JOIN search_topics t ON i.topic_id = t.id
+                WHERE i.last_crawl_time = ?
+                ORDER BY i.score DESC, i.published_at DESC
+            """, (latest_time,))
+            rows = cursor.fetchall()
+            if not rows:
+                return None
+
+            cursor.execute("""
+                SELECT cs.topic_id
+                FROM search_crawl_status cs
+                JOIN search_crawl_records cr ON cs.crawl_record_id = cr.id
+                WHERE cr.crawl_time = ? AND cs.status = 'failed'
+            """, (latest_time,))
+            failed_ids = [row[0] for row in cursor.fetchall()]
+
+            crawl_date = self._format_date_folder(date)
+            return self._build_search_data_from_rows(cursor, rows, crawl_date, latest_time, failed_ids)
+        except Exception as e:
+            print(f"[存储] 获取最新联网搜索数据失败: {e}")
+            return None
+
+    def _detect_new_search_items_impl(
+        self, current_data: SearchData, dedup_days: int = 7
+    ) -> Dict[str, List[SearchItem]]:
+        """
+        检测新增的联网搜索条目（支持跨天去重）
+
+        对比当天更早批次 + 过去 dedup_days 天已收录的 (topic_id, url)，
+        仅从未出现过的条目才算本次新增。
+        """
+        try:
+            historical_urls: Dict[str, set] = {}
+
+            # 1. 收集当天早于当前批次的 URL
+            today_data = self._get_search_data_impl(current_data.date)
+            if today_data:
+                current_time = current_data.crawl_time
+                for topic_id, item_list in today_data.items.items():
+                    hist_set = historical_urls.setdefault(topic_id, set())
+                    for item in item_list:
+                        first_time = item.first_time or item.crawl_time
+                        if first_time < current_time and item.url:
+                            hist_set.add(item.url)
+
+            # 2. 跨天去重：回查过去 dedup_days 天的已有数据库（不创建空库）
+            if dedup_days > 0 and current_data.date:
+                try:
+                    base_dt = datetime.strptime(current_data.date, "%Y-%m-%d")
+                except ValueError:
+                    base_dt = self._get_configured_time().replace(tzinfo=None)
+
+                for offset in range(1, dedup_days + 1):
+                    prev_date = (base_dt - timedelta(days=offset)).strftime("%Y-%m-%d")
+                    if not self._db_exists(prev_date, db_type="search"):
+                        continue
+                    try:
+                        prev_conn = self._get_connection(prev_date, db_type="search")
+                        prev_cursor = prev_conn.cursor()
+                        prev_cursor.execute("SELECT topic_id, url FROM search_items WHERE url != ''")
+                        for topic_id, url in prev_cursor.fetchall():
+                            historical_urls.setdefault(topic_id, set()).add(url)
+                    except Exception:
+                        continue
+
+            # 3. 过滤出真正的新增条目
+            new_items: Dict[str, List[SearchItem]] = {}
+            for topic_id, item_list in current_data.items.items():
+                hist_set = historical_urls.get(topic_id, set())
+                for item in item_list:
+                    if item.url and item.url not in hist_set:
+                        new_items.setdefault(topic_id, []).append(item)
+
+            return new_items
+        except Exception as e:
+            print(f"[存储] 检测新增联网搜索条目失败: {e}")
+            return {}
+
+    def _get_search_query_cache_impl(
+        self, prompt_hash: str, date: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """读取当天的智能提示词改写缓存"""
+        try:
+            if not self._db_exists(date, db_type="search"):
+                return None
+            conn = self._get_connection(date, db_type="search")
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT original_text, rewritten_queries, ori_question
+                FROM search_query_cache
+                WHERE prompt_hash = ?
+            """, (prompt_hash,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            queries = json.loads(row[1]) if row[1] else []
+            if not isinstance(queries, list):
+                return None
+            return {
+                "original_text": row[0],
+                "queries": queries,
+                "ori_question": row[2] or "",
+            }
+        except Exception:
+            return None
+
+    def _save_search_query_cache_impl(
+        self,
+        prompt_hash: str,
+        original_text: str,
+        rewritten_queries: List[str],
+        ori_question: str = "",
+        date: Optional[str] = None,
+    ) -> bool:
+        """保存智能提示词改写缓存"""
+        try:
+            conn = self._get_connection(date, db_type="search")
+            cursor = conn.cursor()
+            now_str = self._get_configured_time().strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute("""
+                INSERT OR REPLACE INTO search_query_cache
+                (prompt_hash, original_text, rewritten_queries, ori_question, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                prompt_hash,
+                original_text,
+                json.dumps(rewritten_queries, ensure_ascii=False),
+                ori_question,
+                now_str,
+            ))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"[存储] 保存搜索词改写缓存失败: {e}")
+            return False

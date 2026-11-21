@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from trendradar.storage.base import StorageBackend, NewsData, RSSItem, RSSData
+from trendradar.storage.base import StorageBackend, NewsData, RSSItem, RSSData, SearchItem, SearchData
 from trendradar.storage.sqlite_mixin import SQLiteStorageMixin
 from trendradar.utils.time import (
     DEFAULT_TIMEZONE,
@@ -86,10 +86,11 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
         新结构（扁平）：output/{type}/{date}.db
         - output/news/2025-12-28.db
         - output/rss/2025-12-28.db
+        - output/search/2025-12-28.db
 
         Args:
             date: 日期字符串
-            db_type: 数据库类型 ("news" 或 "rss")
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             数据库文件路径
@@ -98,6 +99,11 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
         db_dir = self.data_dir / db_type
         db_dir.mkdir(parents=True, exist_ok=True)
         return db_dir / f"{date_str}.db"
+
+    def _db_exists(self, date: Optional[str] = None, db_type: str = "news") -> bool:
+        """检查本地数据库文件是否已存在（不触发目录创建）"""
+        date_str = self._format_date_folder(date)
+        return (self.data_dir / db_type / f"{date_str}.db").exists()
 
     def _get_connection(self, date: Optional[str] = None, db_type: str = "news") -> sqlite3.Connection:
         """
@@ -226,6 +232,45 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
         if not db_path.exists():
             return None
         return self._get_latest_rss_data_impl(date)
+
+    # ========================================
+    # 联网搜索数据存储方法
+    # ========================================
+
+    def save_search_data(self, data: SearchData) -> bool:
+        """保存联网搜索数据到 SQLite"""
+        success, new_count, updated_count = self._save_search_data_impl(data, "[本地存储]")
+        if success:
+            log_parts = [f"[本地存储] 联网搜索处理完成：新增 {new_count} 条"]
+            if updated_count > 0:
+                log_parts.append(f"更新 {updated_count} 条")
+            print("，".join(log_parts))
+        return success
+
+    def get_search_data(self, date: Optional[str] = None) -> Optional[SearchData]:
+        """获取指定日期的所有联网搜索数据"""
+        return self._get_search_data_impl(date)
+
+    def get_latest_search_data(self, date: Optional[str] = None) -> Optional[SearchData]:
+        """获取最新一次抓取的联网搜索数据"""
+        return self._get_latest_search_data_impl(date)
+
+    def detect_new_search_items(
+        self, current_data: SearchData, dedup_days: int = 7
+    ) -> Dict[str, List[SearchItem]]:
+        """检测新增的联网搜索条目（支持跨天去重）"""
+        return self._detect_new_search_items_impl(current_data, dedup_days=dedup_days)
+
+    def get_search_query_cache(self, prompt_hash: str, date: Optional[str] = None):
+        return self._get_search_query_cache_impl(prompt_hash, date)
+
+    def save_search_query_cache(
+        self, prompt_hash: str, original_text: str, rewritten_queries: List[str],
+        ori_question: str = "", date: Optional[str] = None
+    ) -> bool:
+        return self._save_search_query_cache_impl(
+            prompt_hash, original_text, rewritten_queries, ori_question, date
+        )
 
     # ========================================
     # AI 智能筛选
@@ -435,8 +480,8 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
             if not self.data_dir.exists():
                 return 0
 
-            # 清理数据库文件 (news/, rss/)
-            for db_type in ["news", "rss"]:
+            # 清理数据库文件 (news/, rss/, search/)
+            for db_type in ["news", "rss", "search"]:
                 db_dir = self.data_dir / db_type
                 if not db_dir.exists():
                     continue

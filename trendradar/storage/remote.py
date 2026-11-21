@@ -28,7 +28,7 @@ except ImportError:
     BotoConfig = None
     ClientError = Exception
 
-from trendradar.storage.base import StorageBackend, NewsData, RSSItem, RSSData
+from trendradar.storage.base import StorageBackend, NewsData, RSSItem, RSSData, SearchItem, SearchData
 from trendradar.storage.sqlite_mixin import SQLiteStorageMixin
 from trendradar.utils.time import (
     DEFAULT_TIMEZONE,
@@ -169,7 +169,7 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
 
         Args:
             date: 日期字符串
-            db_type: 数据库类型 ("news" 或 "rss")
+            db_type: 数据库类型 ("news"、"rss" 或 "search")
 
         Returns:
             本地临时文件路径
@@ -178,6 +178,18 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
         db_dir = self.temp_dir / db_type
         db_dir.mkdir(parents=True, exist_ok=True)
         return db_dir / f"{date_folder}.db"
+
+    def _db_exists(self, date: Optional[str] = None, db_type: str = "news") -> bool:
+        """检查本地临时库或远程对象是否存在（避免只读查重时创建空库）"""
+        date_folder = self._format_date_folder(date)
+        local_path = self.temp_dir / db_type / f"{date_folder}.db"
+        if local_path.exists():
+            return True
+        try:
+            r2_key = self._get_remote_db_key(date, db_type)
+            return self._check_object_exists(r2_key)
+        except Exception:
+            return False
 
     def _check_object_exists(self, r2_key: str) -> bool:
         """
@@ -487,6 +499,56 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
         return self._get_latest_rss_data_impl(date)
 
     # ========================================
+    # 联网搜索数据存储方法
+    # ========================================
+
+    def save_search_data(self, data: SearchData) -> bool:
+        """保存联网搜索数据到远程存储"""
+        success, new_count, updated_count = self._save_search_data_impl(data, "[远程存储]")
+        if not success:
+            return False
+
+        log_parts = [f"[远程存储] 联网搜索处理完成：新增 {new_count} 条"]
+        if updated_count > 0:
+            log_parts.append(f"更新 {updated_count} 条")
+        print("，".join(log_parts))
+
+        if self._upload_sqlite(data.date, db_type="search"):
+            print("[远程存储] 联网搜索数据已同步到远程存储")
+            return True
+        else:
+            print("[远程存储] 联网搜索数据上传远程存储失败")
+            return False
+
+    def get_search_data(self, date: Optional[str] = None) -> Optional[SearchData]:
+        """获取指定日期的所有联网搜索数据"""
+        return self._get_search_data_impl(date)
+
+    def get_latest_search_data(self, date: Optional[str] = None) -> Optional[SearchData]:
+        """获取最新一次抓取的联网搜索数据"""
+        return self._get_latest_search_data_impl(date)
+
+    def detect_new_search_items(
+        self, current_data: SearchData, dedup_days: int = 7
+    ) -> Dict[str, List[SearchItem]]:
+        """检测新增的联网搜索条目（支持跨天去重）"""
+        return self._detect_new_search_items_impl(current_data, dedup_days=dedup_days)
+
+    def get_search_query_cache(self, prompt_hash: str, date: Optional[str] = None):
+        return self._get_search_query_cache_impl(prompt_hash, date)
+
+    def save_search_query_cache(
+        self, prompt_hash: str, original_text: str, rewritten_queries: List[str],
+        ori_question: str = "", date: Optional[str] = None
+    ) -> bool:
+        ok = self._save_search_query_cache_impl(
+            prompt_hash, original_text, rewritten_queries, ori_question, date
+        )
+        if ok:
+            self._upload_sqlite(date, db_type="search")
+        return ok
+
+    # ========================================
     # AI 智能筛选存储方法
     # ========================================
 
@@ -698,40 +760,37 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
         cutoff_date = self._get_configured_time() - timedelta(days=retention_days)
 
         try:
-            # 列出远程存储中 news/ 前缀下的所有对象
+            # 列出远程存储中 news/、rss/、search/ 前缀下的所有对象
             paginator = self.s3_client.get_paginator('list_objects_v2')
-            pages = paginator.paginate(Bucket=self.bucket_name, Prefix="news/")
-
-            # 收集需要删除的对象键
             objects_to_delete = []
-            deleted_dates = set()
+            deleted_keys = []
 
-            for page in pages:
-                if 'Contents' not in page:
-                    continue
+            for db_type in ("news", "rss", "search"):
+                pages = paginator.paginate(Bucket=self.bucket_name, Prefix=f"{db_type}/")
+                pattern = re.compile(rf'{db_type}/(\d{{4}})-(\d{{2}})-(\d{{2}})\.db$')
 
-                for obj in page['Contents']:
-                    key = obj['Key']
-
-                    # 解析日期（格式: news/YYYY-MM-DD.db）
-                    folder_date = None
-                    date_str = None
-                    try:
-                        date_match = re.match(r'news/(\d{4})-(\d{2})-(\d{2})\.db$', key)
-                        if date_match:
-                            folder_date = datetime(
-                                int(date_match.group(1)),
-                                int(date_match.group(2)),
-                                int(date_match.group(3)),
-                                tzinfo=pytz.timezone(self.timezone)
-                            )
-                            date_str = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
-                    except Exception:
+                for page in pages:
+                    if 'Contents' not in page:
                         continue
 
-                    if folder_date and folder_date < cutoff_date:
-                        objects_to_delete.append({'Key': key})
-                        deleted_dates.add(date_str)
+                    for obj in page['Contents']:
+                        key = obj['Key']
+                        folder_date = None
+                        try:
+                            date_match = pattern.match(key)
+                            if date_match:
+                                folder_date = datetime(
+                                    int(date_match.group(1)),
+                                    int(date_match.group(2)),
+                                    int(date_match.group(3)),
+                                    tzinfo=pytz.timezone(self.timezone)
+                                )
+                        except Exception:
+                            continue
+
+                        if folder_date and folder_date < cutoff_date:
+                            objects_to_delete.append({'Key': key})
+                            deleted_keys.append(key)
 
             # 批量删除对象（每次最多 1000 个）
             if objects_to_delete:
@@ -747,11 +806,11 @@ class RemoteStorageBackend(SQLiteStorageMixin, StorageBackend):
                     except Exception as e:
                         print(f"[远程存储] 批量删除失败: {e}")
 
-                deleted_count = len(deleted_dates)
-                for date_str in sorted(deleted_dates):
-                    print(f"[远程存储] 清理过期数据: news/{date_str}.db")
+                deleted_count = len(deleted_keys)
+                for key in sorted(deleted_keys):
+                    print(f"[远程存储] 清理过期数据: {key}")
 
-                print(f"[远程存储] 共清理 {deleted_count} 个过期日期数据库文件")
+                print(f"[远程存储] 共清理 {deleted_count} 个过期数据库文件")
 
             return deleted_count
 

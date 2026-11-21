@@ -8,7 +8,7 @@
 import os
 from typing import Optional
 
-from trendradar.storage.base import StorageBackend, NewsData, RSSData
+from trendradar.storage.base import StorageBackend, NewsData, RSSData, SearchData
 from trendradar.utils.time import DEFAULT_TIMEZONE
 
 
@@ -217,6 +217,35 @@ class StorageManager:
     def detect_new_rss_items(self, current_data: RSSData) -> dict:
         """检测新增的 RSS 条目（增量模式）"""
         return self.get_backend().detect_new_rss_items(current_data)
+
+    def save_search_data(self, data: SearchData) -> bool:
+        """保存联网搜索数据"""
+        return self.get_backend().save_search_data(data)
+
+    def get_search_data(self, date: Optional[str] = None) -> Optional[SearchData]:
+        """获取指定日期的所有联网搜索数据"""
+        return self.get_backend().get_search_data(date)
+
+    def get_latest_search_data(self, date: Optional[str] = None) -> Optional[SearchData]:
+        """获取最新一次抓取的联网搜索数据"""
+        return self.get_backend().get_latest_search_data(date)
+
+    def detect_new_search_items(self, current_data: SearchData, dedup_days: int = 7) -> dict:
+        """检测新增的联网搜索条目（支持跨天去重）"""
+        return self.get_backend().detect_new_search_items(current_data, dedup_days=dedup_days)
+
+    def get_search_query_cache(self, prompt_hash: str, date: Optional[str] = None):
+        """获取当天的搜索提示词改写缓存"""
+        return self.get_backend().get_search_query_cache(prompt_hash, date)
+
+    def save_search_query_cache(
+        self, prompt_hash: str, original_text: str, rewritten_queries: list,
+        ori_question: str = "", date: Optional[str] = None
+    ) -> bool:
+        """保存搜索提示词改写缓存"""
+        return self.get_backend().save_search_query_cache(
+            prompt_hash, original_text, rewritten_queries, ori_question, date
+        )
 
     def get_today_all_data(self, date: Optional[str] = None) -> Optional[NewsData]:
         """获取当天所有数据"""

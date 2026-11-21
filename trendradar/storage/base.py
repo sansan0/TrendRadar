@@ -175,6 +175,143 @@ class RSSData:
 
 
 @dataclass
+class SearchItem:
+    """联网搜索条目数据模型"""
+
+    title: str                          # 标题
+    topic_id: str                       # 搜索主题 ID
+    topic_name: str = ""                # 搜索主题名称
+    url: str = ""                       # 原文链接
+    query: str = ""                     # 命中的搜索词
+    provider: str = "deepseek"          # 搜索引擎名称
+    snippet: str = ""                   # 短摘要（列表/卡片展示）
+    summary: str = ""                   # 长摘要（AI 分析用）
+    content: str = ""                   # 完整正文 Markdown（可选）
+    site_name: str = ""                 # 来源网站名
+    site_icon: str = ""                 # 网站图标 URL
+    published_at: str = ""              # 发布时间（ISO/RFC3339）
+    score: float = 0.0                  # 统一 0.0~1.0 质量分
+    raw_score: float = 0.0              # 引擎原始分（如 DeepSeek 0~3）
+    authority: int = -1                 # 来源权威度（-1=未知, 0~4）
+    crawl_time: str = ""                # 抓取时间（HH:MM）
+
+    # 统计信息
+    first_time: str = ""                # 首次抓取时间
+    last_time: str = ""                 # 最后抓取时间
+    count: int = 1                      # 出现次数
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            "title": self.title,
+            "topic_id": self.topic_id,
+            "topic_name": self.topic_name,
+            "url": self.url,
+            "query": self.query,
+            "provider": self.provider,
+            "snippet": self.snippet,
+            "summary": self.summary,
+            "content": self.content,
+            "site_name": self.site_name,
+            "site_icon": self.site_icon,
+            "published_at": self.published_at,
+            "score": self.score,
+            "raw_score": self.raw_score,
+            "authority": self.authority,
+            "crawl_time": self.crawl_time,
+            "first_time": self.first_time,
+            "last_time": self.last_time,
+            "count": self.count,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SearchItem":
+        """从字典创建"""
+        return cls(
+            title=data.get("title", ""),
+            topic_id=data.get("topic_id", ""),
+            topic_name=data.get("topic_name", ""),
+            url=data.get("url", ""),
+            query=data.get("query", ""),
+            provider=data.get("provider", "deepseek"),
+            snippet=data.get("snippet", ""),
+            summary=data.get("summary", ""),
+            content=data.get("content", ""),
+            site_name=data.get("site_name", ""),
+            site_icon=data.get("site_icon", ""),
+            published_at=data.get("published_at", ""),
+            score=float(data.get("score", 0.0) or 0.0),
+            raw_score=float(data.get("raw_score", 0.0) or 0.0),
+            authority=int(data.get("authority", -1) if data.get("authority") is not None else -1),
+            crawl_time=data.get("crawl_time", ""),
+            first_time=data.get("first_time", ""),
+            last_time=data.get("last_time", ""),
+            count=int(data.get("count", 1) or 1),
+        )
+
+
+@dataclass
+class SearchData:
+    """
+    联网搜索数据集合
+
+    结构:
+    - date: 日期（YYYY-MM-DD）
+    - crawl_time: 抓取时间（HH:MM）
+    - items: 按 topic_id 分组的搜索结果
+    - id_to_name: topic_id 到主题名称的映射
+    - id_to_query: topic_id 到原始查询摘要的映射
+    - id_to_provider: topic_id 到搜索引擎名称的映射
+    - failed_ids: 失败的 topic_id 列表
+    """
+
+    date: str
+    crawl_time: str
+    items: Dict[str, List[SearchItem]]
+    id_to_name: Dict[str, str] = field(default_factory=dict)
+    id_to_query: Dict[str, str] = field(default_factory=dict)
+    id_to_provider: Dict[str, str] = field(default_factory=dict)
+    failed_ids: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        items_dict = {}
+        for topic_id, item_list in self.items.items():
+            items_dict[topic_id] = [item.to_dict() for item in item_list]
+
+        return {
+            "date": self.date,
+            "crawl_time": self.crawl_time,
+            "items": items_dict,
+            "id_to_name": self.id_to_name,
+            "id_to_query": self.id_to_query,
+            "id_to_provider": self.id_to_provider,
+            "failed_ids": self.failed_ids,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SearchData":
+        """从字典创建"""
+        items = {}
+        for topic_id, item_list in data.get("items", {}).items():
+            items[topic_id] = [SearchItem.from_dict(item) for item in item_list]
+
+        return cls(
+            date=data.get("date", ""),
+            crawl_time=data.get("crawl_time", ""),
+            items=items,
+            id_to_name=data.get("id_to_name", {}),
+            id_to_query=data.get("id_to_query", {}),
+            id_to_provider=data.get("id_to_provider", {}),
+            failed_ids=data.get("failed_ids", []),
+        )
+
+    def get_total_count(self) -> int:
+        """获取条目总数"""
+        return sum(len(item_list) for item_list in self.items.values())
+
+
+@dataclass
 class NewsData:
     """
     新闻数据集合
@@ -525,6 +662,35 @@ class StorageBackend(ABC):
 
     def get_all_rss_ids(self, date: Optional[str] = None) -> List[Dict]:
         return []
+
+    # === 联网搜索数据存储（默认实现，子类通过 mixin 覆盖） ===
+
+    def save_search_data(self, data: "SearchData") -> bool:
+        return False
+
+    def get_search_data(self, date: Optional[str] = None) -> Optional["SearchData"]:
+        return None
+
+    def get_latest_search_data(self, date: Optional[str] = None) -> Optional["SearchData"]:
+        return None
+
+    def detect_new_search_items(
+        self, current_data: "SearchData", dedup_days: int = 7
+    ) -> Dict[str, List["SearchItem"]]:
+        return {}
+
+    def get_search_query_cache(self, prompt_hash: str, date: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        return None
+
+    def save_search_query_cache(
+        self,
+        prompt_hash: str,
+        original_text: str,
+        rewritten_queries: List[str],
+        ori_question: str = "",
+        date: Optional[str] = None,
+    ) -> bool:
+        return False
 
 
 def convert_crawl_results_to_news_data(

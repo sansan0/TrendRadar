@@ -14,6 +14,8 @@ from trendradar.storage.base import (
     NewsData,
     RSSItem,
     RSSData,
+    SearchItem,
+    SearchData,
     convert_crawl_results_to_news_data,
 )
 from trendradar.storage.sqlite_mixin import SQLiteStorageMixin
@@ -35,6 +37,8 @@ __all__ = [
     "NewsData",
     "RSSItem",
     "RSSData",
+    "SearchItem",
+    "SearchData",
     # Mixin
     "SQLiteStorageMixin",
     # 转换函数

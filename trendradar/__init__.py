@@ -9,5 +9,5 @@ TrendRadar - 热点新闻聚合与分析工具
 
 from trendradar.context import AppContext
 
-__version__ = "6.11.0"
+__version__ = "6.12.0"
 __all__ = ["AppContext", "__version__"]

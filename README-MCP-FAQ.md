@@ -831,6 +831,11 @@
 | **Slack** | mrkdwn | `SLACK_WEBHOOK_URL` |
 | **通用 Webhook** | Markdown | `GENERIC_WEBHOOK_URL` |
 
+**Email 可选配置：**
+
+- `EMAIL_SMTP_USERNAME` / `notification.channels.email.smtp_username`：SMTP 登录用户名；留空时使用 `EMAIL_FROM`
+- `EMAIL_REPLY_TO` / `notification.channels.email.reply_to`：独立回复地址；留空时不设置 `Reply-To`
+
 **配置方式：**
 
 - 在 `config.yaml` 的 `notification.channels` 中配置对应渠道

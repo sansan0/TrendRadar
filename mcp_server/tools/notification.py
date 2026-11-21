@@ -796,7 +796,8 @@ def _send_telegram(bot_token: str, chat_id: str, content: str, title: str) -> Di
 def _send_email(
     from_email: str, password: str, to_email: str,
     message: str, title: str,
-    smtp_server: str = "", smtp_port: str = ""
+    smtp_server: str = "", smtp_port: str = "",
+    smtp_username: str = "", reply_to: str = "",
 ) -> Dict:
     """邮件发送（HTML 格式）"""
     try:
@@ -820,6 +821,8 @@ def _send_email(
 
         msg = MIMEMultipart("alternative")
         msg["From"] = formataddr(("TrendRadar", from_email))
+        if reply_to:
+            msg["Reply-To"] = reply_to
 
         recipients = [addr.strip() for addr in to_email.split(",")]
         msg["To"] = ", ".join(recipients)
@@ -844,7 +847,7 @@ def _send_email(
             server = smtplib.SMTP_SSL(server_host, port, timeout=30)
             server.ehlo()
 
-        server.login(from_email, password)
+        server.login(smtp_username or from_email, password)
         server.send_message(msg)
         server.quit()
 
@@ -1222,6 +1225,8 @@ class NotificationTools:
                 message, title,
                 config.get("EMAIL_SMTP_SERVER", ""),
                 config.get("EMAIL_SMTP_PORT", ""),
+                smtp_username=config.get("EMAIL_SMTP_USERNAME", ""),
+                reply_to=config.get("EMAIL_REPLY_TO", ""),
             )
 
         # 统一分批管线：格式适配 → 字节分割 → 添加批次头部 → (可选)反序

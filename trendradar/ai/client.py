@@ -49,6 +49,31 @@ class AIClient:
             )
             self.extra_params = {}
 
+    @property
+    def uses_workload_identity(self) -> bool:
+        """
+        是否通过 Anthropic workload identity federation 认证（无需静态 API Key）
+
+        LiteLLM 1.106+ 在未传 api_key 时，会读取 ANTHROPIC_FEDERATION_RULE_ID、
+        ANTHROPIC_ORGANIZATION_ID 和身份令牌来源（如 ANTHROPIC_IDENTITY_TOKEN_FILE），
+        用 OIDC 令牌换取短期访问令牌。这里直接复用 LiteLLM 自己的判断，
+        保证与实际调用时的行为一致。
+        """
+        if not self.model.startswith("anthropic/"):
+            return False
+        try:
+            from litellm.llms.anthropic.wif import resolve_anthropic_wif_params
+
+            return resolve_anthropic_wif_params(None) is not None
+        except Exception as e:
+            print(f"[AI] workload identity federation 配置无效: {e}")
+            return False
+
+    @property
+    def has_credentials(self) -> bool:
+        """是否具备可用的认证方式（静态 API Key 或 workload identity federation）"""
+        return bool(self.api_key) or self.uses_workload_identity
+
     def chat(
         self,
         messages: List[Dict[str, str]],
@@ -123,7 +148,7 @@ class AIClient:
         if not self.model:
             return False, "未配置 AI 模型（model）"
 
-        if not self.api_key:
+        if not self.has_credentials:
             return False, "未配置 AI API Key，请在 config.yaml 或环境变量 AI_API_KEY 中设置"
 
         # 验证模型格式（应该包含 provider/model）

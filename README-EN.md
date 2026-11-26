@@ -1010,7 +1010,9 @@ As TrendRadar's **third data source** alongside hotlists and RSS feeds, Web Sear
 
 ### **Visual Configuration Editor**
 
-A web-based graphical configuration interface — no need to manually edit YAML files. Complete edits and exports for `config.yaml`, `frequency_words.txt`, `search_queries.txt` (web search topics), and `timeline.yaml` through simple forms.
+In Guided mode, try changing one news source or keyword and copy the corresponding file into your project. Return to the same browser to resume that step. Open **Changes & restore** to compare your edits with the bundled defaults.
+
+Pro mode lets you edit all seven files side by side, including the main settings, timeline, keyword rules, search topics and three AI text files. Select a field or text section in the source to locate its form control. Edits in the form update the source.
 
 Switch between Chinese and English and use English configuration templates to set application options, keywords, and schedules in your preferred language.
 

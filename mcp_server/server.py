@@ -7,9 +7,12 @@ TrendRadar MCP Server - FastMCP 2.0 实现
 
 import asyncio
 import json
+import logging
 from typing import List, Optional, Dict, Union
 
 from fastmcp import FastMCP
+from fastmcp.exceptions import NotFoundError
+from fastmcp.server.middleware import Middleware, MiddlewareContext
 
 from .tools.data_query import DataQueryTools
 from .tools.analytics import AnalyticsTools
@@ -24,8 +27,40 @@ from .utils.date_parser import DateParser
 from .utils.errors import MCPError
 
 
+logger = logging.getLogger(__name__)
+
+
+class IgnoreExtraArgumentsMiddleware(Middleware):
+    """忽略 MCP 客户端（如 n8n AI Agent）注入的未声明工具参数。"""
+
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        arguments = context.message.arguments
+        if isinstance(arguments, dict) and arguments and context.fastmcp_context is not None:
+            try:
+                tool = await context.fastmcp_context.fastmcp.get_tool(context.message.name)
+            except NotFoundError:
+                return await call_next(context)
+
+            params_schema = tool.parameters if isinstance(tool.parameters, dict) else None
+            if params_schema is not None and isinstance(params_schema.get("properties"), dict):
+                allowed = set(params_schema["properties"].keys())
+                extra_keys = [k for k in arguments if k not in allowed]
+                if extra_keys:
+                    logger.debug(
+                        "Ignoring extra arguments for tool '%s': %s",
+                        context.message.name,
+                        extra_keys,
+                    )
+                    filtered = {k: v for k, v in arguments.items() if k in allowed}
+                    context = context.copy(
+                        message=context.message.model_copy(update={"arguments": filtered})
+                    )
+        return await call_next(context)
+
+
 # 创建 FastMCP 2.0 应用
 mcp = FastMCP('trendradar-news')
+mcp.add_middleware(IgnoreExtraArgumentsMiddleware())
 
 # 全局工具实例（在第一次请求时初始化）
 _tools_instances = {}

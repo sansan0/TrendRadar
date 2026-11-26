@@ -1,0 +1,79 @@
+name: Deploy Visual Config Studio
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "editor/**"
+      - "config/**"
+      - ".github/workflows/deploy-editor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-config-editor"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build & Verify Config Editor
+    runs-on: ubuntu-latest
+    # 仅在官方主仓库自动触发；任何仓库管理员均可手动点击 workflow_dispatch 触发，避免普通 Fork 用户误跑覆盖报告
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'sansan0/TrendRadar'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: editor/package-lock.json
+
+      - name: Install editor dependencies
+        working-directory: editor
+        run: npm ci
+
+      - name: Run unit & component regression tests
+        working-directory: editor
+        run: |
+          npm run test
+          npm run test:components
+
+      - name: Build lightweight chunked bundle & SEO/GEO assets
+        working-directory: editor
+        run: npm run build
+
+      - name: Verify bundle & SEO/GEO invariants
+        working-directory: editor
+        run: npm run verify
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: editor/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'sansan0/TrendRadar'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

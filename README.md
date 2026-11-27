@@ -9,6 +9,7 @@
 <a href="https://trendradar.sandev.cc/zh/" title="TrendRadar 官方网站"><strong>🌐 官方网站</strong></a> · <a href="https://trendradar.sandev.cc/zh/docs/quick-start/" title="TrendRadar 官网文档"><strong>📖 官网文档</strong></a> · <a href="https://trendradar.sandev.cc/zh/docs/self-hosted-sources/" title="AI 自建热榜数据源"><strong>AI 自建热榜数据源</strong></a>
 
 <a href="https://trendshift.io/repositories/14726?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-14726" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/14726/monthly" alt="sansan0%2FTrendRadar | Trendshift" width="250" height="55"/></a>
+<a href="https://www.star-history.com/?type=date&repos=sansan0%2Ftrendradar" target="_blank" rel="noopener noreferrer"><picture><source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=sansan0/trendradar&theme=dark" /><img alt="Star History Rank" src="https://api.star-history.com/badge?repo=sansan0/trendradar" width="196" height="55" /></picture></a>
 
 
 [![GitHub Stars](https://img.shields.io/github/stars/sansan0/TrendRadar?style=flat-square&logo=github&color=yellow)](https://github.com/sansan0/TrendRadar/stargazers)
@@ -1066,7 +1067,9 @@ frequency_words.txt 文件增加了一个【必须词】功能，使用 + 号
 
 ### **可视化配置编辑器**
 
-提供基于 Web 的图形化配置界面，无需手动编辑 YAML 文件，通过表单即可完成 `config.yaml`、`frequency_words.txt`、`search_queries.txt`（联网搜索任务）和 `timeline.yaml` 的修改与导出。
+首次使用可以在引导模式改一个新闻来源或关键词，复制对应文件到项目里试跑。回到同一浏览器可接着上次的步骤编辑，也能在「改动与恢复」中对照初始配置。
+
+专业模式可对照编辑主配置、时间线、关键词、搜索主题和三份 AI 文本，共七个文件。选中源码中的字段或段落，右侧表单会跟随定位。修改表单也会同步写回源码。
 
 支持中英文界面切换和英文配置模板，方便按熟悉的语言设置运行参数、关键词和调度规则。
 
@@ -4002,7 +4005,13 @@ MCP Inspector 是官方调试工具，用于测试 MCP 连接：
 
 ## Star History
 
-[![Star History Chart](https://star-history.dera.page/svg?repos=sansan0/TrendRadar)](https://star-history.dera.page/#sansan0/TrendRadar)
+<a href="https://www.star-history.com/?type=date&repos=sansan0%2Ftrendradar">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=sansan0/trendradar&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=sansan0/trendradar&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=sansan0/trendradar&type=date&legend=top-left" />
+ </picture>
+</a>
 
 <br>
 

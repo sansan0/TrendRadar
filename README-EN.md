@@ -2786,6 +2786,7 @@ current directory/
    | `FEISHU_WEBHOOK_URL` | `notification.channels.feishu.webhook_url` | `https://...` | Feishu Webhook (multi-account use `;` separator) |
    | `AI_ANALYSIS_ENABLED` | `ai_analysis.enabled` | `true` / `false` | Enable AI analysis (v5.0.0 new) |
    | `AI_API_KEY` | `ai.api_key` | `sk-xxx...` | AI API Key (shared by ai_analysis and ai_translation) |
+   | `ANTHROPIC_FEDERATION_RULE_ID`, etc. | - | - | Replaces `AI_API_KEY` when Claude (`anthropic/` models) authenticates via [workload identity federation](https://platform.claude.com/docs/en/manage-claude/workload-identity-federation); read by LiteLLM |
    | `AI_PROVIDER` | `ai.provider` | `deepseek` / `openai` / `gemini` | AI provider (v5.0.0 new) |
    | `S3_*` | `storage.remote.*` | - | Remote storage config (5 params) |
 
